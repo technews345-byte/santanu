@@ -1,0 +1,179 @@
+import React, { useMemo, useState } from 'react';
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import { addMonths, format, subMonths } from 'date-fns';
+import { Screen } from '../components/Screen';
+import { Card } from '../components/Card';
+import { Pill } from '../components/Pill';
+import { IconBadge } from '../components/IconBadge';
+import { DonutChart, DonutSlice } from '../components/DonutChart';
+import { TrendChart } from '../components/TrendChart';
+import { EmptyState } from '../components/EmptyState';
+import { QuickAddFab } from '../components/QuickAddFab';
+import { useTheme } from '../theme/ThemeContext';
+import { fontSizes, radius, spacing } from '../theme/tokens';
+import { useStore } from '../store/useStore';
+import { formatCurrency, last6MonthKeys, periodInterval, summarize, transactionsInRange } from '../utils/finance';
+import { PeriodKey } from '../types';
+
+const PERIODS: { key: PeriodKey; label: string }[] = [
+  { key: 'week', label: 'Week' },
+  { key: 'month', label: 'Month' },
+  { key: 'year', label: 'Year' },
+];
+
+export default function AnalyticsScreen() {
+  const { theme } = useTheme();
+  const navigation = useNavigation<any>();
+  const { transactions, categories, activeAccountId } = useStore();
+  const [period, setPeriod] = useState<PeriodKey>('month');
+  const [anchor, setAnchor] = useState(new Date());
+  const [viewType, setViewType] = useState<'expense' | 'income'>('expense');
+
+  const scoped = useMemo(
+    () => (activeAccountId ? transactions.filter((t) => t.accountId === activeAccountId || t.toAccountId === activeAccountId) : transactions),
+    [transactions, activeAccountId]
+  );
+
+  const { start, end } = periodInterval(period, anchor);
+  const periodTxns = useMemo(() => transactionsInRange(scoped, start, end), [scoped, start, end]);
+  const { income, expense } = summarize(periodTxns);
+
+  const breakdown = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const t of periodTxns) {
+      if (t.type !== viewType || !t.categoryId) continue;
+      map.set(t.categoryId, (map.get(t.categoryId) ?? 0) + t.amount);
+    }
+    const total = Array.from(map.values()).reduce((s, v) => s + v, 0);
+    return Array.from(map.entries())
+      .map(([categoryId, value]) => {
+        const cat = categories.find((c) => c.id === categoryId);
+        return {
+          categoryId,
+          name: cat?.name ?? 'Uncategorized',
+          color: cat?.color ?? theme.textTertiary,
+          icon: cat?.icon ?? 'help-outline',
+          value,
+          pct: total > 0 ? (value / total) * 100 : 0,
+        };
+      })
+      .sort((a, b) => b.value - a.value);
+  }, [periodTxns, viewType, categories, theme.textTertiary]);
+
+  const donutData: DonutSlice[] = breakdown.map((b) => ({ label: b.name, value: b.value, color: b.color }));
+
+  const trendData = useMemo(() => {
+    const keys = last6MonthKeys(anchor);
+    return keys.map((key) => {
+      const [y, m] = key.split('-').map(Number);
+      const monthDate = new Date(y, m - 1, 1);
+      const { start: mStart, end: mEnd } = periodInterval('month', monthDate);
+      const txns = transactionsInRange(scoped, mStart, mEnd);
+      const s = summarize(txns);
+      return { label: format(monthDate, 'MMM'), income: s.income, expense: s.expense };
+    });
+  }, [scoped, anchor]);
+
+  const shiftAnchor = (dir: 1 | -1) => {
+    if (period === 'month') setAnchor((prev) => (dir === 1 ? addMonths(prev, 1) : subMonths(prev, 1)));
+    else if (period === 'year') setAnchor((prev) => new Date(prev.getFullYear() + dir, prev.getMonth(), 1));
+    else setAnchor((prev) => new Date(prev.getTime() + dir * 7 * 24 * 60 * 60 * 1000));
+  };
+
+  return (
+    <Screen>
+      <FlatList
+        data={breakdown}
+        keyExtractor={(item) => item.categoryId}
+        contentContainerStyle={{ padding: spacing.md, paddingBottom: 120 }}
+        ListHeaderComponent={
+          <View>
+            <Text style={[styles.title, { color: theme.text }]}>Analytics</Text>
+
+            <View style={styles.periodRow}>
+              {PERIODS.map((p) => (
+                <Pill key={p.key} label={p.label} active={period === p.key} onPress={() => setPeriod(p.key)} />
+              ))}
+            </View>
+
+            <View style={styles.anchorRow}>
+              <Pressable onPress={() => shiftAnchor(-1)} hitSlop={8}>
+                <Ionicons name="chevron-back" size={20} color={theme.textSecondary} />
+              </Pressable>
+              <Text style={[styles.anchorLabel, { color: theme.text }]}>
+                {period === 'year' ? format(anchor, 'yyyy') : period === 'month' ? format(anchor, 'MMMM yyyy') : `Week of ${format(start, 'MMM d')}`}
+              </Text>
+              <Pressable onPress={() => shiftAnchor(1)} hitSlop={8}>
+                <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
+              </Pressable>
+            </View>
+
+            <View style={styles.typeToggle}>
+              <Pill label="Expenses" active={viewType === 'expense'} color={theme.expense} onPress={() => setViewType('expense')} />
+              <Pill label="Income" active={viewType === 'income'} color={theme.success} onPress={() => setViewType('income')} />
+            </View>
+
+            <Card style={styles.chartCard}>
+              {donutData.length > 0 ? (
+                <DonutChart data={donutData} centerLabel={viewType === 'expense' ? 'Spent' : 'Earned'} />
+              ) : (
+                <EmptyState icon="pie-chart-outline" title="No data for this period" />
+              )}
+            </Card>
+
+            <Card style={styles.trendCard}>
+              <Text style={[styles.cardTitle, { color: theme.text }]}>Income vs. Expenses</Text>
+              <View style={styles.legendRow}>
+                <View style={styles.legendItem}>
+                  <View style={[styles.legendDot, { backgroundColor: theme.success }]} />
+                  <Text style={[styles.legendLabel, { color: theme.textSecondary }]}>Income {formatCurrency(income)}</Text>
+                </View>
+                <View style={styles.legendItem}>
+                  <View style={[styles.legendDot, { backgroundColor: theme.expense }]} />
+                  <Text style={[styles.legendLabel, { color: theme.textSecondary }]}>Expense {formatCurrency(expense)}</Text>
+                </View>
+              </View>
+              <TrendChart data={trendData} />
+            </Card>
+
+            {breakdown.length > 0 && <Text style={[styles.sectionTitle, { color: theme.text }]}>Category Breakdown</Text>}
+          </View>
+        }
+        renderItem={({ item }) => (
+          <Pressable style={[styles.rankRow, { backgroundColor: theme.surface }]} onPress={() => navigation.navigate('CategoryDetail', { categoryId: item.categoryId })}>
+            <IconBadge icon={item.icon as any} color={item.color} />
+            <View style={styles.rankMeta}>
+              <Text style={[styles.rankName, { color: theme.text }]}>{item.name}</Text>
+              <Text style={[styles.rankPct, { color: theme.textTertiary }]}>{item.pct.toFixed(1)}% of total</Text>
+            </View>
+            <Text style={[styles.rankValue, { color: theme.text }]}>{formatCurrency(item.value)}</Text>
+          </Pressable>
+        )}
+      />
+      <QuickAddFab />
+    </Screen>
+  );
+}
+
+const styles = StyleSheet.create({
+  title: { fontSize: fontSizes.xl, fontWeight: '800', marginBottom: spacing.sm },
+  periodRow: { flexDirection: 'row' },
+  anchorRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.md, marginTop: spacing.sm },
+  anchorLabel: { fontSize: fontSizes.base, fontWeight: '700', minWidth: 150, textAlign: 'center' },
+  typeToggle: { flexDirection: 'row', marginTop: spacing.md },
+  chartCard: { marginTop: spacing.md, alignItems: 'center', paddingVertical: spacing.xl },
+  trendCard: { marginTop: spacing.md },
+  cardTitle: { fontSize: fontSizes.base, fontWeight: '700', marginBottom: spacing.sm },
+  legendRow: { flexDirection: 'row', gap: spacing.md, marginBottom: spacing.sm },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  legendDot: { width: 8, height: 8, borderRadius: 4 },
+  legendLabel: { fontSize: fontSizes.xs, fontWeight: '600' },
+  sectionTitle: { fontSize: fontSizes.md, fontWeight: '700', marginTop: spacing.lg, marginBottom: spacing.xs },
+  rankRow: { flexDirection: 'row', alignItems: 'center', padding: spacing.sm, borderRadius: radius.md, marginBottom: spacing.xs, gap: spacing.sm },
+  rankMeta: { flex: 1 },
+  rankName: { fontSize: fontSizes.base, fontWeight: '600' },
+  rankPct: { fontSize: fontSizes.xs, marginTop: 2 },
+  rankValue: { fontSize: fontSizes.base, fontWeight: '700', fontVariant: ['tabular-nums'] },
+});
