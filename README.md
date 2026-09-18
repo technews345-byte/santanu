@@ -50,7 +50,45 @@ npm start          # then press i / a, or scan the QR code with Expo Go
 npm run web        # runs in a browser
 ```
 
-Receipt capture and biometric unlock need a development build or a real device; the rest works in Expo Go.
+## Testing on an Android phone
+
+**1. Fastest — Expo Go (no build, ~2 minutes)**
+
+Install "Expo Go" from the Play Store, then on your computer:
+
+```bash
+npm install
+npx expo start
+```
+
+Scan the QR code with Expo Go. Phone and computer must be on the same Wi-Fi; add `--tunnel` if they
+aren't. Everything works except receipt capture and biometric unlock, which need one of the builds below.
+
+**2. Downloadable APK — EAS cloud build (no Android SDK needed)**
+
+Requires a free Expo account. The `preview` profile in `eas.json` is already set to emit an APK
+rather than an AAB, so the result installs directly on a phone:
+
+```bash
+npm install -g eas-cli
+eas login
+eas build --platform android --profile preview
+```
+
+The build runs on Expo's servers and prints a download link when it finishes (~10–15 min). Open that
+link on the phone, install the APK, and allow "install from unknown sources" when prompted.
+
+Use `--profile development` instead if you want a build that also connects to the Metro dev server
+for live reloading.
+
+**3. Local APK build (needs Android Studio / SDK installed)**
+
+```bash
+npx expo prebuild --platform android
+cd android && ./gradlew assembleRelease
+```
+
+The APK lands in `android/app/build/outputs/apk/release/`.
 
 ## Project layout
 
