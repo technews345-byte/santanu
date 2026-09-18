@@ -277,7 +277,7 @@ export default function TransactionsScreen() {
         <BottomSheetModal visible={filterOpen} onClose={() => setFilterOpen(false)} title="Filters">
           <Text style={[styles.filterGroupLabel, { color: theme.textSecondary }]}>Type</Text>
           <View style={styles.chipsWrap}>
-            {(['expense', 'income', 'transfer'] as TransactionType[]).map((t) => (
+            {(['expense', 'income', 'investment', 'transfer'] as TransactionType[]).map((t) => (
               <Pill
                 key={t}
                 label={t.charAt(0).toUpperCase() + t.slice(1)}

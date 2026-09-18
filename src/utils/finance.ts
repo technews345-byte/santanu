@@ -54,7 +54,7 @@ export function accountBalance(account: Account, transactions: Transaction[]): n
   let balance = account.initialBalance;
   for (const t of transactions) {
     if (t.type === 'income' && t.accountId === account.id) balance += t.amount;
-    else if (t.type === 'expense' && t.accountId === account.id) balance -= t.amount;
+    else if ((t.type === 'expense' || t.type === 'investment') && t.accountId === account.id) balance -= t.amount;
     else if (t.type === 'transfer') {
       if (t.accountId === account.id) balance -= t.amount;
       if (t.toAccountId === account.id) balance += t.amount;
@@ -70,11 +70,15 @@ export function totalBalance(accounts: Account[], transactions: Transaction[]): 
 export function summarize(transactions: Transaction[]) {
   let income = 0;
   let expense = 0;
+  let investment = 0;
   for (const t of transactions) {
     if (t.type === 'income') income += t.amount;
     else if (t.type === 'expense') expense += t.amount;
+    else if (t.type === 'investment') investment += t.amount;
   }
-  return { income, expense, net: income - expense };
+  // Investing moves money out of the account without being spending, so it is
+  // kept out of `expense` but still leaves the net that stays in the accounts.
+  return { income, expense, investment, net: income - expense - investment };
 }
 
 export function groupByRelativeDate(transactions: Transaction[]): { title: string; data: Transaction[] }[] {

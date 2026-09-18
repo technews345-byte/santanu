@@ -60,7 +60,7 @@ export default function DashboardScreen() {
 
   const { start, end } = periodInterval(period);
   const periodTxns = useMemo(() => transactionsInRange(scopedTransactions, start, end), [scopedTransactions, start, end]);
-  const { income, expense, net } = summarize(periodTxns);
+  const { income, expense, investment, net } = summarize(periodTxns);
 
   const recentSections = useMemo(() => groupByRelativeDate(scopedTransactions.slice(0, 60)), [scopedTransactions]);
 
@@ -108,6 +108,7 @@ export default function DashboardScreen() {
               <View style={styles.summaryRow}>
                 <SummaryChip label="Income" value={income} color={theme.success} visible={balanceVisible} />
                 <SummaryChip label="Expenses" value={expense} color={theme.expense} visible={balanceVisible} />
+                <SummaryChip label="Invested" value={investment} color={theme.investment} visible={balanceVisible} />
                 <SummaryChip
                   label="Net"
                   value={net}
@@ -120,6 +121,7 @@ export default function DashboardScreen() {
             <View style={styles.quickActions}>
               <QuickAction icon="add-circle" label="Income" color={theme.success} onPress={() => navigation.navigate('TransactionEntry', { initialType: 'income' })} />
               <QuickAction icon="remove-circle" label="Expense" color={theme.expense} onPress={() => navigation.navigate('TransactionEntry', { initialType: 'expense' })} />
+              <QuickAction icon="trending-up" label="Invest" color={theme.investment} onPress={() => navigation.navigate('TransactionEntry', { initialType: 'investment' })} />
               <QuickAction icon="swap-horizontal" label="Transfer" color={theme.transfer} onPress={() => navigation.navigate('TransactionEntry', { initialType: 'transfer' })} />
               <QuickAction icon="download-outline" label="Export" color={theme.tint} onPress={() => navigation.navigate('Settings' as never, { screen: 'Export' } as never)} />
             </View>
@@ -224,8 +226,8 @@ const styles = StyleSheet.create({
   balanceLabel: { fontSize: fontSizes.sm, fontWeight: '600' },
   balanceValue: { fontSize: fontSizes.xxxl, fontWeight: '800', marginTop: spacing.xxs, fontVariant: ['tabular-nums'] },
   periodRow: { flexDirection: 'row', marginTop: spacing.md },
-  summaryRow: { flexDirection: 'row', gap: spacing.xs, marginTop: spacing.md },
-  summaryChip: { flex: 1, borderRadius: radius.md, padding: spacing.sm },
+  summaryRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginTop: spacing.md },
+  summaryChip: { flexGrow: 1, flexBasis: '46%', borderRadius: radius.md, padding: spacing.sm },
   summaryLabel: { fontSize: fontSizes.xs, fontWeight: '600' },
   summaryValue: { fontSize: fontSizes.sm, fontWeight: '800', marginTop: 2, fontVariant: ['tabular-nums'] },
   quickActions: { flexDirection: 'row', justifyContent: 'space-between', marginTop: spacing.lg },

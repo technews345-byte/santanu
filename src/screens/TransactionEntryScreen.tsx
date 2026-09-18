@@ -24,13 +24,14 @@ import { fontSizes, radius, spacing } from '../theme/tokens';
 import { useStore } from '../store/useStore';
 import { evaluateExpression, formatExpressionDisplay, isOperator } from '../utils/calculator';
 import { DEFAULT_CURRENCY } from '../utils/finance';
-import { RecurrenceInterval, TransactionType } from '../types';
+import { CategoryType, RecurrenceInterval, TransactionType } from '../types';
 import { format } from 'date-fns';
 
-const TYPE_CONFIG: Record<TransactionType, { label: string; color: (theme: any) => string }> = {
-  expense: { label: 'Expense', color: (t) => t.expense },
-  income: { label: 'Income', color: (t) => t.success },
-  transfer: { label: 'Transfer', color: (t) => t.transfer },
+const TYPE_CONFIG: Record<TransactionType, { label: string; title: string; color: (theme: any) => string }> = {
+  expense: { label: 'Expense', title: 'Expense', color: (t) => t.expense },
+  income: { label: 'Income', title: 'Income', color: (t) => t.success },
+  transfer: { label: 'Transfer', title: 'Transfer', color: (t) => t.transfer },
+  investment: { label: 'Invest', title: 'Investment', color: (t) => t.investment },
 };
 
 const RECURRENCE_OPTIONS: { key: RecurrenceInterval; label: string }[] = [
@@ -67,17 +68,20 @@ export default function TransactionEntryScreen() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
 
-  useEffect(() => {
-    if (!categoryId) {
-      const firstOfType = categories.find((c) => c.type === (type === 'income' ? 'income' : 'expense') && !c.archived);
-      if (firstOfType && type !== 'transfer') setCategoryId(firstOfType.id);
-    }
-  }, [type]);
+  const categoryType: CategoryType = type === 'income' ? 'income' : type === 'investment' ? 'investment' : 'expense';
 
   const relevantCategories = useMemo(
-    () => categories.filter((c) => !c.archived && c.type === (type === 'income' ? 'income' : 'expense')),
-    [categories, type]
+    () => categories.filter((c) => !c.archived && c.type === categoryType),
+    [categories, categoryType]
   );
+
+  useEffect(() => {
+    if (type === 'transfer') return;
+    const current = categories.find((c) => c.id === categoryId);
+    if (!current || current.type !== categoryType) {
+      setCategoryId(relevantCategories[0]?.id ?? null);
+    }
+  }, [type]);
 
   const selectedCategory = categories.find((c) => c.id === categoryId);
   const selectedAccount = accounts.find((a) => a.id === accountId);
@@ -183,7 +187,7 @@ export default function TransactionEntryScreen() {
         <Pressable onPress={() => navigation.goBack()} hitSlop={10}>
           <Ionicons name="close" size={26} color={theme.text} />
         </Pressable>
-        <Text style={[styles.headerTitle, { color: theme.text }]}>{existing ? 'Edit' : 'Add'} {TYPE_CONFIG[type].label}</Text>
+        <Text style={[styles.headerTitle, { color: theme.text }]}>{existing ? 'Edit' : 'Add'} {TYPE_CONFIG[type].title}</Text>
         {existing ? (
           <Pressable onPress={handleDelete} hitSlop={10}>
             <Ionicons name="trash-outline" size={22} color={theme.danger} />
@@ -446,8 +450,8 @@ function MetaRow({
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   headerTitle: { fontSize: fontSizes.md, fontWeight: '700' },
-  typeToggle: { flexDirection: 'row', gap: spacing.xs, paddingHorizontal: spacing.md, marginTop: spacing.xs },
-  typeOption: { flex: 1, paddingVertical: spacing.xs, borderRadius: radius.pill, alignItems: 'center' },
+  typeToggle: { flexDirection: 'row', gap: 6, paddingHorizontal: spacing.sm, marginTop: spacing.xs },
+  typeOption: { flex: 1, paddingVertical: spacing.xs, paddingHorizontal: 2, borderRadius: radius.pill, alignItems: 'center' },
   amountArea: { alignItems: 'center', paddingVertical: spacing.md },
   amountValue: { fontSize: fontSizes.xxxl, fontWeight: '800', fontVariant: ['tabular-nums'] },
   amountResult: { fontSize: fontSizes.base, marginTop: spacing.xxs, fontVariant: ['tabular-nums'] },

@@ -82,9 +82,21 @@ const DEFAULT_EXPENSE_CATEGORIES = [
 const DEFAULT_INCOME_CATEGORIES = [
   { id: 'cat-salary', name: 'Salary', color: '#10B981', icon: 'cash-outline' },
   { id: 'cat-freelance', name: 'Freelance', color: '#0EA5E9', icon: 'laptop-outline' },
-  { id: 'cat-investment', name: 'Investments', color: '#6366F1', icon: 'trending-up-outline' },
+  { id: 'cat-investment', name: 'Returns', color: '#6366F1', icon: 'trending-up-outline' },
   { id: 'cat-gift', name: 'Gifts', color: '#EC4899', icon: 'gift-outline' },
   { id: 'cat-other-income', name: 'Other', color: '#94A3B8', icon: 'ellipsis-horizontal-outline' },
+];
+
+const DEFAULT_INVESTMENT_CATEGORIES = [
+  { id: 'cat-inv-mutual', name: 'Mutual Funds', color: '#8B5CF6', icon: 'pie-chart-outline' },
+  { id: 'cat-inv-stocks', name: 'Stocks', color: '#0EA5E9', icon: 'trending-up-outline' },
+  { id: 'cat-inv-sip', name: 'SIP', color: '#14B8A6', icon: 'repeat-outline' },
+  { id: 'cat-inv-gold', name: 'Gold', color: '#F59E0B', icon: 'diamond-outline' },
+  { id: 'cat-inv-fd', name: 'Fixed Deposit', color: '#3B82F6', icon: 'lock-closed-outline' },
+  { id: 'cat-inv-ppf', name: 'PPF / EPF', color: '#10B981', icon: 'shield-checkmark-outline' },
+  { id: 'cat-inv-crypto', name: 'Crypto', color: '#F97316', icon: 'logo-bitcoin' },
+  { id: 'cat-inv-property', name: 'Property', color: '#A855F7', icon: 'business-outline' },
+  { id: 'cat-inv-other', name: 'Other', color: '#94A3B8', icon: 'ellipsis-horizontal-outline' },
 ];
 
 async function seedIfEmpty(db: SQLite.SQLiteDatabase) {
@@ -101,22 +113,29 @@ async function seedIfEmpty(db: SQLite.SQLiteDatabase) {
     }
   }
 
-  const categoryCount = await db.getFirstAsync<{ count: number }>('SELECT COUNT(*) as count FROM categories');
-  if ((categoryCount?.count ?? 0) === 0) {
-    let order = 0;
-    for (const c of DEFAULT_EXPENSE_CATEGORIES) {
-      await db.runAsync(
-        `INSERT INTO categories (id, name, type, color, icon, archived, sortOrder) VALUES (?, ?, 'expense', ?, ?, 0, ?)`,
-        [c.id, c.name, c.color, c.icon, order++]
-      );
-    }
-    order = 0;
-    for (const c of DEFAULT_INCOME_CATEGORIES) {
-      await db.runAsync(
-        `INSERT INTO categories (id, name, type, color, icon, archived, sortOrder) VALUES (?, ?, 'income', ?, ?, 0, ?)`,
-        [c.id, c.name, c.color, c.icon, order++]
-      );
-    }
+  // Seeded per type rather than per table, so a type added in a later version
+  // also reaches installs that already have categories.
+  await seedCategoryType(db, 'expense', DEFAULT_EXPENSE_CATEGORIES);
+  await seedCategoryType(db, 'income', DEFAULT_INCOME_CATEGORIES);
+  await seedCategoryType(db, 'investment', DEFAULT_INVESTMENT_CATEGORIES);
+}
+
+async function seedCategoryType(
+  db: SQLite.SQLiteDatabase,
+  type: string,
+  defaults: { id: string; name: string; color: string; icon: string }[]
+) {
+  const existing = await db.getFirstAsync<{ count: number }>('SELECT COUNT(*) as count FROM categories WHERE type = ?', [
+    type,
+  ]);
+  if ((existing?.count ?? 0) > 0) return;
+
+  let order = 0;
+  for (const c of defaults) {
+    await db.runAsync(
+      `INSERT INTO categories (id, name, type, color, icon, archived, sortOrder) VALUES (?, ?, ?, ?, ?, 0, ?)`,
+      [c.id, c.name, type, c.color, c.icon, order++]
+    );
   }
 }
 
