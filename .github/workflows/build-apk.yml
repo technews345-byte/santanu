@@ -33,7 +33,10 @@ jobs:
 
       - name: Build release APK
         working-directory: android
-        run: ./gradlew assembleRelease --no-daemon
+        timeout-minutes: 60
+        # One ABI only: every phone from the last decade is arm64, and building
+        # all four multiplies the native compile time.
+        run: ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a
 
       - name: Upload APK as workflow artifact
         uses: actions/upload-artifact@v4
