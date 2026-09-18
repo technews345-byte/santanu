@@ -1,0 +1,57 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - claude/expense-budget-app-vdww3s
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Generate native Android project
+        run: npx expo prebuild --platform android --no-install
+
+      - name: Build release APK
+        working-directory: android
+        run: ./gradlew assembleRelease --no-daemon
+
+      - name: Upload APK as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ledger-apk
+          path: android/app/build/outputs/apk/release/*.apk
+
+      - name: Publish APK to a release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete android-apk --yes || true
+          git push --delete origin android-apk || true
+          gh release create android-apk \
+            android/app/build/outputs/apk/release/app-release.apk \
+            --title "Ledger — Android APK" \
+            --notes "Install on Android: tap the .apk below, then allow installation from unknown sources. Built from ${GITHUB_SHA}." \
+            --prerelease \
+            --target "${GITHUB_SHA}"
