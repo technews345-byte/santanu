@@ -9,6 +9,12 @@ on:
 permissions:
   contents: write
 
+# The release tag is shared, so an older run finishing late would publish a
+# stale APK over a newer one.
+concurrency:
+  group: build-apk
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -30,6 +36,11 @@ jobs:
 
       - name: Generate native Android project
         run: npx expo prebuild --platform android --no-install
+
+      # The template's 512m metaspace is not enough to compile every Expo
+      # module in one daemon; last value wins in a properties file.
+      - name: Raise Gradle memory limits
+        run: echo "org.gradle.jvmargs=-Xmx6144m -XX:MaxMetaspaceSize=2048m" >> android/gradle.properties
 
       - name: Build release APK
         working-directory: android
