@@ -29,7 +29,7 @@ export default function AnalyticsScreen() {
   const { transactions, categories, activeAccountId } = useStore();
   const [period, setPeriod] = useState<PeriodKey>('month');
   const [anchor, setAnchor] = useState(new Date());
-  const [viewType, setViewType] = useState<'expense' | 'income'>('expense');
+  const [viewType, setViewType] = useState<'expense' | 'income' | 'investment'>('expense');
 
   const scoped = useMemo(
     () => (activeAccountId ? transactions.filter((t) => t.accountId === activeAccountId || t.toAccountId === activeAccountId) : transactions),
@@ -113,11 +113,15 @@ export default function AnalyticsScreen() {
             <View style={styles.typeToggle}>
               <Pill label="Expenses" active={viewType === 'expense'} color={theme.expense} onPress={() => setViewType('expense')} />
               <Pill label="Income" active={viewType === 'income'} color={theme.success} onPress={() => setViewType('income')} />
+              <Pill label="Invested" active={viewType === 'investment'} color={theme.investment} onPress={() => setViewType('investment')} />
             </View>
 
             <Card style={styles.chartCard}>
               {donutData.length > 0 ? (
-                <DonutChart data={donutData} centerLabel={viewType === 'expense' ? 'Spent' : 'Earned'} />
+                <DonutChart
+                  data={donutData}
+                  centerLabel={viewType === 'expense' ? 'Spent' : viewType === 'income' ? 'Earned' : 'Invested'}
+                />
               ) : (
                 <EmptyState icon="pie-chart-outline" title="No data for this period" />
               )}

@@ -1,4 +1,6 @@
-export type TransactionType = 'expense' | 'income' | 'transfer';
+export type TransactionType = 'expense' | 'income' | 'transfer' | 'investment';
+
+export type CategoryType = 'expense' | 'income' | 'investment';
 
 export type AccountType = 'cash' | 'checking' | 'savings' | 'credit_card' | 'wallet' | 'bank';
 
@@ -22,7 +24,7 @@ export interface Account {
 export interface Category {
   id: string;
   name: string;
-  type: 'expense' | 'income';
+  type: CategoryType;
   color: string;
   icon: string;
   archived: boolean;

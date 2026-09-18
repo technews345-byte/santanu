@@ -16,6 +16,12 @@ export const INCOME_ICONS: (keyof typeof Ionicons.glyphMap)[] = [
   'card-outline', 'wallet-outline', 'ribbon-outline', 'ellipsis-horizontal-outline',
 ];
 
+export const INVESTMENT_ICONS: (keyof typeof Ionicons.glyphMap)[] = [
+  'pie-chart-outline', 'trending-up-outline', 'repeat-outline', 'diamond-outline', 'lock-closed-outline',
+  'shield-checkmark-outline', 'logo-bitcoin', 'business-outline', 'bar-chart-outline', 'cash-outline',
+  'wallet-outline', 'ellipsis-horizontal-outline',
+];
+
 export const ACCOUNT_ICONS: (keyof typeof Ionicons.glyphMap)[] = [
   'cash-outline', 'card-outline', 'wallet-outline', 'business-outline', 'home-outline', 'briefcase-outline',
 ];

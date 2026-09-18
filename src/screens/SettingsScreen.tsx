@@ -11,13 +11,14 @@ import { useTheme } from '../theme/ThemeContext';
 import { ThemePreference } from '../theme/ThemeContext';
 import { fontSizes, radius, spacing } from '../theme/tokens';
 import { useStore } from '../store/useStore';
+import { CategoryType } from '../types';
 import { exportToPdf, exportToXlsx } from '../utils/export';
 
 export default function SettingsScreen() {
   const { theme, preference, setPreference } = useTheme();
   const navigation = useNavigation<any>();
   const { accounts, categories, transactions, biometricLockEnabled, setBiometricLockEnabled } = useStore();
-  const [categoryTab, setCategoryTab] = useState<'expense' | 'income'>('expense');
+  const [categoryTab, setCategoryTab] = useState<CategoryType>('expense');
   const [exporting, setExporting] = useState(false);
 
   const visibleCategories = categories.filter((c) => c.type === categoryTab && !c.archived);
@@ -98,6 +99,7 @@ export default function SettingsScreen() {
         <View style={styles.chipsRow}>
           <Pill label="Expense" active={categoryTab === 'expense'} color={theme.expense} onPress={() => setCategoryTab('expense')} />
           <Pill label="Income" active={categoryTab === 'income'} color={theme.success} onPress={() => setCategoryTab('income')} />
+          <Pill label="Investment" active={categoryTab === 'investment'} color={theme.investment} onPress={() => setCategoryTab('investment')} />
         </View>
         <Card padded={false} style={{ marginTop: spacing.xs }}>
           {visibleCategories.length === 0 && <Text style={[styles.emptyText, { color: theme.textTertiary }]}>No categories yet</Text>}

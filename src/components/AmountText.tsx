@@ -16,8 +16,15 @@ export function AmountText({
   style?: TextStyle;
 }) {
   const { theme } = useTheme();
-  const color = type === 'income' ? theme.success : type === 'expense' ? theme.expense : theme.transfer;
-  const sign = type === 'income' ? '+' : type === 'expense' ? '-' : '';
+  const color =
+    type === 'income'
+      ? theme.success
+      : type === 'expense'
+        ? theme.expense
+        : type === 'investment'
+          ? theme.investment
+          : theme.transfer;
+  const sign = type === 'income' ? '+' : type === 'expense' || type === 'investment' ? '-' : '';
   return (
     <Text style={[{ color, fontWeight: '700', fontVariant: ['tabular-nums'] }, style]}>
       {sign}

@@ -5,6 +5,8 @@ export const semantic = {
   expenseMuted: 'rgba(244, 63, 94, 0.14)',
   transfer: '#6366F1',
   transferMuted: 'rgba(99, 102, 241, 0.14)',
+  investment: '#8B5CF6',
+  investmentMuted: 'rgba(139, 92, 246, 0.14)',
   warning: '#F59E0B',
   warningMuted: 'rgba(245, 158, 11, 0.16)',
   danger: '#EF4444',
@@ -33,6 +35,8 @@ export interface Theme {
   expenseMuted: string;
   transfer: string;
   transferMuted: string;
+  investment: string;
+  investmentMuted: string;
   warning: string;
   warningMuted: string;
   danger: string;

@@ -5,7 +5,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { Screen } from '../components/Screen';
 import { IconBadge } from '../components/IconBadge';
 import { ColorPicker } from '../components/ColorPicker';
-import { IconPicker, EXPENSE_ICONS, INCOME_ICONS } from '../components/IconPicker';
+import { IconPicker, EXPENSE_ICONS, INCOME_ICONS, INVESTMENT_ICONS } from '../components/IconPicker';
 import { useTheme } from '../theme/ThemeContext';
 import { fontSizes, radius, spacing } from '../theme/tokens';
 import { useStore } from '../store/useStore';
@@ -20,9 +20,12 @@ export default function CategoryFormScreen() {
 
   const [name, setName] = useState(existing?.name ?? '');
   const [color, setColor] = useState(existing?.color ?? '#6366F1');
-  const [icon, setIcon] = useState(existing?.icon ?? (type === 'income' ? 'cash-outline' : 'pricetag-outline'));
+  const [icon, setIcon] = useState(
+    existing?.icon ?? (type === 'income' ? 'cash-outline' : type === 'investment' ? 'pie-chart-outline' : 'pricetag-outline')
+  );
 
-  const iconSet = (existing?.type ?? type) === 'income' ? INCOME_ICONS : EXPENSE_ICONS;
+  const formType = existing?.type ?? type;
+  const iconSet = formType === 'income' ? INCOME_ICONS : formType === 'investment' ? INVESTMENT_ICONS : EXPENSE_ICONS;
 
   const handleSave = async () => {
     if (!name.trim()) {
