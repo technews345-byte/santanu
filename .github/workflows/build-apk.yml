@@ -38,9 +38,14 @@ jobs:
         run: npx expo prebuild --platform android --no-install
 
       # The template's 512m metaspace is not enough to compile every Expo
-      # module in one daemon; last value wins in a properties file.
+      # module in one daemon. Set this in Gradle's user-level config, which
+      # takes precedence over the generated project file — appending to that
+      # file corrupts its last property, since prebuild writes no trailing
+      # newline.
       - name: Raise Gradle memory limits
-        run: echo "org.gradle.jvmargs=-Xmx6144m -XX:MaxMetaspaceSize=2048m" >> android/gradle.properties
+        run: |
+          mkdir -p ~/.gradle
+          echo "org.gradle.jvmargs=-Xmx6144m -XX:MaxMetaspaceSize=2048m" >> ~/.gradle/gradle.properties
 
       - name: Build release APK
         working-directory: android
