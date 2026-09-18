@@ -1,0 +1,57 @@
+{
+  "expo": {
+    "name": "Ledger",
+    "slug": "santanu",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#F8FAFC",
+      "dark": {
+        "backgroundColor": "#0F172A"
+      }
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.santanu.ledger",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Allow capturing receipt photos to attach to transactions.",
+        "NSPhotoLibraryUsageDescription": "Allow selecting receipt images to attach to transactions.",
+        "NSFaceIDUsageDescription": "Use Face ID to unlock your ledger."
+      }
+    },
+    "android": {
+      "package": "com.santanu.ledger",
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "permissions": ["CAMERA", "READ_EXTERNAL_STORAGE", "WRITE_EXTERNAL_STORAGE", "USE_BIOMETRIC", "USE_FINGERPRINT"]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow selecting receipt images to attach to transactions.",
+          "cameraPermission": "Allow capturing receipt photos to attach to transactions."
+        }
+      ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Use Face ID to unlock your ledger."
+        }
+      ],
+      "expo-sqlite"
+    ]
+  }
+}
