@@ -22,7 +22,7 @@ import { Pill } from '../components/Pill';
 import { useTheme } from '../theme/ThemeContext';
 import { fontSizes, radius, spacing } from '../theme/tokens';
 import { useStore } from '../store/useStore';
-import { evaluateExpression, formatExpressionDisplay } from '../utils/calculator';
+import { evaluateExpression, formatExpressionDisplay, isOperator } from '../utils/calculator';
 import { DEFAULT_CURRENCY } from '../utils/finance';
 import { RecurrenceInterval, TransactionType } from '../types';
 import { format } from 'date-fns';
@@ -87,18 +87,24 @@ export default function TransactionEntryScreen() {
   const typeColor = TYPE_CONFIG[type].color(theme);
 
   const onKeyPress = (key: string) => {
+    if (key === 'clear') {
+      setExpression('0');
+      return;
+    }
     if (key === 'backspace') {
       setExpression((prev) => (prev.length > 1 ? prev.slice(0, -1) : '0'));
       return;
     }
+    if (key === '=') {
+      setExpression(String(evaluateExpression(expression)));
+      return;
+    }
     setExpression((prev) => {
-      const isOperator = ['+', '-', '*', '/'].includes(key);
-      if (prev === '0' && !isOperator && key !== '.') return key;
-      if (prev === '0' && isOperator) return prev;
+      const operator = isOperator(key);
+      if (prev === '0' && operator) return prev;
+      if (prev === '0' && key !== '.' && key !== '%') return key === '00' ? '0' : key;
       const lastChar = prev[prev.length - 1];
-      if (isOperator && ['+', '-', '*', '/'].includes(lastChar)) {
-        return prev.slice(0, -1) + key;
-      }
+      if (operator && isOperator(lastChar)) return prev.slice(0, -1) + key;
       return prev + key;
     });
   };
@@ -442,10 +448,10 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: fontSizes.md, fontWeight: '700' },
   typeToggle: { flexDirection: 'row', gap: spacing.xs, paddingHorizontal: spacing.md, marginTop: spacing.xs },
   typeOption: { flex: 1, paddingVertical: spacing.xs, borderRadius: radius.pill, alignItems: 'center' },
-  amountArea: { alignItems: 'center', paddingVertical: spacing.lg },
+  amountArea: { alignItems: 'center', paddingVertical: spacing.md },
   amountValue: { fontSize: fontSizes.xxxl, fontWeight: '800', fontVariant: ['tabular-nums'] },
   amountResult: { fontSize: fontSizes.base, marginTop: spacing.xxs, fontVariant: ['tabular-nums'] },
-  metaScroll: { flexGrow: 0, maxHeight: 230, paddingHorizontal: spacing.md },
+  metaScroll: { flex: 1, paddingHorizontal: spacing.md },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.xs },
   metaLabel: { fontSize: fontSizes.sm, fontWeight: '600', width: 66 },
   metaValue: { flex: 1, fontSize: fontSizes.base, fontWeight: '600' },
@@ -457,7 +463,7 @@ const styles = StyleSheet.create({
   thumb: { width: '100%', height: '100%' },
   thumbRemove: { position: 'absolute', top: 2, right: 2, width: 16, height: 16, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   addAttachment: { width: 52, height: 52, borderRadius: radius.sm, borderWidth: StyleSheet.hairlineWidth, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' },
-  saveButton: { marginHorizontal: spacing.md, marginBottom: spacing.sm, paddingVertical: spacing.md, borderRadius: radius.lg, alignItems: 'center' },
+  saveButton: { marginHorizontal: spacing.xs, marginTop: spacing.sm, marginBottom: spacing.xs, paddingVertical: spacing.md, borderRadius: radius.lg, alignItems: 'center' },
   saveButtonLabel: { color: '#fff', fontWeight: '700', fontSize: fontSizes.base },
   categoryGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
   categoryItem: { width: '23%', alignItems: 'center', marginBottom: spacing.md, gap: 4 },

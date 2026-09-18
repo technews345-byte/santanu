@@ -1,17 +1,42 @@
-// Minimal safe arithmetic evaluator supporting + - * / and decimals, no eval().
+// Minimal safe arithmetic evaluator supporting + - * / % and decimals, no eval().
+
+// Percent follows phone-calculator convention: in "A+B%" / "A-B%" the B% is
+// B percent *of A*; everywhere else it is plain B/100.
+function resolvePercents(tokens: string[]): string[] {
+  const out: string[] = [];
+  for (const token of tokens) {
+    if (token !== '%') {
+      out.push(token);
+      continue;
+    }
+    const operand = out.pop();
+    if (operand === undefined) continue;
+    const operator = out[out.length - 1];
+    const base = out[out.length - 2];
+    if ((operator === '+' || operator === '-') && base !== undefined) {
+      out.push(String((parseFloat(base) * parseFloat(operand)) / 100));
+    } else {
+      out.push(String(parseFloat(operand) / 100));
+    }
+  }
+  return out;
+}
+
 export function evaluateExpression(expression: string): number {
-  const sanitized = expression.replace(/[^0-9+\-*/.]/g, '');
+  const sanitized = expression.replace(/[^0-9+\-*/.%]/g, '');
   if (!sanitized) return 0;
 
-  const tokens = sanitized.match(/(\d+\.?\d*|\.\d+|[+\-*/])/g);
-  if (!tokens || tokens.length === 0) return 0;
+  const rawTokens = sanitized.match(/(\d+\.?\d*|\.\d+|[+\-*/%])/g);
+  if (!rawTokens || rawTokens.length === 0) return 0;
+
+  const tokens = resolvePercents(rawTokens);
+  if (tokens.length === 0) return 0;
 
   // Pass 1: handle * and /
   const stage1: (number | string)[] = [];
-  let i = 0;
   const num = (t: string) => parseFloat(t);
   stage1.push(num(tokens[0]));
-  i = 1;
+  let i = 1;
   while (i < tokens.length) {
     const op = tokens[i];
     const next = tokens[i + 1];
@@ -36,6 +61,10 @@ export function evaluateExpression(expression: string): number {
   }
 
   return Math.round(result * 100) / 100;
+}
+
+export function isOperator(key: string): boolean {
+  return key === '+' || key === '-' || key === '*' || key === '/';
 }
 
 export function formatExpressionDisplay(expression: string): string {

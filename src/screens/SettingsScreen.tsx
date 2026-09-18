@@ -131,7 +131,7 @@ export default function SettingsScreen() {
 
         <SectionLabel label="About" />
         <Card>
-          <Text style={[styles.rowSub, { color: theme.textTertiary }]}>Expense & Budget Manager · Local-first · v1.0.0</Text>
+          <Text style={[styles.rowSub, { color: theme.textTertiary }]}>Spendly · Local-first expense & budget manager · v1.0.0</Text>
         </Card>
       </ScrollView>
     </Screen>

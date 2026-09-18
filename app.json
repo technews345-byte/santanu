@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Ledger",
+    "name": "Spendly",
     "slug": "santanu",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -8,23 +8,25 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
+      "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#F8FAFC",
       "dark": {
+        "image": "./assets/splash-icon.png",
         "backgroundColor": "#0F172A"
       }
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.santanu.ledger",
+      "bundleIdentifier": "com.santanu.spendly",
       "infoPlist": {
         "NSCameraUsageDescription": "Allow capturing receipt photos to attach to transactions.",
         "NSPhotoLibraryUsageDescription": "Allow selecting receipt images to attach to transactions.",
-        "NSFaceIDUsageDescription": "Use Face ID to unlock your ledger."
+        "NSFaceIDUsageDescription": "Use Face ID to unlock Spendly."
       }
     },
     "android": {
-      "package": "com.santanu.ledger",
+      "package": "com.santanu.spendly",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -48,7 +50,7 @@
       [
         "expo-local-authentication",
         {
-          "faceIDPermission": "Use Face ID to unlock your ledger."
+          "faceIDPermission": "Use Face ID to unlock Spendly."
         }
       ],
       "expo-sqlite"
