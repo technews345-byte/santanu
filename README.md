@@ -1,4 +1,4 @@
-# Ledger — Personal Expense & Budget Manager
+# Spendly — Personal Expense & Budget Manager
 
 A cross-platform (iOS / Android / web) personal finance app built with Expo + React Native + TypeScript.
 Local-first: every interaction reads and writes a local SQLite database, so the app is fully usable offline.

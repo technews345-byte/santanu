@@ -41,7 +41,7 @@ jobs:
       - name: Upload APK as workflow artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ledger-apk
+          name: spendly-apk
           path: android/app/build/outputs/apk/release/*.apk
 
       - name: Publish APK to a release
@@ -52,7 +52,7 @@ jobs:
           git push --delete origin android-apk || true
           gh release create android-apk \
             android/app/build/outputs/apk/release/app-release.apk \
-            --title "Ledger — Android APK" \
+            --title "Spendly — Android APK" \
             --notes "Install on Android: tap the .apk below, then allow installation from unknown sources. Built from ${GITHUB_SHA}." \
             --prerelease \
             --target "${GITHUB_SHA}"
