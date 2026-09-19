@@ -32,8 +32,11 @@ export function useGoogleSignIn(onSignedIn: () => void): ProviderSignIn {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Named per platform rather than a single clientId: a bare clientId is what
+  // the provider falls back to, which on Android means sending a web client's
+  // id with a native redirect and getting redirect_uri_mismatch instead.
   const [request, response, promptAsync] = Google.useAuthRequest({
-    clientId: config.googleWebClientId,
+    webClientId: config.googleWebClientId,
     androidClientId: config.googleAndroidClientId,
     iosClientId: config.googleIosClientId,
   });

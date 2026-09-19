@@ -75,7 +75,8 @@
         "storageBucket": "spendly-cdea9.firebasestorage.app",
         "messagingSenderId": "877074760062",
         "appId": "1:877074760062:web:40be0ffda6a4384056f32f",
-        "measurementId": "G-B15CZ9850M"
+        "measurementId": "G-B15CZ9850M",
+        "googleWebClientId": "877074760062-og0f8g02jpv16i0tbc12n7m594252j63.apps.googleusercontent.com"
       }
     }
   }
