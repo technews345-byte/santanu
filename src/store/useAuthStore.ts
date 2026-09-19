@@ -1,5 +1,9 @@
 import { create } from 'zustand';
+import { AppState } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import NetInfo from '@react-native-community/netinfo';
+import { setSyncHandler } from '../sync/scheduler';
+import { useStore } from './useStore';
 import { isCloudConfigured } from '../services/cloudConfig';
 import type { AuthUser } from '../services/auth';
 import type { SyncState } from '../sync/engine';
@@ -53,6 +57,18 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
       set({ user, ready: true });
       if (user) get().syncNow();
     });
+
+    setSyncHandler(() => get().syncNow());
+
+    // Anything queued while offline goes up as soon as there is a connection
+    // again, without the user having to open or do anything.
+    NetInfo.addEventListener((state) => {
+      if (state.isConnected && get().user) get().syncNow();
+    });
+
+    AppState.addEventListener('change', (next) => {
+      if (next === 'active' && get().user) get().syncNow();
+    });
   },
 
   continueAsGuest: async () => {
@@ -70,12 +86,19 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
 
     set({ syncState: 'syncing', syncError: null });
     try {
-      const { runSync } = require('../sync/engine') as typeof import('../sync/engine');
+      const { runSync, claimLocalDataFor } = require('../sync/engine') as typeof import('../sync/engine');
       const { createFirestoreAdapter } = require('../sync/firestoreAdapter') as typeof import('../sync/firestoreAdapter');
+
+      // Guest rows are kept and uploaded; another account's rows are cleared
+      // before anything is pulled or pushed.
+      const transition = await claimLocalDataFor(user.uid);
       await runSync(createFirestoreAdapter(user.uid));
+      if (transition === 'switched-account') await useStore.getState().hydrate();
       const now = new Date().toISOString();
       await setMeta(LAST_SYNC_KEY, now);
       set({ syncState: 'idle', lastSyncedAt: now, pendingCount: await countPending() });
+      // Pulled rows have to reach the screens, not just the database.
+      await useStore.getState().hydrate();
     } catch (error: any) {
       // Nothing is lost here: the rows stay queued and the next attempt
       // picks them up, so this only affects what the indicator shows.
@@ -90,8 +113,13 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
 
   signOut: async () => {
     if (!isCloudConfigured) return;
+    // Push anything still queued before letting go, so signing out cannot
+    // strand an expense that never reached the account.
+    await get().syncNow();
     const { signOut } = require('../services/auth') as typeof import('../services/auth');
+    const { releaseOwner } = require('../sync/engine') as typeof import('../sync/engine');
     await signOut();
+    await releaseOwner();
     set({ user: null, syncState: 'idle' });
   },
 }));

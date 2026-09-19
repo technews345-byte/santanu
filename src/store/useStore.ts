@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { Account, Budget, Category, Transaction } from '../types';
 import { AccountsRepo, BudgetsRepo, CategoriesRepo, TransactionsRepo } from '../db/repositories';
 import { generateId } from '../utils/id';
+import { requestSync } from '../sync/scheduler';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const ACTIVE_ACCOUNT_KEY = 'settings:activeAccountId';
@@ -105,6 +106,7 @@ export const useStore = create<StoreState>((set, get) => ({
     };
     await AccountsRepo.upsert(account);
     set({ accounts: [...get().accounts, account] });
+    requestSync();
     return account;
   },
 
@@ -114,10 +116,12 @@ export const useStore = create<StoreState>((set, get) => ({
     const updated = { ...existing, ...patch };
     await AccountsRepo.upsert(updated);
     set({ accounts: get().accounts.map((a) => (a.id === id ? updated : a)) });
+    requestSync();
   },
 
   removeAccount: async (id) => {
     await AccountsRepo.remove(id);
+    requestSync();
     set({
       accounts: get().accounts.filter((a) => a.id !== id),
       activeAccountId: get().activeAccountId === id ? null : get().activeAccountId,
@@ -133,6 +137,7 @@ export const useStore = create<StoreState>((set, get) => ({
     };
     await CategoriesRepo.upsert(category);
     set({ categories: [...get().categories, category] });
+    requestSync();
     return category;
   },
 
@@ -142,10 +147,12 @@ export const useStore = create<StoreState>((set, get) => ({
     const updated = { ...existing, ...patch };
     await CategoriesRepo.upsert(updated);
     set({ categories: get().categories.map((c) => (c.id === id ? updated : c)) });
+    requestSync();
   },
 
   removeCategory: async (id) => {
     await CategoriesRepo.remove(id);
+    requestSync();
     set({ categories: get().categories.filter((c) => c.id !== id) });
   },
 
@@ -154,6 +161,7 @@ export const useStore = create<StoreState>((set, get) => ({
     const tx: Transaction = { ...input, id: generateId('txn'), createdAt: now, updatedAt: now };
     await TransactionsRepo.upsert(tx);
     set({ transactions: [tx, ...get().transactions] });
+    requestSync();
     return tx;
   },
 
@@ -167,10 +175,12 @@ export const useStore = create<StoreState>((set, get) => ({
         .transactions.map((t) => (t.id === id ? updated : t))
         .sort((a, b) => (a.date < b.date ? 1 : -1)),
     });
+    requestSync();
   },
 
   removeTransaction: async (id) => {
     await TransactionsRepo.remove(id);
+    requestSync();
     set({ transactions: get().transactions.filter((t) => t.id !== id) });
   },
 
@@ -181,6 +191,7 @@ export const useStore = create<StoreState>((set, get) => ({
     const copy: Transaction = { ...existing, id: generateId('txn'), date: now, createdAt: now, updatedAt: now };
     await TransactionsRepo.upsert(copy);
     set({ transactions: [copy, ...get().transactions] });
+    requestSync();
   },
 
   setBudget: async (categoryId, monthKey, amount, isRecurring) => {
@@ -189,6 +200,7 @@ export const useStore = create<StoreState>((set, get) => ({
       ? { ...existing, amount, isRecurring }
       : { id: generateId('bud'), categoryId, monthKey, amount, isRecurring };
     await BudgetsRepo.upsert(budget);
+    requestSync();
     set({
       budgets: existing ? get().budgets.map((b) => (b.id === budget.id ? budget : b)) : [...get().budgets, budget],
     });
@@ -196,6 +208,7 @@ export const useStore = create<StoreState>((set, get) => ({
 
   removeBudget: async (id) => {
     await BudgetsRepo.remove(id);
+    requestSync();
     set({ budgets: get().budgets.filter((b) => b.id !== id) });
   },
 }));

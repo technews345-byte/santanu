@@ -18,6 +18,35 @@ export interface RemoteAdapter {
 
 export type SyncState = 'idle' | 'syncing' | 'offline' | 'error';
 
+const OWNER_KEY = 'sync:ownerUid';
+
+export type OwnerTransition = 'first-sign-in' | 'same-account' | 'switched-account';
+
+/**
+ * Decides what the local database means for the account now signing in.
+ *
+ * Rows created before any sign-in are that person's own, so they are kept and
+ * upload as a guest migration. Rows belonging to a *different* account must
+ * not be kept: on a shared phone they would otherwise show up under the new
+ * account, and get uploaded into it.
+ */
+export async function claimLocalDataFor(uid: string): Promise<OwnerTransition> {
+  const previous = await getMeta(OWNER_KEY);
+  await setMeta(OWNER_KEY, uid);
+
+  if (!previous) return 'first-sign-in';
+  if (previous === uid) return 'same-account';
+
+  const { clearLocalData } = await import('../db/syncStore');
+  await clearLocalData();
+  await setMeta(OWNER_KEY, uid);
+  return 'switched-account';
+}
+
+export async function releaseOwner(): Promise<void> {
+  await setMeta(OWNER_KEY, '');
+}
+
 export interface SyncOutcome {
   pulled: number;
   pushed: number;
