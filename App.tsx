@@ -11,6 +11,7 @@ import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { BrandSplash } from './src/components/BrandSplash';
 import { useStore } from './src/store/useStore';
+import { useAuthStore } from './src/store/useAuthStore';
 import { fontSizes, radius, spacing } from './src/theme/tokens';
 
 // Hold the native splash until the branded one is on screen, so the handoff
@@ -20,11 +21,13 @@ SplashScreen.preventAutoHideAsync().catch(() => {});
 function AppContent() {
   const { theme } = useTheme();
   const { hydrated, hydrationError, hydrate, biometricLockEnabled } = useStore();
+  const initAuth = useAuthStore((s) => s.init);
   const [unlocked, setUnlocked] = useState(false);
   const [splashDone, setSplashDone] = useState(false);
 
   useEffect(() => {
     hydrate();
+    initAuth();
   }, []);
 
   // Paint the root view in the theme colour too: it is what shows in the frame

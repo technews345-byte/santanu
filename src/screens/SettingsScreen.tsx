@@ -11,6 +11,7 @@ import { useTheme } from '../theme/ThemeContext';
 import { ThemePreference } from '../theme/ThemeContext';
 import { fontSizes, radius, spacing } from '../theme/tokens';
 import { useStore } from '../store/useStore';
+import { useAuthStore } from '../store/useAuthStore';
 import { CategoryType } from '../types';
 import { exportToPdf, exportToXlsx } from '../utils/export';
 
@@ -18,6 +19,8 @@ export default function SettingsScreen() {
   const { theme, preference, setPreference } = useTheme();
   const navigation = useNavigation<any>();
   const { accounts, categories, transactions, biometricLockEnabled, setBiometricLockEnabled } = useStore();
+  const user = useAuthStore((s) => s.user);
+  const pendingCount = useAuthStore((s) => s.pendingCount);
   const [categoryTab, setCategoryTab] = useState<CategoryType>('expense');
   const [exporting, setExporting] = useState(false);
 
@@ -52,6 +55,30 @@ export default function SettingsScreen() {
     <Screen>
       <ScrollView contentContainerStyle={{ padding: spacing.md, paddingBottom: 100 }}>
         <Text style={[styles.title, { color: theme.text }]}>Settings</Text>
+
+        <SectionLabel label="Account" />
+        <Card padded={false}>
+          <Pressable style={styles.listRow} onPress={() => navigation.navigate('Account')}>
+            <IconBadge
+              icon={user ? 'person-circle-outline' : 'cloud-upload-outline'}
+              color={user ? theme.success : theme.tint}
+              size={36}
+            />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.listLabel, { color: theme.text }]}>
+                {user?.displayName ?? user?.email ?? user?.phoneNumber ?? 'Sync your expenses across devices'}
+              </Text>
+              <Text style={[styles.rowSub, { color: theme.textTertiary }]}>
+                {user
+                  ? pendingCount > 0
+                    ? `${pendingCount} change${pendingCount === 1 ? '' : 's'} waiting to upload`
+                    : 'Backed up to your account'
+                  : 'Create an account to securely back up your data'}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={theme.textTertiary} />
+          </Pressable>
+        </Card>
 
         <SectionLabel label="Appearance" />
         <Card>
