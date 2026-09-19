@@ -214,7 +214,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, paddingHorizontal: spacing.lg, paddingBottom: spacing.lg },
   close: { alignSelf: 'flex-end', padding: spacing.xs },
   hero: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  logo: { width: 180, height: 180 / (863 / 1000) },
+  logo: { width: 190, height: 190 },
   headlineWrap: { alignItems: 'center', marginTop: spacing.lg },
   headline: { fontSize: fontSizes.xxl, fontWeight: '800', letterSpacing: -0.5, lineHeight: 38 },
   actions: { gap: spacing.sm },
