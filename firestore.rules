@@ -9,9 +9,13 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Reading and removing need only ownership. Writing content is split out
+    // below, because allow statements are OR-ed: granting `write` here would
+    // satisfy every create and update on its own and the checks underneath
+    // would never be reached.
     match /users/{userId}/{collection}/{docId} {
-      allow read, write: if isOwner(userId)
-                         && isSyncedCollection(collection);
+      allow read, delete: if isOwner(userId)
+                          && isSyncedCollection(collection);
 
       // Reject a write that tries to land under someone else's id, or that
       // arrives without the fields sync needs to merge it later.
