@@ -132,7 +132,7 @@ export default function LoginScreen() {
 
 function unconfiguredMessage(provider: string) {
   return isCloudConfigured
-    ? `${provider} sign-in needs its OAuth client id added to this build. Mobile number sign-in works now.`
+    ? `${provider} sign-in needs its OAuth client id for this platform added to this build.`
     : 'Cloud sync is not set up in this build yet. Everything still saves on this device.';
 }
 

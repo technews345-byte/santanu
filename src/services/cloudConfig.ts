@@ -1,4 +1,5 @@
 import Constants from 'expo-constants';
+import { Platform } from 'react-native';
 
 export interface CloudConfig {
   apiKey: string;
@@ -38,8 +39,19 @@ export function getCloudConfig(): CloudConfig {
   return config as CloudConfig;
 }
 
+/**
+ * Google issues a separate OAuth client per platform and refuses a redirect
+ * that belongs to another one, so the build needs the id for the platform it
+ * is running on. Expo's Google provider picks the id the same way.
+ */
+export const googleClientId = Platform.select({
+  android: config.googleAndroidClientId,
+  ios: config.googleIosClientId,
+  default: config.googleWebClientId,
+});
+
 export const cloudProviders = {
-  google: !!(config.googleWebClientId || config.googleAndroidClientId),
+  google: !!googleClientId,
   facebook: !!config.facebookAppId,
   // Phone verification needs no extra client id, only the provider enabled
   // in the Firebase console.
