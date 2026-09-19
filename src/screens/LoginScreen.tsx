@@ -75,8 +75,8 @@ export default function LoginScreen() {
           </Animated.View>
 
           <Animated.View style={[styles.headlineWrap, step(1)]}>
-            <Text style={[styles.headline, { color: theme.text }]}>Your money.</Text>
-            <Text style={[styles.headline, { color: theme.textSecondary }]}>Always with you.</Text>
+            <Text style={[styles.headline, { color: theme.text }]}>Your Money,</Text>
+            <Text style={[styles.headline, { color: theme.textSecondary }]}>Simplified</Text>
           </Animated.View>
         </View>
 
