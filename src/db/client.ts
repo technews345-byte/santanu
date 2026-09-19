@@ -69,12 +69,16 @@ const DEFAULT_ACCOUNTS = [
   { id: 'acc-bank', name: 'Bank', type: 'checking', color: '#6366F1', icon: 'business-outline', initialBalance: 0 },
 ];
 
-// Added after the first release: also backfilled onto existing installs by the
-// migration below, which is why they carry their own list.
+// Added after the first release. Each batch keeps its own migration key so it
+// still reaches installs that already applied the earlier ones.
 const ADDED_EXPENSE_CATEGORIES = [
   { id: 'cat-loan', name: 'Loan', color: '#0891B2', icon: 'business-outline' },
   { id: 'cat-emi', name: 'EMI', color: '#7E22CE', icon: 'card-outline' },
   { id: 'cat-insurance', name: 'Insurance', color: '#059669', icon: 'shield-checkmark-outline' },
+];
+
+const CREDIT_CARD_CATEGORY = [
+  { id: 'cat-credit-card', name: 'Credit Card', color: '#E11D48', icon: 'card' },
 ];
 
 const DEFAULT_EXPENSE_CATEGORIES = [
@@ -90,6 +94,7 @@ const DEFAULT_EXPENSE_CATEGORIES = [
   { id: 'cat-housing', name: 'Housing', color: '#3B82F6', icon: 'home-outline' },
   { id: 'cat-education', name: 'Education', color: '#D946EF', icon: 'school-outline' },
   ...ADDED_EXPENSE_CATEGORIES,
+  ...CREDIT_CARD_CATEGORY,
   { id: 'cat-other-expense', name: 'Other', color: '#94A3B8', icon: 'ellipsis-horizontal-outline' },
 ];
 
@@ -133,12 +138,21 @@ async function seedIfEmpty(db: SQLite.SQLiteDatabase) {
   await seedCategoryType(db, 'income', DEFAULT_INCOME_CATEGORIES);
   await seedCategoryType(db, 'investment', DEFAULT_INVESTMENT_CATEGORIES);
 
-  await runOnce(db, 'add-loan-emi-insurance', async () => {
+  await addExpenseCategories(db, 'add-loan-emi-insurance', ADDED_EXPENSE_CATEGORIES);
+  await addExpenseCategories(db, 'add-credit-card', CREDIT_CARD_CATEGORY);
+}
+
+async function addExpenseCategories(
+  db: SQLite.SQLiteDatabase,
+  key: string,
+  categories: { id: string; name: string; color: string; icon: string }[]
+) {
+  await runOnce(db, key, async () => {
     const row = await db.getFirstAsync<{ max: number | null }>(
       `SELECT MAX(sortOrder) as max FROM categories WHERE type = 'expense'`
     );
     let order = (row?.max ?? -1) + 1;
-    for (const c of ADDED_EXPENSE_CATEGORIES) {
+    for (const c of categories) {
       await db.runAsync(
         `INSERT OR IGNORE INTO categories (id, name, type, color, icon, archived, sortOrder)
          VALUES (?, ?, 'expense', ?, ?, 0, ?)`,
