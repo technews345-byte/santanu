@@ -154,6 +154,33 @@ async function seedIfEmpty(db: SQLite.SQLiteDatabase) {
   await addExpenseCategories(db, 'add-loan-emi-insurance', ADDED_EXPENSE_CATEGORIES);
   await addExpenseCategories(db, 'add-credit-card', CREDIT_CARD_CATEGORY);
   await addSyncColumns(db);
+  await moveOtherLast(db);
+}
+
+// Categories added after release are appended, which left the catch-all
+// "Other" stranded mid-grid. It belongs at the end of its own type.
+const OTHER_CATEGORY_IDS: Record<string, string> = {
+  expense: 'cat-other-expense',
+  income: 'cat-other-income',
+  investment: 'cat-inv-other',
+};
+
+async function moveOtherLast(db: SQLite.SQLiteDatabase) {
+  await runOnce(db, 'move-other-last', async () => {
+    const now = new Date().toISOString();
+    for (const [type, id] of Object.entries(OTHER_CATEGORY_IDS)) {
+      const row = await db.getFirstAsync<{ max: number | null }>(
+        'SELECT MAX(sortOrder) as max FROM categories WHERE type = ? AND id != ?',
+        [type, id]
+      );
+      if (row?.max === null || row?.max === undefined) continue;
+      await db.runAsync('UPDATE categories SET sortOrder = ?, updatedAt = ?, dirty = 1 WHERE id = ?', [
+        row.max + 1,
+        now,
+        id,
+      ]);
+    }
+  });
 }
 
 // Every syncable row carries when it last changed, whether it still needs
