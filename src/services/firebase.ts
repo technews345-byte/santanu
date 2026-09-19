@@ -1,5 +1,5 @@
 import { FirebaseApp, initializeApp, getApps } from 'firebase/app';
-import { Auth, getAuth, initializeAuth } from 'firebase/auth';
+import { Auth, getAuth, initializeAuth, useDeviceLanguage } from 'firebase/auth';
 import { Firestore, initializeFirestore } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getCloudConfig, isCloudConfigured } from './cloudConfig';
@@ -34,7 +34,28 @@ export function getFirebaseAuth(): Auth {
   } catch {
     authInstance = getAuth(instance);
   }
+  applyDeviceLanguage(authInstance);
   return authInstance;
+}
+
+/**
+ * Decides which language Firebase uses for the OTP text message and the
+ * reCAPTCHA check. useDeviceLanguage reads navigator.language, which React
+ * Native does not provide, so fall back to the locale Hermes reports and then
+ * to English rather than leaving it unset.
+ */
+function applyDeviceLanguage(auth: Auth) {
+  try {
+    useDeviceLanguage(auth);
+    if (auth.languageCode) return;
+  } catch {
+    // Ignore: resolved below.
+  }
+  try {
+    auth.languageCode = Intl.DateTimeFormat().resolvedOptions().locale.split('-')[0] || 'en';
+  } catch {
+    auth.languageCode = 'en';
+  }
 }
 
 export function getFirestoreDb(): Firestore {
