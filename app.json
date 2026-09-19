@@ -7,15 +7,6 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#F8FAFC",
-      "dark": {
-        "image": "./assets/splash-icon.png",
-        "backgroundColor": "#0F172A"
-      }
-    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.santanu.spendly",
@@ -53,6 +44,20 @@
           "faceIDPermission": "Use Face ID to unlock Spendly."
         }
       ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 240,
+          "resizeMode": "contain",
+          "backgroundColor": "#F8FAFC",
+          "dark": {
+            "image": "./assets/splash-icon-dark.png",
+            "backgroundColor": "#0F172A"
+          }
+        }
+      ],
+      "expo-system-ui",
       "expo-sqlite"
     ]
   }
