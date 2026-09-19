@@ -15,7 +15,10 @@ CREATE TABLE IF NOT EXISTS accounts (
   currency TEXT NOT NULL DEFAULT 'INR',
   archived INTEGER NOT NULL DEFAULT 0,
   sortOrder INTEGER NOT NULL DEFAULT 0,
-  createdAt TEXT NOT NULL
+  createdAt TEXT NOT NULL,
+  updatedAt TEXT,
+  dirty INTEGER NOT NULL DEFAULT 1,
+  deletedAt TEXT
 );
 
 CREATE TABLE IF NOT EXISTS categories (
@@ -25,7 +28,11 @@ CREATE TABLE IF NOT EXISTS categories (
   color TEXT NOT NULL,
   icon TEXT NOT NULL,
   archived INTEGER NOT NULL DEFAULT 0,
-  sortOrder INTEGER NOT NULL DEFAULT 0
+  sortOrder INTEGER NOT NULL DEFAULT 0,
+  createdAt TEXT,
+  updatedAt TEXT,
+  dirty INTEGER NOT NULL DEFAULT 1,
+  deletedAt TEXT
 );
 
 CREATE TABLE IF NOT EXISTS transactions (
@@ -42,7 +49,9 @@ CREATE TABLE IF NOT EXISTS transactions (
   recurrence TEXT NOT NULL DEFAULT 'none',
   nextOccurrence TEXT,
   createdAt TEXT NOT NULL,
-  updatedAt TEXT NOT NULL
+  updatedAt TEXT NOT NULL,
+  dirty INTEGER NOT NULL DEFAULT 1,
+  deletedAt TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_transactions_date ON transactions(date);
@@ -60,6 +69,10 @@ CREATE TABLE IF NOT EXISTS budgets (
   monthKey TEXT NOT NULL,
   amount REAL NOT NULL,
   isRecurring INTEGER NOT NULL DEFAULT 1,
+  createdAt TEXT,
+  updatedAt TEXT,
+  dirty INTEGER NOT NULL DEFAULT 1,
+  deletedAt TEXT,
   UNIQUE(categoryId, monthKey)
 );
 `;
@@ -140,6 +153,34 @@ async function seedIfEmpty(db: SQLite.SQLiteDatabase) {
 
   await addExpenseCategories(db, 'add-loan-emi-insurance', ADDED_EXPENSE_CATEGORIES);
   await addExpenseCategories(db, 'add-credit-card', CREDIT_CARD_CATEGORY);
+  await addSyncColumns(db);
+}
+
+// Every syncable row carries when it last changed, whether it still needs
+// pushing, and a tombstone instead of a hard delete — a removal has to travel
+// to other devices, and a row that simply vanished cannot.
+const SYNC_COLUMNS: Record<string, string[]> = {
+  accounts: ['updatedAt TEXT', 'dirty INTEGER NOT NULL DEFAULT 1', 'deletedAt TEXT'],
+  categories: ['createdAt TEXT', 'updatedAt TEXT', 'dirty INTEGER NOT NULL DEFAULT 1', 'deletedAt TEXT'],
+  transactions: ['dirty INTEGER NOT NULL DEFAULT 1', 'deletedAt TEXT'],
+  budgets: ['createdAt TEXT', 'updatedAt TEXT', 'dirty INTEGER NOT NULL DEFAULT 1', 'deletedAt TEXT'],
+};
+
+async function addSyncColumns(db: SQLite.SQLiteDatabase) {
+  await runOnce(db, 'add-sync-columns', async () => {
+    const now = new Date().toISOString();
+    for (const [table, columns] of Object.entries(SYNC_COLUMNS)) {
+      const existing = await db.getAllAsync<{ name: string }>(`PRAGMA table_info(${table})`);
+      const present = new Set(existing.map((c) => c.name));
+      for (const definition of columns) {
+        const name = definition.split(' ')[0];
+        if (present.has(name)) continue;
+        await db.execAsync(`ALTER TABLE ${table} ADD COLUMN ${definition}`);
+      }
+      await db.runAsync(`UPDATE ${table} SET updatedAt = COALESCE(updatedAt, ?)`, [now]);
+      await db.runAsync(`UPDATE ${table} SET createdAt = COALESCE(createdAt, ?)`, [now]);
+    }
+  });
 }
 
 async function addExpenseCategories(
