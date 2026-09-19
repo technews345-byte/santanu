@@ -81,13 +81,28 @@ export default function LoginScreen() {
         </View>
 
         <Animated.View style={[styles.actions, step(2)]}>
-          {isCloudConfigured ? (
-            <OAuthButtons onDone={() => navigation.goBack()} onNotice={setNotice} />
+          {cloudProviders.google ? (
+            <GoogleAuthButton onDone={() => navigation.goBack()} onNotice={setNotice} />
           ) : (
-            <>
-              <ProviderButton icon="logo-google" label="Continue with Google" onPress={handleUnconfigured} loading={false} />
-              <ProviderButton icon="logo-facebook" label="Continue with Facebook" onPress={handleUnconfigured} loading={false} />
-            </>
+            <ProviderButton
+              icon="logo-google"
+              label="Continue with Google"
+              onPress={() => setNotice(unconfiguredMessage('Google'))}
+              loading={false}
+              dimmed
+            />
+          )}
+
+          {cloudProviders.facebook ? (
+            <FacebookAuthButton onDone={() => navigation.goBack()} onNotice={setNotice} />
+          ) : (
+            <ProviderButton
+              icon="logo-facebook"
+              label="Continue with Facebook"
+              onPress={() => setNotice(unconfiguredMessage('Facebook'))}
+              loading={false}
+              dimmed
+            />
           )}
           <ProviderButton
             icon="phone-portrait-outline"
@@ -119,40 +134,48 @@ export default function LoginScreen() {
   );
 }
 
+function unconfiguredMessage(provider: string) {
+  return isCloudConfigured
+    ? `${provider} sign-in needs its OAuth client id added to this build. Mobile number sign-in works now.`
+    : 'Cloud sync is not set up in this build yet. Everything still saves on this device.';
+}
+
 /**
- * Kept in its own component because the provider hooks throw when no client id
- * is configured, so an unconfigured build must not mount them at all.
+ * Each provider gets its own component because Expo's auth hooks throw when
+ * their client id is missing, which blanks the whole screen. Mounting them
+ * separately means a project with only some providers set up still works.
  */
-function OAuthButtons({ onDone, onNotice }: { onDone: () => void; onNotice: (message: string) => void }) {
+function GoogleAuthButton({ onDone, onNotice }: { onDone: () => void; onNotice: (message: string) => void }) {
   const google = useGoogleSignIn(onDone);
+
+  useEffect(() => {
+    if (google.error) onNotice(google.error);
+  }, [google.error]);
+
+  return (
+    <ProviderButton
+      icon="logo-google"
+      label="Continue with Google"
+      loading={google.busy}
+      onPress={() => (google.available ? google.signIn() : onNotice(unconfiguredMessage('Google')))}
+    />
+  );
+}
+
+function FacebookAuthButton({ onDone, onNotice }: { onDone: () => void; onNotice: (message: string) => void }) {
   const facebook = useFacebookSignIn(onDone);
 
   useEffect(() => {
-    const message = google.error ?? facebook.error;
-    if (message) onNotice(message);
-  }, [google.error, facebook.error]);
+    if (facebook.error) onNotice(facebook.error);
+  }, [facebook.error]);
 
   return (
-    <>
-      <ProviderButton
-        icon="logo-google"
-        label="Continue with Google"
-        loading={google.busy}
-        dimmed={!cloudProviders.google}
-        onPress={() =>
-          google.available ? google.signIn() : onNotice('Google sign-in is not configured for this build yet.')
-        }
-      />
-      <ProviderButton
-        icon="logo-facebook"
-        label="Continue with Facebook"
-        loading={facebook.busy}
-        dimmed={!cloudProviders.facebook}
-        onPress={() =>
-          facebook.available ? facebook.signIn() : onNotice('Facebook sign-in is not configured for this build yet.')
-        }
-      />
-    </>
+    <ProviderButton
+      icon="logo-facebook"
+      label="Continue with Facebook"
+      loading={facebook.busy}
+      onPress={() => (facebook.available ? facebook.signIn() : onNotice(unconfiguredMessage('Facebook')))}
+    />
   );
 }
 
