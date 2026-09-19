@@ -26,7 +26,13 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "permissions": ["CAMERA", "READ_EXTERNAL_STORAGE", "WRITE_EXTERNAL_STORAGE", "USE_BIOMETRIC", "USE_FINGERPRINT"]
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "USE_BIOMETRIC",
+        "USE_FINGERPRINT"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -60,6 +66,17 @@
       ],
       "expo-system-ui",
       "expo-sqlite"
-    ]
+    ],
+    "extra": {
+      "firebase": {
+        "apiKey": "AIzaSyAhKIn6G1bv4sBvSsGgAiUONPcRWx5NnZs",
+        "authDomain": "spendly-cdea9.firebaseapp.com",
+        "projectId": "spendly-cdea9",
+        "storageBucket": "spendly-cdea9.firebasestorage.app",
+        "messagingSenderId": "877074760062",
+        "appId": "1:877074760062:web:40be0ffda6a4384056f32f",
+        "measurementId": "G-B15CZ9850M"
+      }
+    }
   }
 }
