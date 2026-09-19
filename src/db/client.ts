@@ -49,6 +49,11 @@ CREATE INDEX IF NOT EXISTS idx_transactions_date ON transactions(date);
 CREATE INDEX IF NOT EXISTS idx_transactions_account ON transactions(accountId);
 CREATE INDEX IF NOT EXISTS idx_transactions_category ON transactions(categoryId);
 
+CREATE TABLE IF NOT EXISTS meta (
+  key TEXT PRIMARY KEY NOT NULL,
+  value TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS budgets (
   id TEXT PRIMARY KEY NOT NULL,
   categoryId TEXT NOT NULL,
@@ -64,6 +69,14 @@ const DEFAULT_ACCOUNTS = [
   { id: 'acc-bank', name: 'Bank', type: 'checking', color: '#6366F1', icon: 'business-outline', initialBalance: 0 },
 ];
 
+// Added after the first release: also backfilled onto existing installs by the
+// migration below, which is why they carry their own list.
+const ADDED_EXPENSE_CATEGORIES = [
+  { id: 'cat-loan', name: 'Loan', color: '#0891B2', icon: 'business-outline' },
+  { id: 'cat-emi', name: 'EMI', color: '#7E22CE', icon: 'card-outline' },
+  { id: 'cat-insurance', name: 'Insurance', color: '#059669', icon: 'shield-checkmark-outline' },
+];
+
 const DEFAULT_EXPENSE_CATEGORIES = [
   { id: 'cat-food', name: 'Food & Dining', color: '#F97316', icon: 'restaurant-outline' },
   { id: 'cat-groceries', name: 'Groceries', color: '#84CC16', icon: 'cart-outline' },
@@ -76,6 +89,7 @@ const DEFAULT_EXPENSE_CATEGORIES = [
   { id: 'cat-subscriptions', name: 'Subscriptions', color: '#14B8A6', icon: 'repeat-outline' },
   { id: 'cat-housing', name: 'Housing', color: '#3B82F6', icon: 'home-outline' },
   { id: 'cat-education', name: 'Education', color: '#D946EF', icon: 'school-outline' },
+  ...ADDED_EXPENSE_CATEGORIES,
   { id: 'cat-other-expense', name: 'Other', color: '#94A3B8', icon: 'ellipsis-horizontal-outline' },
 ];
 
@@ -118,6 +132,29 @@ async function seedIfEmpty(db: SQLite.SQLiteDatabase) {
   await seedCategoryType(db, 'expense', DEFAULT_EXPENSE_CATEGORIES);
   await seedCategoryType(db, 'income', DEFAULT_INCOME_CATEGORIES);
   await seedCategoryType(db, 'investment', DEFAULT_INVESTMENT_CATEGORIES);
+
+  await runOnce(db, 'add-loan-emi-insurance', async () => {
+    const row = await db.getFirstAsync<{ max: number | null }>(
+      `SELECT MAX(sortOrder) as max FROM categories WHERE type = 'expense'`
+    );
+    let order = (row?.max ?? -1) + 1;
+    for (const c of ADDED_EXPENSE_CATEGORIES) {
+      await db.runAsync(
+        `INSERT OR IGNORE INTO categories (id, name, type, color, icon, archived, sortOrder)
+         VALUES (?, ?, 'expense', ?, ?, 0, ?)`,
+        [c.id, c.name, c.color, c.icon, order++]
+      );
+    }
+  });
+}
+
+// Recorded so a migration never runs twice — otherwise a category the user
+// deleted would reappear on the next launch.
+async function runOnce(db: SQLite.SQLiteDatabase, key: string, migrate: () => Promise<void>) {
+  const done = await db.getFirstAsync<{ value: string }>('SELECT value FROM meta WHERE key = ?', [key]);
+  if (done) return;
+  await migrate();
+  await db.runAsync('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)', [key, new Date().toISOString()]);
 }
 
 async function seedCategoryType(
