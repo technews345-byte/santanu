@@ -106,6 +106,15 @@ export function describeAuthError(error: any): string {
       return 'This account already exists with a different sign-in method. Use that one, then link this from Account.';
     case 'auth/requires-recent-login':
       return 'For security, sign in again before making this change.';
+    case 'auth/configuration-not-found':
+      return 'Sign-in is not switched on for this project yet. Enable Authentication in the Firebase console, then try again.';
+    case 'auth/operation-not-allowed':
+      return 'This sign-in method is switched off in the Firebase console. Enable it under Authentication to use it.';
+    case 'auth/invalid-app-credential':
+    case 'auth/captcha-check-failed':
+      return 'The phone sign-in check failed. Confirm the app domain is listed under Authentication to Settings to Authorized domains.';
+    case 'auth/unauthorized-domain':
+      return 'This domain is not on the authorized list for sign-in. Add it under Authentication to Settings to Authorized domains.';
     default:
       return error?.message ?? 'Something went wrong. Please try again.';
   }
