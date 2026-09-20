@@ -30,6 +30,7 @@ export function GlassPressable({
   disabled,
   level = 'panel',
   blur = true,
+  opaque = false,
   style,
   contentStyle,
   borderRadius = radius.xl,
@@ -41,6 +42,7 @@ export function GlassPressable({
   disabled?: boolean;
   level?: GlassLevel;
   blur?: boolean;
+  opaque?: boolean;
   style?: StyleProp<ViewStyle>;
   contentStyle?: StyleProp<ViewStyle>;
   borderRadius?: number;
@@ -86,7 +88,7 @@ export function GlassPressable({
       style={style}
     >
       <Animated.View style={{ transform: [{ scale }] }}>
-        <GlassSurface level={level} blur={blur} borderRadius={borderRadius} contentStyle={contentStyle}>
+        <GlassSurface level={level} blur={blur} opaque={opaque} borderRadius={borderRadius} contentStyle={contentStyle}>
           {children}
         </GlassSurface>
 

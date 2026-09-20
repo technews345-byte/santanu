@@ -1,9 +1,11 @@
-import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, G } from 'react-native-svg';
 import { useTheme } from '../theme/ThemeContext';
 import { fontSizes, spacing } from '../theme/tokens';
 import { formatCurrency } from '../utils/finance';
+
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 export interface DonutSlice {
   label: string;
@@ -27,6 +29,23 @@ export function DonutChart({
   const circumference = 2 * Math.PI * radiusVal;
   const total = data.reduce((sum, d) => sum + d.value, 0);
 
+  // Segments draw themselves on rather than appearing complete, and redraw
+  // when the figures change, so switching between expenses, income and
+  // investments is a movement instead of a swap.
+  const sweep = useRef(new Animated.Value(0)).current;
+  const signature = data.map((d) => `${d.color}:${d.value}`).join('|');
+
+  useEffect(() => {
+    sweep.setValue(0);
+    Animated.timing(sweep, {
+      toValue: 1,
+      duration: 720,
+      easing: Easing.bezier(0.22, 1, 0.36, 1),
+      // strokeDasharray is an SVG attribute, not a transform.
+      useNativeDriver: false,
+    }).start();
+  }, [signature]);
+
   let cumulative = 0;
 
   return (
@@ -42,16 +61,24 @@ export function DonutChart({
               const offset = -cumulative * circumference;
               cumulative += fraction;
               return (
-                <Circle
+                <AnimatedCircle
                   key={idx}
                   cx={size / 2}
                   cy={size / 2}
                   r={radiusVal}
                   stroke={slice.color}
                   strokeWidth={strokeWidth}
-                  strokeDasharray={`${dash} ${gap}`}
+                  strokeDasharray={
+                    sweep.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [`0 ${circumference}`, `${dash} ${gap}`],
+                    }) as unknown as string
+                  }
                   strokeDashoffset={offset}
-                  strokeLinecap="butt"
+                  // Rounded ends read as a ribbon rather than a cut pie. A
+                  // segment too small to round is left square, since a cap
+                  // wider than its own arc bulges past where it belongs.
+                  strokeLinecap={dash > strokeWidth * 1.6 ? 'round' : 'butt'}
                   fill="none"
                 />
               );

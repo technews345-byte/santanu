@@ -16,6 +16,10 @@ import * as ImagePicker from 'expo-image-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Screen } from '../components/Screen';
 import { IconBadge } from '../components/IconBadge';
+import { GlassPressable } from '../components/glass/GlassPressable';
+import { GlassSurface } from '../components/glass/GlassSurface';
+import { GlassTabs } from '../components/glass/GlassTabs';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Keypad } from '../components/Keypad';
 import { BottomSheetModal } from '../components/BottomSheetModal';
 import { Pill } from '../components/Pill';
@@ -53,6 +57,8 @@ export default function TransactionEntryScreen() {
 
   const [type, setType] = useState<TransactionType>(existing?.type ?? initialType ?? 'expense');
   const [expression, setExpression] = useState<string>(existing ? String(existing.amount) : '0');
+  // Drives the note field's lit border, so focus is visible on glass.
+  const [noteFocused, setNoteFocused] = useState(false);
   const [accountId, setAccountId] = useState<string>(existing?.accountId ?? activeAccountId ?? accounts[0]?.id ?? '');
   const [toAccountId, setToAccountId] = useState<string | null>(existing?.toAccountId ?? null);
   const [categoryId, setCategoryId] = useState<string | null>(existing?.categoryId ?? null);
@@ -198,20 +204,14 @@ export default function TransactionEntryScreen() {
       </View>
 
       <View style={styles.typeToggle}>
-        {(Object.keys(TYPE_CONFIG) as TransactionType[]).map((t) => (
-          <Pressable
-            key={t}
-            onPress={() => setType(t)}
-            style={[
-              styles.typeOption,
-              { backgroundColor: type === t ? TYPE_CONFIG[t].color(theme) : theme.surfaceAlt },
-            ]}
-          >
-            <Text style={{ color: type === t ? theme.textInverted : theme.textSecondary, fontWeight: '700', fontSize: fontSizes.sm }}>
-              {TYPE_CONFIG[t].label}
-            </Text>
-          </Pressable>
-        ))}
+        <GlassTabs
+          options={(Object.keys(TYPE_CONFIG) as TransactionType[]).map((t) => ({
+            key: t,
+            label: TYPE_CONFIG[t].label,
+          }))}
+          value={type}
+          onChange={setType}
+        />
       </View>
 
       <View style={styles.amountArea}>
@@ -277,9 +277,11 @@ export default function TransactionEntryScreen() {
           onPress={() => setRecurrenceSheetOpen(true)}
         />
 
-        <View style={[styles.noteBox, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
+        <View style={[styles.noteBox, { backgroundColor: theme.surfaceAlt, borderColor: noteFocused ? theme.tint : theme.glassBorder }]}>
           <Ionicons name="document-text-outline" size={18} color={theme.textTertiary} />
           <TextInput
+            onFocus={() => setNoteFocused(true)}
+            onBlur={() => setNoteFocused(false)}
             placeholder="Add a note"
             placeholderTextColor={theme.textTertiary}
             value={note}
@@ -312,8 +314,15 @@ export default function TransactionEntryScreen() {
 
       <Keypad onKeyPress={onKeyPress} />
 
-      <Pressable style={[styles.saveButton, { backgroundColor: typeColor }]} onPress={handleSave}>
-        <Text style={styles.saveButtonLabel}>{existing ? 'Save Changes' : 'Save Transaction'}</Text>
+      <Pressable style={[styles.saveButtonWrap, { shadowColor: typeColor }]} onPress={handleSave}>
+        <LinearGradient
+          colors={[typeColor, theme.tint]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={[styles.saveButton, { borderColor: theme.glassBorder }]}
+        >
+          <Text style={styles.saveButtonLabel}>{existing ? 'Save Changes' : 'Save Transaction'}</Text>
+        </LinearGradient>
       </Pressable>
 
       <BottomSheetModal visible={categorySheetOpen} onClose={() => setCategorySheetOpen(false)} title="Category">
@@ -436,27 +445,35 @@ function MetaRow({
 }) {
   const { theme } = useTheme();
   return (
-    <Pressable style={styles.metaRow} onPress={onPress}>
+    <GlassPressable
+      level="row"
+      blur={false}
+      borderRadius={radius.lg}
+      style={styles.metaRowOuter}
+      contentStyle={styles.metaRow}
+      onPress={onPress}
+    >
       <IconBadge icon={icon} color={iconColor} size={36} />
       <Text style={[styles.metaLabel, { color: theme.textSecondary }]}>{label}</Text>
       <Text style={[styles.metaValue, { color: theme.text }]} numberOfLines={1}>
         {value}
       </Text>
       <Ionicons name="chevron-forward" size={16} color={theme.textTertiary} />
-    </Pressable>
+    </GlassPressable>
   );
 }
 
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   headerTitle: { fontSize: fontSizes.md, fontWeight: '700' },
-  typeToggle: { flexDirection: 'row', gap: 6, paddingHorizontal: spacing.sm, marginTop: spacing.xs },
+  typeToggle: { paddingHorizontal: spacing.sm, marginTop: spacing.xs },
   typeOption: { flex: 1, paddingVertical: spacing.xs, paddingHorizontal: 2, borderRadius: radius.pill, alignItems: 'center' },
   amountArea: { alignItems: 'center', paddingVertical: spacing.md },
   amountValue: { fontSize: fontSizes.xxxl, fontWeight: '800', fontVariant: ['tabular-nums'] },
   amountResult: { fontSize: fontSizes.base, marginTop: spacing.xxs, fontVariant: ['tabular-nums'] },
   metaScroll: { flex: 1, paddingHorizontal: spacing.md },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.xs },
+  metaRowOuter: { marginBottom: spacing.xs },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.sm },
   metaLabel: { fontSize: fontSizes.sm, fontWeight: '600', width: 66 },
   metaValue: { flex: 1, fontSize: fontSizes.base, fontWeight: '600' },
   quickDateRow: { flexDirection: 'row', paddingLeft: 44, marginBottom: spacing.xs },
@@ -467,7 +484,17 @@ const styles = StyleSheet.create({
   thumb: { width: '100%', height: '100%' },
   thumbRemove: { position: 'absolute', top: 2, right: 2, width: 16, height: 16, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   addAttachment: { width: 52, height: 52, borderRadius: radius.sm, borderWidth: StyleSheet.hairlineWidth, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' },
-  saveButton: { marginHorizontal: spacing.xs, marginTop: spacing.sm, marginBottom: spacing.xs, paddingVertical: spacing.md, borderRadius: radius.lg, alignItems: 'center' },
+  saveButtonWrap: {
+    marginHorizontal: spacing.xs,
+    marginTop: spacing.sm,
+    marginBottom: spacing.xs,
+    borderRadius: radius.lg,
+    shadowOpacity: 0.45,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 8,
+  },
+  saveButton: { paddingVertical: spacing.md, borderRadius: radius.lg, alignItems: 'center', borderWidth: 1 },
   saveButtonLabel: { color: '#fff', fontWeight: '700', fontSize: fontSizes.base },
   categoryGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
   categoryItem: { width: '23%', alignItems: 'center', marginBottom: spacing.md, gap: 4 },

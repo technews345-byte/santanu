@@ -24,6 +24,7 @@ export function GlassSurface({
   children,
   level = 'panel',
   blur = true,
+  opaque = false,
   style,
   contentStyle,
   borderRadius = radius.xl,
@@ -31,6 +32,9 @@ export function GlassSurface({
   children?: React.ReactNode;
   level?: GlassLevel;
   blur?: boolean;
+  /** Hide whatever sits behind this pane: a row over its own swipe actions,
+   *  or chrome that has to stay readable over any content. */
+  opaque?: boolean;
   style?: StyleProp<ViewStyle>;
   contentStyle?: StyleProp<ViewStyle>;
   borderRadius?: number;
@@ -60,7 +64,8 @@ export function GlassSurface({
       ]}
     >
       <View style={[styles.clip, { borderRadius }]}>
-        {useBlur && (
+        {opaque && <View style={[StyleSheet.absoluteFill, { backgroundColor: theme.surfaceSolid }]} />}
+        {useBlur && !opaque && (
           <BlurView
             intensity={level === 'row' ? theme.blurIntensity * 0.6 : theme.blurIntensity}
             tint={theme.glassTint}
