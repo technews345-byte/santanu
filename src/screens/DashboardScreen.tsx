@@ -9,6 +9,9 @@ import { IconBadge } from '../components/IconBadge';
 import { AmountText } from '../components/AmountText';
 import { EmptyState } from '../components/EmptyState';
 import { QuickAddFab } from '../components/QuickAddFab';
+import { GlassPressable } from '../components/glass/GlassPressable';
+import { GlassSurface } from '../components/glass/GlassSurface';
+import { GlassTabs } from '../components/glass/GlassTabs';
 import { useTheme } from '../theme/ThemeContext';
 import { fontSizes, radius, spacing } from '../theme/tokens';
 import { useStore } from '../store/useStore';
@@ -44,6 +47,7 @@ export default function DashboardScreen() {
     toggleBalanceVisible,
   } = useStore();
 
+  const user = useAuthStore((s) => s.user);
   const [period, setPeriod] = useState<PeriodKey>('month');
   const [switcherOpen, setSwitcherOpen] = useState(false);
 
@@ -71,23 +75,35 @@ export default function DashboardScreen() {
   return (
     <Screen>
       <View style={styles.header}>
-        <Pressable style={styles.switcher} onPress={() => setSwitcherOpen(true)}>
+        <View style={styles.greetBlock}>
+          <Text style={[styles.greeting, { color: theme.text }]} numberOfLines={1}>
+            {greeting(user)}
+          </Text>
+          <Text style={[styles.tagline, { color: theme.textSecondary }]}>
+            Track. Plan. Save. Live Better.
+          </Text>
+        </View>
+        <ProfileChip />
+      </View>
+
+      <Pressable style={styles.switcher} onPress={() => setSwitcherOpen(true)}>
+        <GlassSurface level="row" blur={false} borderRadius={radius.pill} contentStyle={styles.switcherInner}>
+          <Ionicons name="wallet-outline" size={15} color={theme.textSecondary} />
           <Text style={[styles.switcherLabel, { color: theme.textSecondary }]}>
             {activeAccount ? activeAccount.name : 'All Accounts'}
           </Text>
-          <Ionicons name="chevron-down" size={16} color={theme.textSecondary} />
-        </Pressable>
-        <ProfileChip />
-      </View>
+          <Ionicons name="chevron-down" size={15} color={theme.textSecondary} />
+        </GlassSurface>
+      </Pressable>
 
       <SectionList
         sections={recentSections}
         keyExtractor={(item) => item.id}
         stickySectionHeadersEnabled={false}
-        contentContainerStyle={{ paddingBottom: 120, paddingHorizontal: spacing.md }}
+        contentContainerStyle={{ paddingBottom: 168, paddingHorizontal: spacing.md }}
         ListHeaderComponent={
           <View style={{ marginBottom: spacing.md }}>
-            <Card style={styles.balanceCard}>
+            <Card level="raised" style={styles.balanceCard}>
               <View style={styles.balanceRow}>
                 <Text style={[styles.balanceLabel, { color: theme.textSecondary }]}>Total Balance</Text>
                 <Pressable onPress={toggleBalanceVisible} hitSlop={10}>
@@ -99,9 +115,7 @@ export default function DashboardScreen() {
               </Text>
 
               <View style={styles.periodRow}>
-                {PERIODS.map((p) => (
-                  <Pill key={p.key} label={p.label} active={period === p.key} onPress={() => setPeriod(p.key)} />
-                ))}
+                <GlassTabs options={PERIODS.map((p) => ({ key: p.key, label: p.label }))} value={period} onChange={setPeriod} />
               </View>
 
               <View style={styles.summaryRow}>
@@ -118,11 +132,10 @@ export default function DashboardScreen() {
             </Card>
 
             <View style={styles.quickActions}>
-              <QuickAction icon="add-circle" label="Income" color={theme.success} onPress={() => navigation.navigate('TransactionEntry', { initialType: 'income' })} />
-              <QuickAction icon="remove-circle" label="Expense" color={theme.expense} onPress={() => navigation.navigate('TransactionEntry', { initialType: 'expense' })} />
-              <QuickAction icon="trending-up" label="Invest" color={theme.investment} onPress={() => navigation.navigate('TransactionEntry', { initialType: 'investment' })} />
-              <QuickAction icon="swap-horizontal" label="Transfer" color={theme.transfer} onPress={() => navigation.navigate('TransactionEntry', { initialType: 'transfer' })} />
-              <QuickAction icon="download-outline" label="Export" color={theme.tint} onPress={() => navigation.navigate('Settings' as never, { screen: 'Export' } as never)} />
+              <QuickAction icon="arrow-up-circle" label="Add Expense" color={theme.expense} onPress={() => navigation.navigate('TransactionEntry', { initialType: 'expense' })} />
+              <QuickAction icon="arrow-down-circle" label="Add Income" color={theme.success} onPress={() => navigation.navigate('TransactionEntry', { initialType: 'income' })} />
+              <QuickAction icon="pie-chart" label="Budgets" color={theme.investment} onPress={() => navigation.navigate('Budgets' as never)} />
+              <QuickAction icon="stats-chart" label="Analytics" color={theme.transfer} onPress={() => navigation.navigate('Analytics' as never)} />
             </View>
 
             <Text style={[styles.sectionTitle, { color: theme.text }]}>Recent Activity</Text>
@@ -136,9 +149,13 @@ export default function DashboardScreen() {
           const account = accountById(item.accountId);
           const toAccount = item.toAccountId ? accountById(item.toAccountId) : null;
           return (
-            <Pressable
+            <GlassPressable
+              level="row"
+              blur={false}
+              borderRadius={radius.lg}
+              style={styles.txnRowOuter}
+              contentStyle={styles.txnRow}
               onPress={() => navigation.navigate('TransactionEntry', { transactionId: item.id })}
-              style={({ pressed }) => [styles.txnRow, { backgroundColor: theme.surface, opacity: pressed ? 0.7 : 1 }]}
             >
               <IconBadge icon={(cat?.icon as any) ?? (item.type === 'transfer' ? 'swap-horizontal' : 'help-outline')} color={cat?.color ?? theme.transfer} />
               <View style={styles.txnMeta}>
@@ -150,7 +167,7 @@ export default function DashboardScreen() {
                 </Text>
               </View>
               <AmountText amount={item.amount} type={item.type} currency={item.currency} />
-            </Pressable>
+            </GlassPressable>
           );
         }}
         ListEmptyComponent={<EmptyState icon="receipt-outline" title="No transactions yet" subtitle="Tap + to add your first transaction" />}
@@ -201,13 +218,28 @@ function SummaryChip({ label, value, color, visible }: { label: string; value: n
 function QuickAction({ icon, label, color, onPress }: { icon: keyof typeof Ionicons.glyphMap; label: string; color: string; onPress: () => void }) {
   const { theme } = useTheme();
   return (
-    <Pressable style={styles.quickAction} onPress={onPress}>
-      <View style={[styles.quickIconWrap, { backgroundColor: `${color}18` }]}>
-        <Ionicons name={icon} size={22} color={color} />
+    <GlassPressable
+      level="row"
+      blur={false}
+      borderRadius={radius.lg}
+      style={styles.quickAction}
+      contentStyle={styles.quickActionInner}
+      onPress={onPress}
+    >
+      {/* The glow sits behind the icon rather than around the tile, so five
+          of them in a row do not turn into a band of colour. */}
+      <View style={[styles.quickIconWrap, { backgroundColor: `${color}22`, shadowColor: color }]}>
+        <Ionicons name={icon} size={20} color={color} />
       </View>
-      <Text style={[styles.quickActionLabel, { color: theme.textSecondary }]}>{label}</Text>
-    </Pressable>
+      <Text numberOfLines={1} style={[styles.quickActionLabel, { color: theme.textSecondary }]}>{label}</Text>
+    </GlassPressable>
   );
+}
+
+/** Their name if the account carries one, so the app greets a person. */
+function greeting(user: { displayName: string | null; email: string | null } | null): string {
+  const name = user?.displayName?.trim().split(/\s+/)[0];
+  return name ? `Hi ${name} 👋` : 'Hi there 👋';
 }
 
 /**
@@ -276,24 +308,40 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },
-  switcher: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  switcherLabel: { fontSize: fontSizes.md, fontWeight: '700' },
+  greetBlock: { flex: 1, paddingRight: spacing.sm },
+  greeting: { fontSize: fontSizes.lg, fontWeight: '800', letterSpacing: -0.3 },
+  tagline: { fontSize: fontSizes.xs, fontWeight: '500', marginTop: 2 },
+  switcher: { alignSelf: 'flex-start', marginHorizontal: spacing.md, marginBottom: spacing.xs },
+  switcherInner: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: spacing.sm, paddingVertical: 6 },
+  switcherLabel: { fontSize: fontSizes.sm, fontWeight: '700' },
   balanceCard: { marginTop: spacing.xs },
   balanceRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   balanceLabel: { fontSize: fontSizes.sm, fontWeight: '600' },
   balanceValue: { fontSize: fontSizes.xxxl, fontWeight: '800', marginTop: spacing.xxs, fontVariant: ['tabular-nums'] },
-  periodRow: { flexDirection: 'row', marginTop: spacing.md },
+  periodRow: { marginTop: spacing.md },
   summaryRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginTop: spacing.md },
   summaryChip: { flexGrow: 1, flexBasis: '46%', borderRadius: radius.md, padding: spacing.sm },
   summaryLabel: { fontSize: fontSizes.xs, fontWeight: '600' },
   summaryValue: { fontSize: fontSizes.sm, fontWeight: '800', marginTop: 2, fontVariant: ['tabular-nums'] },
-  quickActions: { flexDirection: 'row', justifyContent: 'space-between', marginTop: spacing.lg },
-  quickAction: { alignItems: 'center', gap: 6, flex: 1 },
-  quickIconWrap: { width: 52, height: 52, borderRadius: radius.lg, alignItems: 'center', justifyContent: 'center' },
-  quickActionLabel: { fontSize: fontSizes.xs, fontWeight: '600' },
+  quickActions: { flexDirection: 'row', gap: spacing.xs, marginTop: spacing.lg },
+  quickAction: { flex: 1 },
+  quickActionInner: { alignItems: 'center', gap: 6, paddingVertical: spacing.sm, paddingHorizontal: 2 },
+  quickIconWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 3,
+  },
+  quickActionLabel: { fontSize: 10, fontWeight: '700' },
   sectionTitle: { fontSize: fontSizes.md, fontWeight: '700', marginTop: spacing.lg, marginBottom: spacing.xs },
   dateHeader: { fontSize: fontSizes.xs, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, marginTop: spacing.sm, marginBottom: spacing.xs },
-  txnRow: { flexDirection: 'row', alignItems: 'center', padding: spacing.sm, borderRadius: radius.md, marginBottom: spacing.xs, gap: spacing.sm },
+  txnRowOuter: { marginBottom: spacing.xs },
+  txnRow: { flexDirection: 'row', alignItems: 'center', padding: spacing.sm, gap: spacing.sm },
   txnMeta: { flex: 1 },
   txnTitle: { fontSize: fontSizes.base, fontWeight: '600' },
   txnSub: { fontSize: fontSizes.xs, marginTop: 2 },

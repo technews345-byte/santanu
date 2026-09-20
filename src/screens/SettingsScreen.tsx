@@ -58,7 +58,7 @@ export default function SettingsScreen() {
 
   return (
     <Screen>
-      <ScrollView contentContainerStyle={{ padding: spacing.md, paddingBottom: 100 }}>
+      <ScrollView contentContainerStyle={{ padding: spacing.md, paddingBottom: 168 }}>
         <Text style={[styles.title, { color: theme.text }]}>Settings</Text>
 
         <SectionLabel label="Account" />

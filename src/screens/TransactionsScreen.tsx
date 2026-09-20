@@ -10,6 +10,7 @@ import { IconBadge } from '../components/IconBadge';
 import { AmountText } from '../components/AmountText';
 import { EmptyState } from '../components/EmptyState';
 import { QuickAddFab } from '../components/QuickAddFab';
+import { GlassPressable } from '../components/glass/GlassPressable';
 import { BottomSheetModal } from '../components/BottomSheetModal';
 import { useTheme } from '../theme/ThemeContext';
 import { fontSizes, radius, spacing } from '../theme/tokens';
@@ -172,7 +173,7 @@ export default function TransactionsScreen() {
           </View>
         </View>
 
-        <View style={[styles.searchBox, { backgroundColor: theme.surfaceAlt }]}>
+        <View style={[styles.searchBox, { backgroundColor: theme.surfaceAlt, borderColor: theme.glassBorder }]}>
           <Ionicons name="search" size={16} color={theme.textTertiary} />
           <TextInput
             value={search}
@@ -197,7 +198,7 @@ export default function TransactionsScreen() {
         <FlatList
           data={sorted}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={{ paddingHorizontal: spacing.md, paddingBottom: 120 }}
+          contentContainerStyle={{ paddingHorizontal: spacing.md, paddingBottom: 168 }}
           ListEmptyComponent={<EmptyState icon="filter-outline" title="No matching transactions" subtitle="Try adjusting your filters" />}
           renderItem={({ item }) => {
             const cat = categories.find((c) => c.id === item.categoryId);
