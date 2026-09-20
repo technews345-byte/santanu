@@ -9,8 +9,10 @@ import { useAuthStore } from '../store/useAuthStore';
 import { cloudProviders, isCloudConfigured } from '../services/cloudConfig';
 import { useGoogleSignIn } from '../services/oauth';
 
-// Transparent asset, so it sits on whichever theme background is behind it.
-const LOGO = require('../../assets/splash-icon.png');
+// Two lockups, because the wordmark is near-black in one and near-white in
+// the other: each is legible only on the background it was drawn for.
+const LOCKUP_LIGHT = require('../../assets/logo-lockup-light.png');
+const LOCKUP_DARK = require('../../assets/logo-lockup-dark.png');
 
 export default function LoginScreen() {
   const { theme } = useTheme();
@@ -75,7 +77,11 @@ export default function LoginScreen() {
 
         <View style={styles.hero}>
           <Animated.View style={step(0)}>
-            <Image source={LOGO} style={styles.logo} resizeMode="contain" />
+            <Image
+              source={theme.mode === 'dark' ? LOCKUP_DARK : LOCKUP_LIGHT}
+              style={styles.logo}
+              resizeMode="contain"
+            />
           </Animated.View>
 
           <Animated.View style={[styles.headlineWrap, step(1)]}>
@@ -195,7 +201,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, paddingHorizontal: spacing.lg, paddingBottom: spacing.lg },
   close: { alignSelf: 'flex-end', padding: spacing.xs },
   hero: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  logo: { width: 190, height: 190 },
+  logo: { width: 216, height: 248 },
   headlineWrap: { alignItems: 'center', marginTop: spacing.lg },
   headline: { fontSize: fontSizes.xxl, fontWeight: '800', letterSpacing: -0.5, lineHeight: 38 },
   actions: { gap: spacing.sm },
