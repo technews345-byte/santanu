@@ -9,10 +9,14 @@ const LOGO = require('../../assets/splash-icon.png');
 const LOGO_WIDTH = 236;
 const LOGO_ASPECT = 1047 / 1013; // the supplied mark, very slightly wider than tall
 
-const FADE_IN_MS = 520;
-const SETTLE_MS = 200;
-const FADE_OUT_MS = 340;
-const BREATH_MS = 1900;
+const FADE_IN_MS = 560;
+const SETTLE_MS = 180;
+const FADE_OUT_MS = 380;
+const BREATH_MS = 2200;
+
+// A single decelerating curve, used everywhere the app moves, so nothing
+// stops abruptly: fast to leave, long to settle.
+const GLIDE = Easing.bezier(0.22, 1, 0.36, 1);
 
 export function BrandSplash({
   ready,
@@ -25,7 +29,7 @@ export function BrandSplash({
 }) {
   const { theme } = useTheme();
   const opacity = useRef(new Animated.Value(0)).current;
-  const scale = useRef(new Animated.Value(0.94)).current;
+  const scale = useRef(new Animated.Value(0.92)).current;
   const breath = useRef(new Animated.Value(0)).current;
   const overlay = useRef(new Animated.Value(1)).current;
   const [introDone, setIntroDone] = useState(false);
@@ -35,13 +39,13 @@ export function BrandSplash({
       Animated.timing(opacity, {
         toValue: 1,
         duration: FADE_IN_MS,
-        easing: Easing.out(Easing.quad),
+        easing: GLIDE,
         useNativeDriver: true,
       }),
       Animated.timing(scale, {
         toValue: 1,
-        duration: FADE_IN_MS + 80,
-        easing: Easing.out(Easing.cubic),
+        duration: FADE_IN_MS + 120,
+        easing: GLIDE,
         useNativeDriver: true,
       }),
     ]).start(() => setIntroDone(true));
@@ -64,7 +68,7 @@ export function BrandSplash({
       Animated.timing(overlay, {
         toValue: 0,
         duration: FADE_OUT_MS,
-        easing: Easing.inOut(Easing.quad),
+        easing: GLIDE,
         useNativeDriver: true,
       }).start(({ finished }) => {
         if (finished) onFinish();
@@ -73,7 +77,7 @@ export function BrandSplash({
     return () => clearTimeout(timer);
   }, [introDone, ready]);
 
-  const breathScale = breath.interpolate({ inputRange: [0, 1], outputRange: [1, 1.025] });
+  const breathScale = breath.interpolate({ inputRange: [0, 1], outputRange: [1, 1.022] });
 
   return (
     <Animated.View

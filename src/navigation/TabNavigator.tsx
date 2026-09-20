@@ -26,6 +26,10 @@ export function TabNavigator() {
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
+        // Switching tabs cut straight to the next screen; a short cross-fade
+        // reads as one surface changing rather than two screens swapping.
+        animation: 'fade',
+        transitionSpec: { animation: 'timing', config: { duration: 180 } },
         tabBarActiveTintColor: theme.tint,
         tabBarInactiveTintColor: theme.textTertiary,
         tabBarStyle: {

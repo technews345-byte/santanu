@@ -25,8 +25,8 @@ export default function LoginScreen() {
   useEffect(() => {
     Animated.timing(intro, {
       toValue: 1,
-      duration: 620,
-      easing: Easing.out(Easing.cubic),
+      duration: 760,
+      easing: Easing.bezier(0.22, 1, 0.36, 1),
       useNativeDriver: true,
     }).start();
   }, []);
@@ -201,7 +201,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, paddingHorizontal: spacing.lg, paddingBottom: spacing.lg },
   close: { alignSelf: 'flex-end', padding: spacing.xs },
   hero: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  logo: { width: 216, height: 248 },
+  logo: { width: 234, height: 268 },
   headlineWrap: { alignItems: 'center', marginTop: spacing.lg },
   headline: { fontSize: fontSizes.xxl, fontWeight: '800', letterSpacing: -0.5, lineHeight: 38 },
   actions: { gap: spacing.sm },
