@@ -100,6 +100,12 @@ export const RecaptchaGate = forwardRef<RecaptchaHandle>((_props, ref) => {
                   baseUrl: `https://${config.authDomain}`,
                 }}
                 style={styles.web}
+                onError={({ nativeEvent }) =>
+                  settle(null, `The security check could not load: ${nativeEvent.description ?? 'no connection'}`)
+                }
+                onHttpError={({ nativeEvent }) =>
+                  settle(null, `The security check could not load (HTTP ${nativeEvent.statusCode}).`)
+                }
                 onMessage={(event) => {
                   try {
                     const data = JSON.parse(event.nativeEvent.data);
@@ -126,10 +132,10 @@ RecaptchaGate.displayName = 'RecaptchaGate';
 
 const styles = StyleSheet.create({
   backdrop: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.lg },
-  sheet: { width: '100%', borderRadius: radius.xl, padding: spacing.lg },
+  sheet: { width: '100%', maxHeight: '88%', borderRadius: radius.xl, padding: spacing.lg },
   title: { fontSize: fontSizes.md, fontWeight: '700' },
   subtitle: { fontSize: fontSizes.sm, marginTop: spacing.xxs, marginBottom: spacing.md },
-  webWrap: { height: 160, overflow: 'hidden', borderRadius: radius.md },
+  webWrap: { height: 440, maxHeight: '70%', overflow: 'hidden', borderRadius: radius.md },
   web: { flex: 1, backgroundColor: 'transparent' },
   cancel: { alignSelf: 'center', paddingVertical: spacing.sm, marginTop: spacing.xs },
 });
