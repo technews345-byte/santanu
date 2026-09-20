@@ -9,8 +9,11 @@ import { GlassSurface } from './GlassSurface';
 
 /**
  * A bar that floats above the content rather than sealing the bottom of the
- * screen, so the list visibly runs on underneath it — which is the whole
- * reason for making it glass.
+ * screen.
+ *
+ * It keeps the tint, sheen and lit border of glass but is backed solid: a
+ * see-through bar let the list run visibly through its labels, and a control
+ * that is hard to read is not worth the effect.
  *
  * The selected marker is one pill that travels between destinations. The icon
  * of the destination being left shrinks as the one being entered grows, so
@@ -46,7 +49,7 @@ export function GlassTabBar({ state, descriptors, navigation }: BottomTabBarProp
       style={[styles.dock, { paddingBottom: Math.max(insets.bottom, spacing.sm) }]}
       pointerEvents="box-none"
     >
-      <GlassSurface level="raised" borderRadius={radius.xl} style={styles.bar}>
+      <GlassSurface level="raised" opaque borderRadius={radius.xl} style={styles.bar}>
         <View
           style={styles.row}
           onLayout={(e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width)}

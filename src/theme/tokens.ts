@@ -42,6 +42,11 @@ export interface Theme {
   danger: string;
   dangerMuted: string;
 
+  /**
+   * Opaque fill for panes that hide something behind them — a row over its
+   * own swipe actions, or chrome that must stay readable over any content.
+   */
+  surfaceSolid: string;
   /** Translucent panel fill. Opaque enough that figures stay readable on it. */
   glass: string;
   /** A second, heavier fill for panels that carry the largest numbers. */
@@ -76,6 +81,7 @@ export const lightTheme: Theme = {
   tintMuted: 'rgba(59, 91, 255, 0.12)',
   shadow: 'rgba(30, 58, 138, 0.13)',
   overlay: 'rgba(15, 23, 42, 0.38)',
+  surfaceSolid: '#FBFCFF',
   glass: 'rgba(255, 255, 255, 0.46)',
   glassStrong: 'rgba(255, 255, 255, 0.60)',
   glassBorder: 'rgba(255, 255, 255, 0.95)',
@@ -106,15 +112,16 @@ export const darkTheme: Theme = {
   tintMuted: 'rgba(110, 139, 255, 0.2)',
   shadow: 'rgba(0, 0, 0, 0.55)',
   overlay: 'rgba(3, 7, 18, 0.62)',
+  surfaceSolid: '#141E36',
   glass: 'rgba(30, 44, 78, 0.46)',
   glassStrong: 'rgba(36, 52, 90, 0.60)',
   glassBorder: 'rgba(140, 168, 255, 0.24)',
   glassSheen: 'rgba(160, 190, 255, 0.14)',
   glassTint: 'dark',
   blurIntensity: 42,
-  auroraOne: 'rgba(59, 91, 255, 0.30)',
-  auroraTwo: 'rgba(139, 92, 246, 0.24)',
-  auroraThree: 'rgba(34, 184, 240, 0.18)',
+  auroraOne: 'rgba(59, 91, 255, 0.15)',
+  auroraTwo: 'rgba(139, 92, 246, 0.13)',
+  auroraThree: 'rgba(34, 184, 240, 0.10)',
   ...semantic,
 };
 

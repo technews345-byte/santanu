@@ -11,6 +11,7 @@ import { AmountText } from '../components/AmountText';
 import { EmptyState } from '../components/EmptyState';
 import { QuickAddFab } from '../components/QuickAddFab';
 import { GlassPressable } from '../components/glass/GlassPressable';
+import { GlassSurface } from '../components/glass/GlassSurface';
 import { BottomSheetModal } from '../components/BottomSheetModal';
 import { useTheme } from '../theme/ThemeContext';
 import { fontSizes, radius, spacing } from '../theme/tokens';
@@ -46,6 +47,8 @@ export default function TransactionsScreen() {
   const [filterOpen, setFilterOpen] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
   const [search, setSearch] = useState('');
+  // Lights the search field's border while it holds focus.
+  const [searchFocused, setSearchFocused] = useState(false);
   const [sort, setSort] = useState<SortKey>('date_desc');
   const [typeFilters, setTypeFilters] = useState<TransactionType[]>([]);
   const [categoryFilters, setCategoryFilters] = useState<string[]>([]);
@@ -158,28 +161,32 @@ export default function TransactionsScreen() {
           <Text style={[styles.title, { color: theme.text }]}>Transactions</Text>
           <View style={styles.headerActions}>
             <Pressable onPress={() => setSortOpen(true)} hitSlop={8}>
-              <Ionicons name="swap-vertical-outline" size={22} color={theme.textSecondary} />
+              <GlassSurface level="raised" borderRadius={radius.pill} contentStyle={styles.roundBtn}>
+                <Ionicons name="swap-vertical-outline" size={19} color={theme.text} />
+              </GlassSurface>
             </Pressable>
-            <Pressable onPress={() => setFilterOpen(true)} hitSlop={8} style={{ marginLeft: spacing.md }}>
-              <View>
-                <Ionicons name="options-outline" size={22} color={theme.textSecondary} />
-                {activeFilterCount > 0 && (
-                  <View style={[styles.filterBadge, { backgroundColor: theme.tint }]}>
-                    <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
-                  </View>
-                )}
-              </View>
+            <Pressable onPress={() => setFilterOpen(true)} hitSlop={8} style={{ marginLeft: spacing.xs }}>
+              <GlassSurface level="raised" borderRadius={radius.pill} contentStyle={styles.roundBtn}>
+                <Ionicons name="options-outline" size={19} color={theme.text} />
+              </GlassSurface>
+              {activeFilterCount > 0 && (
+                <View style={[styles.filterBadge, { backgroundColor: theme.tint, borderColor: theme.bg }]}>
+                  <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
+                </View>
+              )}
             </Pressable>
           </View>
         </View>
 
-        <View style={[styles.searchBox, { backgroundColor: theme.surfaceAlt, borderColor: theme.glassBorder }]}>
+        <View style={[styles.searchBox, { backgroundColor: theme.surfaceAlt, borderColor: searchFocused ? theme.tint : theme.glassBorder }]}>
           <Ionicons name="search" size={16} color={theme.textTertiary} />
           <TextInput
             value={search}
             onChangeText={setSearch}
             placeholder="Search transactions..."
             placeholderTextColor={theme.textTertiary}
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => setSearchFocused(false)}
             style={[styles.searchInput, { color: theme.text }]}
           />
           {search.length > 0 && (
@@ -189,7 +196,12 @@ export default function TransactionsScreen() {
           )}
         </View>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabsRow} contentContainerStyle={{ paddingHorizontal: spacing.md }}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.tabsRow}
+          contentContainerStyle={{ paddingHorizontal: spacing.md, paddingVertical: spacing.xxs, alignItems: 'center' }}
+        >
           {TABS.map((t) => (
             <Pill key={t.key} label={t.label} active={tab === t.key} onPress={() => setTab(t.key)} />
           ))}
@@ -205,13 +217,20 @@ export default function TransactionsScreen() {
             const account = accounts.find((a) => a.id === item.accountId);
             const toAccount = item.toAccountId ? accounts.find((a) => a.id === item.toAccountId) : null;
             const row = (
-              <Pressable
+              <GlassPressable
+                level="row"
+                blur={false}
+                // The delete and edit panels live behind this row; translucent
+                // glass would leave them showing through at rest.
+                opaque
+                borderRadius={radius.lg}
+                style={styles.txnRowOuter}
+                contentStyle={styles.txnRow}
                 onPress={() => (selectionMode ? toggleSelected(item.id) : navigation.navigate('TransactionEntry', { transactionId: item.id }))}
                 onLongPress={() => {
                   setSelectionMode(true);
                   toggleSelected(item.id);
                 }}
-                style={[styles.txnRow, { backgroundColor: theme.surface }]}
               >
                 {selectionMode && (
                   <Ionicons
@@ -231,7 +250,7 @@ export default function TransactionsScreen() {
                   </Text>
                 </View>
                 <AmountText amount={item.amount} type={item.type} currency={item.currency} />
-              </Pressable>
+              </GlassPressable>
             );
             if (selectionMode) return row;
             return (
@@ -343,16 +362,18 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: spacing.md, paddingTop: spacing.sm },
   title: { fontSize: fontSizes.xl, fontWeight: '800' },
   headerActions: { flexDirection: 'row', alignItems: 'center' },
-  filterBadge: { position: 'absolute', top: -6, right: -8, minWidth: 16, height: 16, borderRadius: 8, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 },
+  roundBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  filterBadge: { position: 'absolute', top: -2, right: -4, minWidth: 17, height: 17, borderRadius: 9, borderWidth: 2, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 },
   filterBadgeText: { color: '#fff', fontSize: 10, fontWeight: '700' },
-  searchBox: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginHorizontal: spacing.md, marginTop: spacing.sm, paddingHorizontal: spacing.sm, paddingVertical: spacing.sm, borderRadius: radius.md },
+  searchBox: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginHorizontal: spacing.md, marginTop: spacing.sm, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.pill, borderWidth: 1 },
   searchInput: { flex: 1, fontSize: fontSizes.sm, padding: 0 },
-  tabsRow: { marginTop: spacing.sm, flexGrow: 0 },
-  txnRow: { flexDirection: 'row', alignItems: 'center', padding: spacing.sm, borderRadius: radius.md, marginTop: spacing.xs, gap: spacing.sm },
+  tabsRow: { marginTop: spacing.sm, flexGrow: 0, flexShrink: 0 },
+  txnRowOuter: { marginTop: spacing.xs },
+  txnRow: { flexDirection: 'row', alignItems: 'center', padding: spacing.sm, gap: spacing.sm },
   txnMeta: { flex: 1 },
   txnTitle: { fontSize: fontSizes.base, fontWeight: '600' },
   txnSub: { fontSize: fontSizes.xs, marginTop: 2 },
-  swipeAction: { width: 64, alignItems: 'center', justifyContent: 'center', marginTop: spacing.xs, borderRadius: radius.md },
+  swipeAction: { width: 72, alignItems: 'center', justifyContent: 'center', marginTop: spacing.xs, borderRadius: radius.lg },
   bulkBar: { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: spacing.md, borderTopWidth: StyleSheet.hairlineWidth },
   optionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.sm },
   filterGroupLabel: { fontSize: fontSizes.sm, fontWeight: '700', marginTop: spacing.sm, marginBottom: spacing.xs },
