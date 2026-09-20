@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { FlatList, Modal, Pressable, SectionList, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Image, Modal, Pressable, SectionList, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { Screen } from '../components/Screen';
@@ -12,6 +12,7 @@ import { QuickAddFab } from '../components/QuickAddFab';
 import { useTheme } from '../theme/ThemeContext';
 import { fontSizes, radius, spacing } from '../theme/tokens';
 import { useStore } from '../store/useStore';
+import { useAuthStore } from '../store/useAuthStore';
 import {
   accountBalance,
   formatCurrency,
@@ -76,9 +77,7 @@ export default function DashboardScreen() {
           </Text>
           <Ionicons name="chevron-down" size={16} color={theme.textSecondary} />
         </Pressable>
-        <Pressable onPress={() => navigation.navigate('Settings' as never)}>
-          <Ionicons name="person-circle-outline" size={30} color={theme.textSecondary} />
-        </Pressable>
+        <ProfileChip />
       </View>
 
       <SectionList
@@ -211,7 +210,66 @@ function QuickAction({ icon, label, color, onPress }: { icon: keyof typeof Ionic
   );
 }
 
+/**
+ * Whoever is signed in, shown the way they would recognise themselves: their
+ * own name and their own picture, rather than a generic silhouette.
+ */
+function ProfileChip() {
+  const { theme } = useTheme();
+  const navigation = useNavigation<any>();
+  const user = useAuthStore((s) => s.user);
+  // A photo URL can 404 once Google rotates it; fall back rather than show a gap.
+  const [photoBroken, setPhotoBroken] = useState(false);
+
+  const given = firstName(user?.displayName);
+  const photo = photoBroken ? null : user?.photoURL;
+
+  return (
+    <Pressable
+      style={styles.profile}
+      hitSlop={10}
+      onPress={() => navigation.navigate(user ? 'Account' : 'Login')}
+    >
+      {given && (
+        <Text numberOfLines={1} style={[styles.profileName, { color: theme.text }]}>
+          {given}
+        </Text>
+      )}
+      {photo ? (
+        <Image
+          source={{ uri: photo }}
+          style={[styles.avatar, { borderColor: theme.border }]}
+          onError={() => setPhotoBroken(true)}
+        />
+      ) : user ? (
+        <View style={[styles.avatar, styles.avatarFallback, { backgroundColor: theme.tintMuted, borderColor: theme.border }]}>
+          <Text style={[styles.avatarInitial, { color: theme.tint }]}>{initial(user)}</Text>
+        </View>
+      ) : (
+        <Ionicons name="person-circle-outline" size={30} color={theme.textSecondary} />
+      )}
+    </Pressable>
+  );
+}
+
+/** Just the given name: a header has room for one word, not a full name. */
+function firstName(displayName: string | null | undefined): string | null {
+  const first = displayName?.trim().split(/\s+/)[0];
+  return first ? first : null;
+}
+
+function initial(user: { displayName: string | null; email: string | null; phoneNumber: string | null }): string {
+  const source = user.displayName?.trim() || user.email?.trim() || '';
+  const letter = source.replace(/[^A-Za-z]/g, '').charAt(0);
+  return letter ? letter.toUpperCase() : '#';
+}
+
 const styles = StyleSheet.create({
+  profile: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, maxWidth: '55%' },
+  profileName: { fontSize: fontSizes.sm, fontWeight: '700', flexShrink: 1 },
+  avatar: { width: 32, height: 32, borderRadius: 16, borderWidth: StyleSheet.hairlineWidth },
+  avatarFallback: { alignItems: 'center', justifyContent: 'center' },
+  avatarInitial: { fontSize: fontSizes.sm, fontWeight: '800' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
