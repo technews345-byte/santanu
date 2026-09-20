@@ -252,17 +252,9 @@ function ProfileChip() {
   );
 }
 
-/**
- * One word for the header, which has room for no more: the given name, or
- * failing that the name someone chose for their email address, which is
- * usually their own.
- */
+/** Their name as they wrote it, or failing that the address they signed in with. */
 function greetingName(user: { displayName: string | null; email: string | null } | null): string | null {
-  const given = user?.displayName?.trim().split(/\s+/)[0];
-  if (given) return given;
-  const local = user?.email?.split('@')[0] ?? '';
-  const word = local.split(/[^A-Za-z]+/).filter(Boolean)[0];
-  return word ? word.charAt(0).toUpperCase() + word.slice(1) : null;
+  return user?.displayName?.trim() || user?.email?.trim() || null;
 }
 
 function initial(user: { displayName: string | null; email: string | null; phoneNumber: string | null }): string {
@@ -272,7 +264,7 @@ function initial(user: { displayName: string | null; email: string | null; phone
 }
 
 const styles = StyleSheet.create({
-  profile: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, maxWidth: '55%' },
+  profile: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, maxWidth: '62%' },
   profileName: { fontSize: fontSizes.sm, fontWeight: '700', flexShrink: 1 },
   avatar: { width: 32, height: 32, borderRadius: 16, borderWidth: StyleSheet.hairlineWidth },
   avatarFallback: { alignItems: 'center', justifyContent: 'center' },
