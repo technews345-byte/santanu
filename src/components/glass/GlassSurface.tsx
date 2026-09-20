@@ -82,7 +82,11 @@ export function GlassSurface({
         <View
           style={[
             StyleSheet.absoluteFill,
-            { borderRadius, borderWidth: 1, borderColor: theme.glassBorder },
+            {
+              borderRadius,
+              borderWidth: level === 'raised' ? 1.4 : 1,
+              borderColor: theme.glassBorder,
+            },
           ]}
           pointerEvents="none"
         />

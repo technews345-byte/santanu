@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { FlatList, Image, Modal, Pressable, SectionList, StyleSheet, Text, View } from 'react-native';
+import { format } from 'date-fns';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { Screen } from '../components/Screen';
@@ -12,6 +13,7 @@ import { QuickAddFab } from '../components/QuickAddFab';
 import { GlassPressable } from '../components/glass/GlassPressable';
 import { GlassSurface } from '../components/glass/GlassSurface';
 import { GlassTabs } from '../components/glass/GlassTabs';
+import { GradientBadge } from '../components/glass/GradientBadge';
 import { useTheme } from '../theme/ThemeContext';
 import { fontSizes, radius, spacing } from '../theme/tokens';
 import { useStore } from '../store/useStore';
@@ -26,6 +28,8 @@ import {
   transactionsInRange,
 } from '../utils/finance';
 import { PeriodKey } from '../types';
+
+const MARK = require('../../assets/splash-icon.png');
 
 const PERIODS: { key: PeriodKey; label: string }[] = [
   { key: 'day', label: 'Day' },
@@ -67,6 +71,19 @@ export default function DashboardScreen() {
   const periodTxns = useMemo(() => transactionsInRange(scopedTransactions, start, end), [scopedTransactions, start, end]);
   const { income, expense, investment, net } = summarize(periodTxns);
 
+  // Last month over this one, so the chip says something true rather than
+  // decorative. Only spending is compared: it is the number people act on.
+  const delta = useMemo(() => {
+    const now = new Date();
+    const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const a = periodInterval('month', now);
+    const b = periodInterval('month', prevMonth);
+    const thisSpend = summarize(transactionsInRange(scopedTransactions, a.start, a.end)).expense;
+    const lastSpend = summarize(transactionsInRange(scopedTransactions, b.start, b.end)).expense;
+    if (lastSpend <= 0) return null;
+    return ((thisSpend - lastSpend) / lastSpend) * 100;
+  }, [scopedTransactions]);
+
   const recentSections = useMemo(() => groupByRelativeDate(scopedTransactions.slice(0, 60)), [scopedTransactions]);
 
   const categoryById = (id: string | null) => categories.find((c) => c.id === id);
@@ -83,7 +100,10 @@ export default function DashboardScreen() {
             Track. Plan. Save. Live Better.
           </Text>
         </View>
-        <ProfileChip />
+        <View style={styles.headerActions}>
+          <RoundGlassButton icon="search-outline" onPress={() => navigation.navigate('Transactions' as never)} />
+          <ProfileChip />
+        </View>
       </View>
 
       <Pressable style={styles.switcher} onPress={() => setSwitcherOpen(true)}>
@@ -106,6 +126,10 @@ export default function DashboardScreen() {
             <Card level="raised" style={styles.balanceCard}>
               <View style={styles.balanceRow}>
                 <Text style={[styles.balanceLabel, { color: theme.textSecondary }]}>Total Balance</Text>
+                <View style={styles.brandMark}>
+                  <Image source={MARK} style={styles.brandImage} resizeMode="contain" />
+                  <Text style={[styles.brandName, { color: theme.text }]}>Spendly</Text>
+                </View>
                 <Pressable onPress={toggleBalanceVisible} hitSlop={10}>
                   <Ionicons name={balanceVisible ? 'eye-outline' : 'eye-off-outline'} size={20} color={theme.textSecondary} />
                 </Pressable>
@@ -113,6 +137,20 @@ export default function DashboardScreen() {
               <Text style={[styles.balanceValue, { color: theme.text }]}>
                 {balanceVisible ? formatCurrency(balance) : '••••••'}
               </Text>
+
+              {delta !== null && (
+                <View style={[styles.deltaChip, { backgroundColor: delta <= 0 ? theme.successMuted : theme.expenseMuted }]}>
+                  <Ionicons
+                    name={delta <= 0 ? 'arrow-down' : 'arrow-up'}
+                    size={13}
+                    color={delta <= 0 ? theme.success : theme.expense}
+                  />
+                  <Text style={[styles.deltaText, { color: delta <= 0 ? theme.success : theme.expense }]}>
+                    {Math.abs(delta).toFixed(0)}%
+                  </Text>
+                  <Text style={[styles.deltaSub, { color: theme.textSecondary }]}>vs last month</Text>
+                </View>
+              )}
 
               <View style={styles.periodRow}>
                 <GlassTabs options={PERIODS.map((p) => ({ key: p.key, label: p.label }))} value={period} onChange={setPeriod} />
@@ -138,7 +176,15 @@ export default function DashboardScreen() {
               <QuickAction icon="stats-chart" label="Analytics" color={theme.transfer} onPress={() => navigation.navigate('Analytics' as never)} />
             </View>
 
-            <Text style={[styles.sectionTitle, { color: theme.text }]}>Recent Activity</Text>
+            <SmartTip transactions={scopedTransactions} categories={categories} />
+
+            <View style={styles.sectionHead}>
+              <Text style={[styles.sectionTitle, { color: theme.text }]}>Recent Transactions</Text>
+              <Pressable style={styles.seeAll} onPress={() => navigation.navigate('Transactions' as never)} hitSlop={8}>
+                <Text style={[styles.seeAllText, { color: theme.tint }]}>See all</Text>
+                <Ionicons name="chevron-forward" size={14} color={theme.tint} />
+              </Pressable>
+            </View>
           </View>
         }
         renderSectionHeader={({ section }) => (
@@ -163,10 +209,12 @@ export default function DashboardScreen() {
                   {item.note || cat?.name || (item.type === 'transfer' ? 'Transfer' : 'Uncategorized')}
                 </Text>
                 <Text style={[styles.txnSub, { color: theme.textTertiary }]} numberOfLines={1}>
-                  {toAccount ? `${account?.name} → ${toAccount.name}` : account?.name ?? 'Account'}
+                  {format(new Date(item.date), 'd MMM, h:mm a')}
+                  {toAccount ? ` · ${account?.name} → ${toAccount.name}` : account ? ` · ${account.name}` : ''}
                 </Text>
               </View>
               <AmountText amount={item.amount} type={item.type} currency={item.currency} />
+              <Ionicons name="chevron-forward" size={15} color={theme.textTertiary} />
             </GlassPressable>
           );
         }}
@@ -226,13 +274,102 @@ function QuickAction({ icon, label, color, onPress }: { icon: keyof typeof Ionic
       contentStyle={styles.quickActionInner}
       onPress={onPress}
     >
-      {/* The glow sits behind the icon rather than around the tile, so five
-          of them in a row do not turn into a band of colour. */}
-      <View style={[styles.quickIconWrap, { backgroundColor: `${color}22`, shadowColor: color }]}>
-        <Ionicons name={icon} size={20} color={color} />
-      </View>
-      <Text numberOfLines={1} style={[styles.quickActionLabel, { color: theme.textSecondary }]}>{label}</Text>
+      <GradientBadge icon={icon} color={color} size={48} />
+      <Text numberOfLines={2} style={[styles.quickActionLabel, { color: theme.text }]}>{label}</Text>
     </GlassPressable>
+  );
+}
+
+function RoundGlassButton({
+  icon,
+  onPress,
+  dot,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  onPress: () => void;
+  dot?: boolean;
+}) {
+  const { theme } = useTheme();
+  return (
+    <Pressable onPress={onPress} hitSlop={8}>
+      <GlassSurface level="raised" borderRadius={radius.pill} contentStyle={styles.roundBtn}>
+        <Ionicons name={icon} size={20} color={theme.text} />
+      </GlassSurface>
+      {dot && <View style={[styles.dot, { backgroundColor: theme.expense, borderColor: theme.bg }]} />}
+    </Pressable>
+  );
+}
+
+/**
+ * One observation drawn from the person's own spending, or nothing at all.
+ *
+ * A tip that appears whatever the data says is decoration; this one only
+ * shows when a category has genuinely moved by a margin worth a glance, and
+ * it names the figure so the claim can be checked.
+ */
+function SmartTip({
+  transactions,
+  categories,
+}: {
+  transactions: import('../types').Transaction[];
+  categories: import('../types').Category[];
+}) {
+  const { theme } = useTheme();
+  const navigation = useNavigation<any>();
+  const [dismissed, setDismissed] = useState(false);
+
+  const tip = useMemo(() => {
+    const now = new Date();
+    const thisMonth = periodInterval('month', now);
+    const lastMonth = periodInterval('month', new Date(now.getFullYear(), now.getMonth() - 1, 1));
+
+    const spendByCategory = (from: Date, to: Date) => {
+      const map = new Map<string, number>();
+      for (const t of transactionsInRange(transactions, from, to)) {
+        if (t.type !== 'expense' || !t.categoryId) continue;
+        map.set(t.categoryId, (map.get(t.categoryId) ?? 0) + t.amount);
+      }
+      return map;
+    };
+
+    const current = spendByCategory(thisMonth.start, thisMonth.end);
+    const previous = spendByCategory(lastMonth.start, lastMonth.end);
+
+    let best: { name: string; pct: number } | null = null;
+    for (const [categoryId, amount] of current) {
+      const before = previous.get(categoryId) ?? 0;
+      if (before <= 0) continue;
+      const pct = ((amount - before) / before) * 100;
+      if (Math.abs(pct) < 15) continue;
+      if (!best || Math.abs(pct) > Math.abs(best.pct)) {
+        best = { name: categories.find((c) => c.id === categoryId)?.name ?? 'a category', pct };
+      }
+    }
+    return best;
+  }, [transactions, categories]);
+
+  if (!tip || dismissed) return null;
+
+  const up = tip.pct > 0;
+  return (
+    <Card level="raised" style={styles.tipCard}>
+      <View style={styles.tipRow}>
+        <GradientBadge icon={up ? 'bulb' : 'checkmark-circle'} color={up ? theme.warning : theme.success} size={42} />
+        <View style={styles.tipBody}>
+          <Text style={[styles.tipTitle, { color: theme.text }]}>Smart Tip</Text>
+          <Text style={[styles.tipText, { color: theme.textSecondary }]}>
+            You spent {Math.abs(tip.pct).toFixed(0)}% {up ? 'more' : 'less'} on {tip.name} this month than last.
+          </Text>
+        </View>
+        <Pressable onPress={() => setDismissed(true)} hitSlop={10}>
+          <Ionicons name="close" size={18} color={theme.textTertiary} />
+        </Pressable>
+      </View>
+      <Pressable style={styles.tipCta} onPress={() => navigation.navigate('Analytics' as never)} hitSlop={6}>
+        <Text style={[styles.tipCtaText, { color: theme.tint }]}>View Insights</Text>
+        <Ionicons name="chevron-forward" size={14} color={theme.tint} />
+      </Pressable>
+    </Card>
   );
 }
 
@@ -308,6 +445,34 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  roundBtn: { width: 42, height: 42, alignItems: 'center', justifyContent: 'center' },
+  dot: { position: 'absolute', top: 2, right: 2, width: 10, height: 10, borderRadius: 5, borderWidth: 2 },
+  brandMark: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  brandImage: { width: 26, height: 26 },
+  brandName: { fontSize: fontSizes.sm, fontWeight: '800', letterSpacing: -0.2 },
+  deltaChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    alignSelf: 'flex-start',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
+    borderRadius: radius.pill,
+    marginTop: spacing.sm,
+  },
+  deltaText: { fontSize: fontSizes.sm, fontWeight: '800' },
+  deltaSub: { fontSize: fontSizes.xs, fontWeight: '600' },
+  sectionHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.lg },
+  seeAll: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  seeAllText: { fontSize: fontSizes.sm, fontWeight: '700' },
+  tipCard: { marginTop: spacing.lg },
+  tipRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
+  tipBody: { flex: 1 },
+  tipTitle: { fontSize: fontSizes.base, fontWeight: '800' },
+  tipText: { fontSize: fontSizes.xs, lineHeight: 18, marginTop: 2 },
+  tipCta: { flexDirection: 'row', alignItems: 'center', gap: 2, alignSelf: 'flex-end', marginTop: spacing.xs },
+  tipCtaText: { fontSize: fontSizes.sm, fontWeight: '700' },
   greetBlock: { flex: 1, paddingRight: spacing.sm },
   greeting: { fontSize: fontSizes.lg, fontWeight: '800', letterSpacing: -0.3 },
   tagline: { fontSize: fontSizes.xs, fontWeight: '500', marginTop: 2 },
@@ -317,7 +482,7 @@ const styles = StyleSheet.create({
   balanceCard: { marginTop: spacing.xs },
   balanceRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   balanceLabel: { fontSize: fontSizes.sm, fontWeight: '600' },
-  balanceValue: { fontSize: fontSizes.xxxl, fontWeight: '800', marginTop: spacing.xxs, fontVariant: ['tabular-nums'] },
+  balanceValue: { fontSize: fontSizes.xxxl, fontWeight: '800', marginTop: spacing.xxs, letterSpacing: -1, fontVariant: ['tabular-nums'] },
   periodRow: { marginTop: spacing.md },
   summaryRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginTop: spacing.md },
   summaryChip: { flexGrow: 1, flexBasis: '46%', borderRadius: radius.md, padding: spacing.sm },
@@ -325,7 +490,7 @@ const styles = StyleSheet.create({
   summaryValue: { fontSize: fontSizes.sm, fontWeight: '800', marginTop: 2, fontVariant: ['tabular-nums'] },
   quickActions: { flexDirection: 'row', gap: spacing.xs, marginTop: spacing.lg },
   quickAction: { flex: 1 },
-  quickActionInner: { alignItems: 'center', gap: 6, paddingVertical: spacing.sm, paddingHorizontal: 2 },
+  quickActionInner: { alignItems: 'center', gap: spacing.xs, paddingVertical: spacing.md, paddingHorizontal: 4, minHeight: 116, justifyContent: 'center' },
   quickIconWrap: {
     width: 42,
     height: 42,
@@ -337,8 +502,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
     elevation: 3,
   },
-  quickActionLabel: { fontSize: 10, fontWeight: '700' },
-  sectionTitle: { fontSize: fontSizes.md, fontWeight: '700', marginTop: spacing.lg, marginBottom: spacing.xs },
+  quickActionLabel: { fontSize: fontSizes.xs, fontWeight: '700', textAlign: 'center', lineHeight: 15 },
+  sectionTitle: { fontSize: fontSizes.md, fontWeight: '800' },
   dateHeader: { fontSize: fontSizes.xs, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, marginTop: spacing.sm, marginBottom: spacing.xs },
   txnRowOuter: { marginBottom: spacing.xs },
   txnRow: { flexDirection: 'row', alignItems: 'center', padding: spacing.sm, gap: spacing.sm },
