@@ -40,23 +40,39 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
   lastSyncedAt: null,
 
   init: async () => {
-    const [ack, lastSynced, pending] = await Promise.all([
-      AsyncStorage.getItem(GUEST_ACK_KEY),
-      getMeta(LAST_SYNC_KEY),
-      countPending(),
-    ]);
-    set({ guestAcknowledged: ack === 'true', lastSyncedAt: lastSynced, pendingCount: pending });
+    try {
+      const [ack, lastSynced, pending] = await Promise.all([
+        AsyncStorage.getItem(GUEST_ACK_KEY),
+        getMeta(LAST_SYNC_KEY),
+        countPending(),
+      ]);
+      set({ guestAcknowledged: ack === 'true', lastSyncedAt: lastSynced, pendingCount: pending });
+    } catch {
+      // Defaults stand: a reader that fails should not decide whether the app opens.
+    }
 
     if (!isCloudConfigured) {
       set({ ready: true });
       return;
     }
 
-    const { subscribeToAuth } = require('../services/auth') as typeof import('../services/auth');
-    subscribeToAuth((user) => {
-      set({ user, ready: true });
-      if (user) get().syncNow();
-    });
+    // The app waits on this before it draws, so nothing here may leave it
+    // waiting for ever: if Firebase neither answers nor throws, carry on
+    // signed out. A later answer still arrives and is honoured.
+    const giveUpWaiting = setTimeout(() => set({ ready: true }), 5000);
+
+    try {
+      const { subscribeToAuth } = require('../services/auth') as typeof import('../services/auth');
+      subscribeToAuth((user) => {
+        clearTimeout(giveUpWaiting);
+        set({ user, ready: true });
+        if (user) get().syncNow();
+      });
+    } catch {
+      clearTimeout(giveUpWaiting);
+      set({ ready: true });
+      return;
+    }
 
     setSyncHandler(() => get().syncNow());
 

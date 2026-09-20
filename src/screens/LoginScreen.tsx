@@ -51,17 +51,27 @@ export default function LoginScreen() {
     setNotice('Cloud sync is not set up in this build yet. Everything still saves on this device.');
   };
 
+  // As the first screen there is nothing behind to return to: answering the
+  // question is what dismisses it.
+  const dismiss = () => {
+    if (navigation.canGoBack()) navigation.goBack();
+  };
+
   const handleGuest = async () => {
     await continueAsGuest();
-    navigation.goBack();
+    dismiss();
   };
 
   return (
     <Screen edges={['top', 'left', 'right', 'bottom']}>
       <View style={styles.container}>
-        <Pressable style={styles.close} onPress={() => navigation.goBack()} hitSlop={12}>
-          <Ionicons name="close" size={24} color={theme.textTertiary} />
-        </Pressable>
+        {navigation.canGoBack() ? (
+          <Pressable style={styles.close} onPress={dismiss} hitSlop={12}>
+            <Ionicons name="close" size={24} color={theme.textTertiary} />
+          </Pressable>
+        ) : (
+          <View style={styles.close} />
+        )}
 
         <View style={styles.hero}>
           <Animated.View style={step(0)}>
@@ -76,7 +86,7 @@ export default function LoginScreen() {
 
         <Animated.View style={[styles.actions, step(2)]}>
           {cloudProviders.google ? (
-            <GoogleAuthButton onDone={() => navigation.goBack()} onNotice={setNotice} />
+            <GoogleAuthButton onDone={dismiss} onNotice={setNotice} />
           ) : (
             <ProviderButton
               icon="logo-google"
