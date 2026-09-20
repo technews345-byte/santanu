@@ -7,6 +7,7 @@ export type RootStackParamList = {
   AccountForm: { accountId?: string };
   CategoryForm: { categoryId?: string; type: 'expense' | 'income' };
   BudgetForm: { categoryId: string };
+  Welcome: undefined;
   Login: undefined;
   PhoneLogin: undefined;
   Account: undefined;

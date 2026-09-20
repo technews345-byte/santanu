@@ -22,6 +22,7 @@ function AppContent() {
   const { theme } = useTheme();
   const { hydrated, hydrationError, hydrate, biometricLockEnabled } = useStore();
   const initAuth = useAuthStore((s) => s.init);
+  const authReady = useAuthStore((s) => s.ready);
   const [unlocked, setUnlocked] = useState(false);
   const [splashDone, setSplashDone] = useState(false);
 
@@ -84,7 +85,7 @@ function AppContent() {
       {content}
       {!splashDone && (
         <BrandSplash
-          ready={hydrated}
+          ready={hydrated && authReady}
           onFirstFrame={handleSplashShown}
           onFinish={() => setSplashDone(true)}
         />

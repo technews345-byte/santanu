@@ -12,11 +12,20 @@ import LoginScreen from '../screens/LoginScreen';
 import PhoneLoginScreen from '../screens/PhoneLoginScreen';
 import AccountScreen from '../screens/AccountScreen';
 import { RootStackParamList } from './types';
+import { useAuthStore } from '../store/useAuthStore';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export function RootNavigator() {
   const { theme } = useTheme();
+  const ready = useAuthStore((s) => s.ready);
+  const user = useAuthStore((s) => s.user);
+  const guestAcknowledged = useAuthStore((s) => s.guestAcknowledged);
+
+  // Someone opening Spendly for the first time is offered the choice up front:
+  // sign in, or carry on without an account. Once either is answered the screen
+  // steps aside and never asks again.
+  const askToSignIn = ready && !user && !guestAcknowledged;
 
   const navTheme = {
     ...(theme.mode === 'dark' ? DarkTheme : DefaultTheme),
@@ -33,17 +42,30 @@ export function RootNavigator() {
   return (
     <NavigationContainer theme={navTheme}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="Tabs" component={TabNavigator} />
-        <Stack.Group screenOptions={{ presentation: 'modal' }}>
-          <Stack.Screen name="TransactionEntry" component={TransactionEntryScreen} />
-          <Stack.Screen name="AccountForm" component={AccountFormScreen} />
-          <Stack.Screen name="CategoryForm" component={CategoryFormScreen} />
-          <Stack.Screen name="BudgetForm" component={BudgetFormScreen} />
-          <Stack.Screen name="Login" component={LoginScreen} />
-          <Stack.Screen name="PhoneLogin" component={PhoneLoginScreen} />
-        </Stack.Group>
-        <Stack.Screen name="CategoryDetail" component={CategoryDetailScreen} />
-        <Stack.Screen name="Account" component={AccountScreen} />
+        {askToSignIn ? (
+          <>
+            <Stack.Screen name="Welcome" component={LoginScreen} />
+            <Stack.Screen
+              name="PhoneLogin"
+              component={PhoneLoginScreen}
+              options={{ presentation: 'modal' }}
+            />
+          </>
+        ) : (
+          <>
+            <Stack.Screen name="Tabs" component={TabNavigator} />
+            <Stack.Group screenOptions={{ presentation: 'modal' }}>
+              <Stack.Screen name="TransactionEntry" component={TransactionEntryScreen} />
+              <Stack.Screen name="AccountForm" component={AccountFormScreen} />
+              <Stack.Screen name="CategoryForm" component={CategoryFormScreen} />
+              <Stack.Screen name="BudgetForm" component={BudgetFormScreen} />
+              <Stack.Screen name="Login" component={LoginScreen} />
+              <Stack.Screen name="PhoneLogin" component={PhoneLoginScreen} />
+            </Stack.Group>
+            <Stack.Screen name="CategoryDetail" component={CategoryDetailScreen} />
+            <Stack.Screen name="Account" component={AccountScreen} />
+          </>
+        )}
       </Stack.Navigator>
     </NavigationContainer>
   );
