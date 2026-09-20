@@ -7,6 +7,7 @@ import { Screen } from '../components/Screen';
 import { Card } from '../components/Card';
 import { IconBadge } from '../components/IconBadge';
 import { ProgressBar } from '../components/ProgressBar';
+import { GlassPressable } from '../components/glass/GlassPressable';
 import { EmptyState } from '../components/EmptyState';
 import { QuickAddFab } from '../components/QuickAddFab';
 import { useTheme } from '../theme/ThemeContext';
@@ -72,9 +73,9 @@ export default function BudgetsScreen() {
       <FlatList
         data={rows}
         keyExtractor={(item) => item.category.id}
-        contentContainerStyle={{ padding: spacing.md, paddingBottom: 120 }}
+        contentContainerStyle={{ padding: spacing.md, paddingBottom: 168 }}
         ListHeaderComponent={
-          <Card style={styles.summaryCard}>
+          <Card level="raised" style={styles.summaryCard}>
             <View style={styles.summaryRow}>
               <View>
                 <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>Planned</Text>
@@ -101,8 +102,12 @@ export default function BudgetsScreen() {
           const progress = hasBudget && budget!.amount > 0 ? spent / budget!.amount : 0;
           const overspent = hasBudget && spent > budget!.amount;
           return (
-            <Pressable
-              style={[styles.budgetRow, { backgroundColor: theme.surface }]}
+            <GlassPressable
+              level="row"
+              blur={false}
+              borderRadius={radius.lg}
+              style={styles.budgetRowOuter}
+              contentStyle={styles.budgetRow}
               onPress={() => navigation.navigate('BudgetForm', { categoryId: category.id })}
             >
               <View style={styles.budgetTop}>
@@ -136,7 +141,7 @@ export default function BudgetsScreen() {
                   <ProgressBar progress={progress} />
                 </View>
               )}
-            </Pressable>
+            </GlassPressable>
           );
         }}
       />
@@ -154,7 +159,8 @@ const styles = StyleSheet.create({
   summaryRow: { flexDirection: 'row', justifyContent: 'space-between' },
   summaryLabel: { fontSize: fontSizes.xs, fontWeight: '600' },
   summaryValue: { fontSize: fontSizes.md, fontWeight: '800', marginTop: 2, fontVariant: ['tabular-nums'] },
-  budgetRow: { padding: spacing.sm, borderRadius: radius.md, marginBottom: spacing.xs },
+  budgetRowOuter: { marginBottom: spacing.sm },
+  budgetRow: { padding: spacing.sm },
   budgetTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   budgetMeta: { flex: 1 },
   budgetName: { fontSize: fontSizes.base, fontWeight: '600' },

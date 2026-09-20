@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
-import { LayoutChangeEvent, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Animated, Easing, LayoutChangeEvent, StyleSheet, Text, View } from 'react-native';
 import Svg, { Line, Rect } from 'react-native-svg';
 import { useTheme } from '../theme/ThemeContext';
 import { fontSizes, spacing } from '../theme/tokens';
+
+const AnimatedRect = Animated.createAnimatedComponent(Rect);
 
 export interface TrendPoint {
   label: string;
@@ -16,6 +18,19 @@ const BAR_GAP = 3;
 export function TrendChart({ data, height = 160 }: { data: TrendPoint[]; height?: number }) {
   const { theme } = useTheme();
   const [width, setWidth] = useState(0);
+  // One value drives every bar, so they rise together rather than racing.
+  const rise = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    rise.setValue(0);
+    Animated.timing(rise, {
+      toValue: 1,
+      duration: 620,
+      easing: Easing.bezier(0.22, 1, 0.36, 1),
+      // Height is a layout property, so this one cannot go to the native side.
+      useNativeDriver: false,
+    }).start();
+  }, [data]);
 
   const onLayout = (e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width);
 
@@ -35,20 +50,20 @@ export function TrendChart({ data, height = 160 }: { data: TrendPoint[]; height?
             const expenseHeight = (d.expense / maxVal) * (plotHeight - 4);
             return (
               <React.Fragment key={idx}>
-                <Rect
+                <AnimatedRect
                   x={centerX - barWidth - BAR_GAP / 2}
-                  y={plotHeight - incomeHeight}
+                  y={rise.interpolate({ inputRange: [0, 1], outputRange: [plotHeight, plotHeight - incomeHeight] })}
                   width={barWidth}
-                  height={incomeHeight}
-                  rx={3}
+                  height={rise.interpolate({ inputRange: [0, 1], outputRange: [0, incomeHeight] })}
+                  rx={barWidth / 2}
                   fill={theme.success}
                 />
-                <Rect
+                <AnimatedRect
                   x={centerX + BAR_GAP / 2}
-                  y={plotHeight - expenseHeight}
+                  y={rise.interpolate({ inputRange: [0, 1], outputRange: [plotHeight, plotHeight - expenseHeight] })}
                   width={barWidth}
-                  height={expenseHeight}
-                  rx={3}
+                  height={rise.interpolate({ inputRange: [0, 1], outputRange: [0, expenseHeight] })}
+                  rx={barWidth / 2}
                   fill={theme.expense}
                 />
               </React.Fragment>

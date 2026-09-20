@@ -1,12 +1,12 @@
 export const semantic = {
-  success: '#10B981',
-  successMuted: 'rgba(16, 185, 129, 0.14)',
-  expense: '#F43F5E',
-  expenseMuted: 'rgba(244, 63, 94, 0.14)',
-  transfer: '#6366F1',
-  transferMuted: 'rgba(99, 102, 241, 0.14)',
+  success: '#00C08B',
+  successMuted: 'rgba(0, 192, 139, 0.16)',
+  expense: '#FF5C7A',
+  expenseMuted: 'rgba(255, 92, 122, 0.16)',
+  transfer: '#22B8F0',
+  transferMuted: 'rgba(34, 184, 240, 0.16)',
   investment: '#8B5CF6',
-  investmentMuted: 'rgba(139, 92, 246, 0.14)',
+  investmentMuted: 'rgba(139, 92, 246, 0.16)',
   warning: '#F59E0B',
   warningMuted: 'rgba(245, 158, 11, 0.16)',
   danger: '#EF4444',
@@ -41,43 +41,80 @@ export interface Theme {
   warningMuted: string;
   danger: string;
   dangerMuted: string;
+
+  /** Translucent panel fill. Opaque enough that figures stay readable on it. */
+  glass: string;
+  /** A second, heavier fill for panels that carry the largest numbers. */
+  glassStrong: string;
+  /** The lit edge that gives a panel its thickness. */
+  glassBorder: string;
+  /** The highlight running along the top of a panel, as light would catch it. */
+  glassSheen: string;
+  /** Tint painted under the blur, since blur alone has no colour of its own. */
+  glassTint: 'light' | 'dark';
+  /** How far the background is thrown out of focus behind a panel. */
+  blurIntensity: number;
+  /** Wash behind the whole screen, from which panels appear to be cut. */
+  auroraOne: string;
+  auroraTwo: string;
+  auroraThree: string;
 }
 
 export const lightTheme: Theme = {
   mode: 'light',
-  bg: '#F8FAFC',
-  surface: '#FFFFFF',
-  surfaceAlt: '#F1F5F9',
-  surfaceRaised: '#FFFFFF',
-  border: '#E2E8F0',
-  borderSubtle: '#EEF2F6',
-  text: '#0F172A',
-  textSecondary: '#475569',
-  textTertiary: '#94A3B8',
+  bg: '#EEF3FC',
+  surface: 'rgba(255, 255, 255, 0.72)',
+  surfaceAlt: 'rgba(255, 255, 255, 0.52)',
+  surfaceRaised: 'rgba(255, 255, 255, 0.86)',
+  border: 'rgba(255, 255, 255, 0.85)',
+  borderSubtle: 'rgba(148, 163, 184, 0.22)',
+  text: '#0B1220',
+  textSecondary: '#46536B',
+  textTertiary: '#8492AC',
   textInverted: '#F8FAFC',
-  tint: '#6366F1',
-  tintMuted: 'rgba(99, 102, 241, 0.12)',
-  shadow: 'rgba(15, 23, 42, 0.08)',
-  overlay: 'rgba(15, 23, 42, 0.45)',
+  tint: '#3B5BFF',
+  tintMuted: 'rgba(59, 91, 255, 0.12)',
+  shadow: 'rgba(30, 58, 138, 0.13)',
+  overlay: 'rgba(15, 23, 42, 0.38)',
+  glass: 'rgba(255, 255, 255, 0.66)',
+  glassStrong: 'rgba(255, 255, 255, 0.84)',
+  glassBorder: 'rgba(255, 255, 255, 0.9)',
+  glassSheen: 'rgba(255, 255, 255, 0.55)',
+  glassTint: 'light',
+  blurIntensity: 34,
+  auroraOne: 'rgba(59, 91, 255, 0.16)',
+  auroraTwo: 'rgba(139, 92, 246, 0.14)',
+  auroraThree: 'rgba(34, 184, 240, 0.12)',
   ...semantic,
 };
 
+// Not an inversion of the light theme: the panels are navy glass lit from
+// within, rather than white panels turned down.
 export const darkTheme: Theme = {
   mode: 'dark',
-  bg: '#0F172A',
-  surface: '#1A2436',
-  surfaceAlt: '#151E2E',
-  surfaceRaised: '#212D42',
-  border: '#2B3A52',
-  borderSubtle: '#1F2A3D',
-  text: '#F8FAFC',
-  textSecondary: '#B6C2D4',
-  textTertiary: '#7C8AA3',
-  textInverted: '#0F172A',
-  tint: '#818CF8',
-  tintMuted: 'rgba(129, 140, 248, 0.18)',
-  shadow: 'rgba(0, 0, 0, 0.4)',
-  overlay: 'rgba(0, 0, 0, 0.6)',
+  bg: '#070C1A',
+  surface: 'rgba(30, 44, 78, 0.62)',
+  surfaceAlt: 'rgba(22, 33, 60, 0.55)',
+  surfaceRaised: 'rgba(38, 54, 92, 0.72)',
+  border: 'rgba(129, 158, 255, 0.22)',
+  borderSubtle: 'rgba(129, 158, 255, 0.12)',
+  text: '#F4F8FF',
+  textSecondary: '#A9B8D6',
+  textTertiary: '#6F7F9E',
+  textInverted: '#070C1A',
+  tint: '#6E8BFF',
+  tintMuted: 'rgba(110, 139, 255, 0.2)',
+  shadow: 'rgba(0, 0, 0, 0.55)',
+  overlay: 'rgba(3, 7, 18, 0.62)',
+  glass: 'rgba(30, 44, 78, 0.58)',
+  glassStrong: 'rgba(36, 52, 90, 0.76)',
+  glassBorder: 'rgba(140, 168, 255, 0.24)',
+  glassSheen: 'rgba(160, 190, 255, 0.14)',
+  glassTint: 'dark',
+  blurIntensity: 42,
+  auroraOne: 'rgba(59, 91, 255, 0.30)',
+  auroraTwo: 'rgba(139, 92, 246, 0.24)',
+  auroraThree: 'rgba(34, 184, 240, 0.18)',
   ...semantic,
 };
 
@@ -93,11 +130,26 @@ export const spacing = {
 };
 
 export const radius = {
-  sm: 10,
-  md: 14,
-  lg: 18,
-  xl: 24,
+  sm: 12,
+  md: 16,
+  lg: 22,
+  xl: 28,
   pill: 999,
+};
+
+/**
+ * One motion vocabulary for the whole app. Springs rather than durations, so
+ * a gesture interrupted halfway carries its velocity into the next movement
+ * instead of restarting.
+ */
+export const motion = {
+  /** Finger-follows-glass: quick to depart, settles without wobbling. */
+  press: { damping: 22, stiffness: 320, mass: 0.7 },
+  /** An indicator gliding to a new tab. */
+  glide: { damping: 20, stiffness: 180, mass: 0.9 },
+  /** Something arriving on screen. */
+  enter: { damping: 18, stiffness: 140, mass: 1 },
+  pressScale: 0.975,
 };
 
 export const fontSizes = {

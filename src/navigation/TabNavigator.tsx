@@ -8,6 +8,7 @@ import BudgetsScreen from '../screens/BudgetsScreen';
 import AnalyticsScreen from '../screens/AnalyticsScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import { TabParamList } from './types';
+import { GlassTabBar } from '../components/glass/GlassTabBar';
 
 const Tab = createBottomTabNavigator<TabParamList>();
 
@@ -24,6 +25,7 @@ export function TabNavigator() {
 
   return (
     <Tab.Navigator
+      tabBar={(props) => <GlassTabBar {...props} />}
       screenOptions={({ route }) => ({
         headerShown: false,
         // Switching tabs cut straight to the next screen; a short cross-fade
@@ -32,15 +34,11 @@ export function TabNavigator() {
         transitionSpec: { animation: 'timing', config: { duration: 180 } },
         tabBarActiveTintColor: theme.tint,
         tabBarInactiveTintColor: theme.textTertiary,
-        tabBarStyle: {
-          backgroundColor: theme.surface,
-          borderTopColor: theme.borderSubtle,
-        },
+
         tabBarIcon: ({ focused, color, size }) => {
           const set = ICONS[route.name as keyof TabParamList];
           return <Ionicons name={focused ? set.active : set.inactive} size={size} color={color} />;
         },
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
       })}
     >
       <Tab.Screen name="Dashboard" component={DashboardScreen} />

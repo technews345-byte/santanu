@@ -11,6 +11,9 @@ import { DonutChart, DonutSlice } from '../components/DonutChart';
 import { TrendChart } from '../components/TrendChart';
 import { EmptyState } from '../components/EmptyState';
 import { QuickAddFab } from '../components/QuickAddFab';
+import { GlassPressable } from '../components/glass/GlassPressable';
+import { GlassSurface } from '../components/glass/GlassSurface';
+import { GlassTabs } from '../components/glass/GlassTabs';
 import { useTheme } from '../theme/ThemeContext';
 import { fontSizes, radius, spacing } from '../theme/tokens';
 import { useStore } from '../store/useStore';
@@ -87,36 +90,40 @@ export default function AnalyticsScreen() {
       <FlatList
         data={breakdown}
         keyExtractor={(item) => item.categoryId}
-        contentContainerStyle={{ padding: spacing.md, paddingBottom: 120 }}
+        contentContainerStyle={{ padding: spacing.md, paddingBottom: 168 }}
         ListHeaderComponent={
           <View>
             <Text style={[styles.title, { color: theme.text }]}>Analytics</Text>
 
             <View style={styles.periodRow}>
-              {PERIODS.map((p) => (
-                <Pill key={p.key} label={p.label} active={period === p.key} onPress={() => setPeriod(p.key)} />
-              ))}
+              <GlassTabs options={PERIODS.map((p) => ({ key: p.key, label: p.label }))} value={period} onChange={setPeriod} />
             </View>
 
-            <View style={styles.anchorRow}>
-              <Pressable onPress={() => shiftAnchor(-1)} hitSlop={8}>
-                <Ionicons name="chevron-back" size={20} color={theme.textSecondary} />
+            <GlassSurface level="row" blur={false} borderRadius={radius.pill} style={styles.anchorRow} contentStyle={styles.anchorInner}>
+              <Pressable onPress={() => shiftAnchor(-1)} hitSlop={10} style={styles.anchorArrow}>
+                <Ionicons name="chevron-back" size={18} color={theme.textSecondary} />
               </Pressable>
               <Text style={[styles.anchorLabel, { color: theme.text }]}>
                 {period === 'year' ? format(anchor, 'yyyy') : period === 'month' ? format(anchor, 'MMMM yyyy') : `Week of ${format(start, 'MMM d')}`}
               </Text>
-              <Pressable onPress={() => shiftAnchor(1)} hitSlop={8}>
-                <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
+              <Pressable onPress={() => shiftAnchor(1)} hitSlop={10} style={styles.anchorArrow}>
+                <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
               </Pressable>
-            </View>
+            </GlassSurface>
 
             <View style={styles.typeToggle}>
-              <Pill label="Expenses" active={viewType === 'expense'} color={theme.expense} onPress={() => setViewType('expense')} />
-              <Pill label="Income" active={viewType === 'income'} color={theme.success} onPress={() => setViewType('income')} />
-              <Pill label="Invested" active={viewType === 'investment'} color={theme.investment} onPress={() => setViewType('investment')} />
+              <GlassTabs
+                options={[
+                  { key: 'expense' as const, label: 'Expenses' },
+                  { key: 'income' as const, label: 'Income' },
+                  { key: 'investment' as const, label: 'Invested' },
+                ]}
+                value={viewType}
+                onChange={setViewType}
+              />
             </View>
 
-            <Card style={styles.chartCard}>
+            <Card level="raised" style={styles.chartCard}>
               {donutData.length > 0 ? (
                 <DonutChart
                   data={donutData}
@@ -127,7 +134,7 @@ export default function AnalyticsScreen() {
               )}
             </Card>
 
-            <Card style={styles.trendCard}>
+            <Card level="raised" style={styles.trendCard}>
               <Text style={[styles.cardTitle, { color: theme.text }]}>Income vs. Expenses</Text>
               <View style={styles.legendRow}>
                 <View style={styles.legendItem}>
@@ -146,14 +153,33 @@ export default function AnalyticsScreen() {
           </View>
         }
         renderItem={({ item }) => (
-          <Pressable style={[styles.rankRow, { backgroundColor: theme.surface }]} onPress={() => navigation.navigate('CategoryDetail', { categoryId: item.categoryId })}>
+          <GlassPressable
+            level="row"
+            blur={false}
+            borderRadius={radius.lg}
+            style={styles.rankRowOuter}
+            contentStyle={styles.rankRow}
+            onPress={() => navigation.navigate('CategoryDetail', { categoryId: item.categoryId })}
+          >
             <IconBadge icon={item.icon as any} color={item.color} />
             <View style={styles.rankMeta}>
               <Text style={[styles.rankName, { color: theme.text }]}>{item.name}</Text>
-              <Text style={[styles.rankPct, { color: theme.textTertiary }]}>{item.pct.toFixed(1)}% of total</Text>
+              {/* A bar under the name turns the share into something you can
+                  compare down the list without reading every figure. */}
+              <View style={[styles.rankTrack, { backgroundColor: theme.borderSubtle }]}>
+                <View
+                  style={[
+                    styles.rankFill,
+                    { width: `${Math.max(2, Math.min(100, item.pct))}%`, backgroundColor: item.color },
+                  ]}
+                />
+              </View>
             </View>
-            <Text style={[styles.rankValue, { color: theme.text }]}>{formatCurrency(item.value)}</Text>
-          </Pressable>
+            <View style={styles.rankRight}>
+              <Text style={[styles.rankValue, { color: theme.text }]}>{formatCurrency(item.value)}</Text>
+              <Text style={[styles.rankPct, { color: theme.textTertiary }]}>{item.pct.toFixed(1)}%</Text>
+            </View>
+          </GlassPressable>
         )}
       />
       <QuickAddFab />
@@ -163,10 +189,12 @@ export default function AnalyticsScreen() {
 
 const styles = StyleSheet.create({
   title: { fontSize: fontSizes.xl, fontWeight: '800', marginBottom: spacing.sm },
-  periodRow: { flexDirection: 'row' },
-  anchorRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.md, marginTop: spacing.sm },
+  periodRow: {},
+  anchorRow: { alignSelf: 'center', marginTop: spacing.sm },
+  anchorInner: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.xs, paddingVertical: 6 },
+  anchorArrow: { paddingHorizontal: spacing.xs },
   anchorLabel: { fontSize: fontSizes.base, fontWeight: '700', minWidth: 150, textAlign: 'center' },
-  typeToggle: { flexDirection: 'row', marginTop: spacing.md },
+  typeToggle: { marginTop: spacing.md },
   chartCard: { marginTop: spacing.md, alignItems: 'center', paddingVertical: spacing.xl },
   trendCard: { marginTop: spacing.md },
   cardTitle: { fontSize: fontSizes.base, fontWeight: '700', marginBottom: spacing.sm },
@@ -175,7 +203,11 @@ const styles = StyleSheet.create({
   legendDot: { width: 8, height: 8, borderRadius: 4 },
   legendLabel: { fontSize: fontSizes.xs, fontWeight: '600' },
   sectionTitle: { fontSize: fontSizes.md, fontWeight: '700', marginTop: spacing.lg, marginBottom: spacing.xs },
-  rankRow: { flexDirection: 'row', alignItems: 'center', padding: spacing.sm, borderRadius: radius.md, marginBottom: spacing.xs, gap: spacing.sm },
+  rankRowOuter: { marginBottom: spacing.xs },
+  rankRow: { flexDirection: 'row', alignItems: 'center', padding: spacing.sm, gap: spacing.sm },
+  rankTrack: { height: 5, borderRadius: radius.pill, marginTop: 6, overflow: 'hidden' },
+  rankFill: { height: 5, borderRadius: radius.pill },
+  rankRight: { alignItems: 'flex-end' },
   rankMeta: { flex: 1 },
   rankName: { fontSize: fontSizes.base, fontWeight: '600' },
   rankPct: { fontSize: fontSizes.xs, marginTop: 2 },
