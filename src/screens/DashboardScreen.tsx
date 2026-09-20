@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { FlatList, Image, Modal, Pressable, SectionList, StyleSheet, Text, View } from 'react-native';
 import { format } from 'date-fns';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { Screen } from '../components/Screen';
@@ -124,6 +125,16 @@ export default function DashboardScreen() {
         ListHeaderComponent={
           <View style={{ marginBottom: spacing.md }}>
             <Card level="raised" style={styles.balanceCard}>
+              {/* The hero pane takes a breath of brand colour, strongest at
+                  the lit corner, so it sits above the panes below it without
+                  needing a heavier fill that would shut out the backdrop. */}
+              <LinearGradient
+                colors={[`${theme.tint}22`, `${theme.investment}14`, 'transparent']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={StyleSheet.absoluteFill}
+                pointerEvents="none"
+              />
               <View style={styles.balanceRow}>
                 <Text style={[styles.balanceLabel, { color: theme.textSecondary }]}>Total Balance</Text>
                 <View style={styles.brandMark}>
@@ -253,13 +264,38 @@ export default function DashboardScreen() {
   );
 }
 
+/**
+ * Each figure on its own pane rather than a flat colour swatch.
+ *
+ * A muted fill is opaque, so the scene behind it stops dead at the chip's
+ * edge and the panel it sits on stops looking like glass. These are panes in
+ * their own right: the backdrop carries through, and the colour arrives as a
+ * wash falling across the surface rather than a block of paint, with a dot of
+ * the full colour to name it.
+ */
 function SummaryChip({ label, value, color, visible }: { label: string; value: number; color: string; visible: boolean }) {
   const { theme } = useTheme();
   return (
-    <View style={[styles.summaryChip, { backgroundColor: `${color}18` }]}>
-      <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>{label}</Text>
+    <GlassSurface
+      level="row"
+      blur={false}
+      borderRadius={radius.lg}
+      style={styles.summaryChip}
+      contentStyle={styles.summaryInner}
+    >
+      <LinearGradient
+        colors={[`${color}2E`, `${color}0A`]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={StyleSheet.absoluteFill}
+        pointerEvents="none"
+      />
+      <View style={styles.summaryHead}>
+        <View style={[styles.summaryDot, { backgroundColor: color, shadowColor: color }]} />
+        <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>{label}</Text>
+      </View>
       <Text style={[styles.summaryValue, { color }]}>{visible ? formatCurrency(value) : '••••'}</Text>
-    </View>
+    </GlassSurface>
   );
 }
 
@@ -479,15 +515,26 @@ const styles = StyleSheet.create({
   switcher: { alignSelf: 'flex-start', marginHorizontal: spacing.md, marginBottom: spacing.xs },
   switcherInner: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: spacing.sm, paddingVertical: 6 },
   switcherLabel: { fontSize: fontSizes.sm, fontWeight: '700' },
-  balanceCard: { marginTop: spacing.xs },
+  balanceCard: { marginTop: spacing.xs, paddingBottom: spacing.xs },
   balanceRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   balanceLabel: { fontSize: fontSizes.sm, fontWeight: '600' },
   balanceValue: { fontSize: fontSizes.xxxl, fontWeight: '800', marginTop: spacing.xxs, letterSpacing: -1, fontVariant: ['tabular-nums'] },
   periodRow: { marginTop: spacing.md },
   summaryRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginTop: spacing.md },
-  summaryChip: { flexGrow: 1, flexBasis: '46%', borderRadius: radius.md, padding: spacing.sm },
+  summaryChip: { flexGrow: 1, flexBasis: '46%' },
+  summaryInner: { padding: spacing.sm },
+  summaryHead: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  summaryDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    shadowOpacity: 0.7,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 2,
+  },
   summaryLabel: { fontSize: fontSizes.xs, fontWeight: '600' },
-  summaryValue: { fontSize: fontSizes.sm, fontWeight: '800', marginTop: 2, fontVariant: ['tabular-nums'] },
+  summaryValue: { fontSize: fontSizes.base, fontWeight: '800', marginTop: 4, letterSpacing: -0.3, fontVariant: ['tabular-nums'] },
   quickActions: { flexDirection: 'row', gap: spacing.xs, marginTop: spacing.lg },
   quickAction: { flex: 1 },
   quickActionInner: { alignItems: 'center', gap: spacing.xs, paddingVertical: spacing.md, paddingHorizontal: 4, minHeight: 116, justifyContent: 'center' },
