@@ -136,14 +136,19 @@ export default function DashboardScreen() {
                 pointerEvents="none"
               />
               <View style={styles.balanceRow}>
-                <Text style={[styles.balanceLabel, { color: theme.textSecondary }]}>Total Balance</Text>
+                {/* Label and its own control together on the left; the brand
+                    takes the right corner, under the avatar in the header. */}
+                <View style={styles.balanceLabelGroup}>
+                  <Text style={[styles.balanceLabel, { color: theme.textSecondary }]}>Total Balance</Text>
+                  <Pressable onPress={toggleBalanceVisible} hitSlop={10}>
+                    <Ionicons name={balanceVisible ? 'eye-outline' : 'eye-off-outline'} size={18} color={theme.textSecondary} />
+                  </Pressable>
+                </View>
+
                 <View style={styles.brandMark}>
                   <Image source={MARK} style={styles.brandImage} resizeMode="contain" />
                   <Text style={[styles.brandName, { color: theme.text }]}>Spendly</Text>
                 </View>
-                <Pressable onPress={toggleBalanceVisible} hitSlop={10}>
-                  <Ionicons name={balanceVisible ? 'eye-outline' : 'eye-off-outline'} size={20} color={theme.textSecondary} />
-                </Pressable>
               </View>
               <Text style={[styles.balanceValue, { color: theme.text }]}>
                 {balanceVisible ? formatCurrency(balance) : '••••••'}
@@ -484,6 +489,7 @@ const styles = StyleSheet.create({
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   roundBtn: { width: 42, height: 42, alignItems: 'center', justifyContent: 'center' },
   dot: { position: 'absolute', top: 2, right: 2, width: 10, height: 10, borderRadius: 5, borderWidth: 2 },
+  balanceLabelGroup: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   brandMark: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   brandImage: { width: 26, height: 26 },
   brandName: { fontSize: fontSizes.sm, fontWeight: '800', letterSpacing: -0.2 },
