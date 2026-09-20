@@ -101,6 +101,8 @@ export function describeAuthError(error: any): string {
       return 'This account already exists with a different sign-in method. Use that one, then link this from Account.';
     case 'auth/requires-recent-login':
       return 'For security, sign in again before making this change.';
+    case 'auth/billing-not-enabled':
+      return 'Text-message sign-in needs billing enabled on the Firebase project. A test number still works.';
     case 'auth/configuration-not-found':
       return 'Sign-in is not switched on for this project yet. Enable Authentication in the Firebase console, then try again.';
     case 'auth/operation-not-allowed':
