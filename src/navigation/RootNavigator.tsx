@@ -41,20 +41,26 @@ export function RootNavigator() {
 
   return (
     <NavigationContainer theme={navTheme}>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Navigator
+        screenOptions={{
+          headerShown: false,
+          animation: 'slide_from_right',
+          animationDuration: 260,
+        }}
+      >
         {askToSignIn ? (
           <>
             <Stack.Screen name="Welcome" component={LoginScreen} />
             <Stack.Screen
               name="PhoneLogin"
               component={PhoneLoginScreen}
-              options={{ presentation: 'modal' }}
+              options={{ presentation: 'modal', animation: 'slide_from_bottom', animationDuration: 300 }}
             />
           </>
         ) : (
           <>
             <Stack.Screen name="Tabs" component={TabNavigator} />
-            <Stack.Group screenOptions={{ presentation: 'modal' }}>
+            <Stack.Group screenOptions={{ presentation: 'modal', animation: 'slide_from_bottom', animationDuration: 300 }}>
               <Stack.Screen name="TransactionEntry" component={TransactionEntryScreen} />
               <Stack.Screen name="AccountForm" component={AccountFormScreen} />
               <Stack.Screen name="CategoryForm" component={CategoryFormScreen} />
