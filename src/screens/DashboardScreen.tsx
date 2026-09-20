@@ -221,7 +221,7 @@ function ProfileChip() {
   // A photo URL can 404 once Google rotates it; fall back rather than show a gap.
   const [photoBroken, setPhotoBroken] = useState(false);
 
-  const given = firstName(user?.displayName);
+  const given = greetingName(user);
   const photo = photoBroken ? null : user?.photoURL;
 
   return (
@@ -252,10 +252,17 @@ function ProfileChip() {
   );
 }
 
-/** Just the given name: a header has room for one word, not a full name. */
-function firstName(displayName: string | null | undefined): string | null {
-  const first = displayName?.trim().split(/\s+/)[0];
-  return first ? first : null;
+/**
+ * One word for the header, which has room for no more: the given name, or
+ * failing that the name someone chose for their email address, which is
+ * usually their own.
+ */
+function greetingName(user: { displayName: string | null; email: string | null } | null): string | null {
+  const given = user?.displayName?.trim().split(/\s+/)[0];
+  if (given) return given;
+  const local = user?.email?.split('@')[0] ?? '';
+  const word = local.split(/[^A-Za-z]+/).filter(Boolean)[0];
+  return word ? word.charAt(0).toUpperCase() + word.slice(1) : null;
 }
 
 function initial(user: { displayName: string | null; email: string | null; phoneNumber: string | null }): string {
