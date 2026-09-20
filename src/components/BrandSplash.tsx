@@ -7,7 +7,7 @@ import { useTheme } from '../theme/ThemeContext';
 const LOGO = require('../../assets/splash-icon.png');
 
 const LOGO_WIDTH = 236;
-const LOGO_ASPECT = 1047 / 1013; // the supplied mark, very slightly wider than tall
+const LOGO_ASPECT = 1072 / 1039; // the supplied mark, very slightly wider than tall
 
 const FADE_IN_MS = 560;
 const SETTLE_MS = 180;
