@@ -6,8 +6,8 @@ import { useTheme } from '../theme/ThemeContext';
 // own background, with no container or plate behind it.
 const LOGO = require('../../assets/splash-icon.png');
 
-const LOGO_WIDTH = 240;
-const LOGO_ASPECT = 1; // supplied asset is square
+const LOGO_WIDTH = 214;
+const LOGO_ASPECT = 302 / 359; // the supplied mark is taller than it is wide
 
 const FADE_IN_MS = 520;
 const SETTLE_MS = 200;
