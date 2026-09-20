@@ -1,5 +1,4 @@
 import {
-  FacebookAuthProvider,
   GoogleAuthProvider,
   PhoneAuthProvider,
   User,
@@ -69,10 +68,6 @@ async function signInOrLink(credential: AuthCredential): Promise<AuthUser> {
 
 export function signInWithGoogleIdToken(idToken: string, accessToken?: string): Promise<AuthUser> {
   return signInOrLink(GoogleAuthProvider.credential(idToken, accessToken));
-}
-
-export function signInWithFacebookToken(accessToken: string): Promise<AuthUser> {
-  return signInOrLink(FacebookAuthProvider.credential(accessToken));
 }
 
 export function signInWithPhoneCode(verificationId: string, code: string): Promise<AuthUser> {
