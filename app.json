@@ -2,7 +2,7 @@
   "expo": {
     "name": "Spendly",
     "slug": "santanu",
-    "scheme": ["spendly", "fb1309510001300891"],
+    "scheme": ["spendly", "com.santanu.spendly", "fb1309510001300891"],
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
