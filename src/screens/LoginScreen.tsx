@@ -7,12 +7,10 @@ import { useTheme } from '../theme/ThemeContext';
 import { fontSizes, radius, spacing } from '../theme/tokens';
 import { useAuthStore } from '../store/useAuthStore';
 import { cloudProviders, isCloudConfigured } from '../services/cloudConfig';
-import { useFacebookSignIn, useGoogleSignIn } from '../services/oauth';
+import { useGoogleSignIn } from '../services/oauth';
 
 // Transparent asset, so it sits on whichever theme background is behind it.
 const LOGO = require('../../assets/splash-icon.png');
-
-type Provider = 'google' | 'facebook' | 'phone';
 
 export default function LoginScreen() {
   const { theme } = useTheme();
@@ -89,17 +87,6 @@ export default function LoginScreen() {
             />
           )}
 
-          {cloudProviders.facebook ? (
-            <FacebookAuthButton onDone={() => navigation.goBack()} onNotice={setNotice} />
-          ) : (
-            <ProviderButton
-              icon="logo-facebook"
-              label="Continue with Facebook"
-              onPress={() => setNotice(unconfiguredMessage('Facebook'))}
-              loading={false}
-              dimmed
-            />
-          )}
           <ProviderButton
             icon="phone-portrait-outline"
             label="Continue with Mobile Number"
@@ -158,22 +145,6 @@ function GoogleAuthButton({ onDone, onNotice }: { onDone: () => void; onNotice: 
   );
 }
 
-function FacebookAuthButton({ onDone, onNotice }: { onDone: () => void; onNotice: (message: string) => void }) {
-  const facebook = useFacebookSignIn(onDone);
-
-  useEffect(() => {
-    if (facebook.error) onNotice(facebook.error);
-  }, [facebook.error]);
-
-  return (
-    <ProviderButton
-      icon="logo-facebook"
-      label="Continue with Facebook"
-      loading={facebook.busy}
-      onPress={() => (facebook.available ? facebook.signIn() : onNotice(unconfiguredMessage('Facebook')))}
-    />
-  );
-}
 
 function ProviderButton({
   icon,

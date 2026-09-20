@@ -2,7 +2,7 @@
   "expo": {
     "name": "Spendly",
     "slug": "santanu",
-    "scheme": ["spendly", "com.santanu.spendly", "fb1309510001300891"],
+    "scheme": ["spendly", "com.santanu.spendly"],
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -77,8 +77,7 @@
         "appId": "1:877074760062:web:40be0ffda6a4384056f32f",
         "measurementId": "G-B15CZ9850M",
         "googleWebClientId": "877074760062-og0f8g02jpv16i0tbc12n7m594252j63.apps.googleusercontent.com",
-        "googleAndroidClientId": "877074760062-ljgqnfifds25ug2163ltte8jb3e2tb7s.apps.googleusercontent.com",
-        "facebookAppId": "1309510001300891"
+        "googleAndroidClientId": "877074760062-ljgqnfifds25ug2163ltte8jb3e2tb7s.apps.googleusercontent.com"
       }
     }
   }

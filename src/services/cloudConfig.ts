@@ -12,7 +12,6 @@ export interface CloudConfig {
   googleWebClientId?: string;
   googleAndroidClientId?: string;
   googleIosClientId?: string;
-  facebookAppId?: string;
 }
 
 const REQUIRED: (keyof CloudConfig)[] = ['apiKey', 'authDomain', 'projectId', 'appId'];
@@ -50,22 +49,8 @@ export const googleClientId = Platform.select({
   default: config.googleWebClientId,
 });
 
-/**
- * On a native build Facebook sends its answer to fb<appId>://authorize, so the
- * app has to own that scheme or the login dialog opens and never comes back.
- * Declare it in app.json alongside the app id: "scheme": ["spendly", "fb<id>"].
- */
-export function facebookSchemeRegistered(appId: string | undefined): boolean {
-  if (!appId) return false;
-  if (Platform.OS === 'web') return true;
-  const declared = Constants.expoConfig?.scheme;
-  const schemes = Array.isArray(declared) ? declared : declared ? [declared] : [];
-  return schemes.includes(`fb${appId}`);
-}
-
 export const cloudProviders = {
   google: !!googleClientId,
-  facebook: facebookSchemeRegistered(config.facebookAppId),
   // Phone verification needs no extra client id, only the provider enabled
   // in the Firebase console.
   phone: isCloudConfigured,
