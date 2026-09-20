@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, Image, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import * as LocalAuthentication from 'expo-local-authentication';
@@ -14,6 +14,11 @@ import { useStore } from '../store/useStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { CategoryType } from '../types';
 import { exportToPdf, exportToXlsx } from '../utils/export';
+import Constants from 'expo-constants';
+
+const LOGO = require('../../assets/splash-icon.png');
+// Read from app.json, so the credit never drifts from what was shipped.
+const APP_VERSION = Constants.expoConfig?.version ?? '1.0.0';
 
 export default function SettingsScreen() {
   const { theme, preference, setPreference } = useTheme();
@@ -160,7 +165,30 @@ export default function SettingsScreen() {
 
         <SectionLabel label="About" />
         <Card>
-          <Text style={[styles.rowSub, { color: theme.textTertiary }]}>Spendly · Local-first expense & budget manager · v1.0.0</Text>
+          <View style={styles.aboutHeader}>
+            <Image source={LOGO} style={styles.aboutLogo} resizeMode="contain" />
+            <Text style={[styles.aboutTitle, { color: theme.text }]}>About Spendly</Text>
+          </View>
+
+          <Text style={[styles.aboutBody, { color: theme.textSecondary }]}>
+            Spendly is a simple and intuitive personal expense-tracking app designed to help you record,
+            organize, and understand your daily spending. Track your expenses, manage your budget, and keep
+            your finances organized—all in one place.
+          </Text>
+
+          <View style={[styles.divider, { backgroundColor: theme.borderSubtle }]} />
+
+          <Text style={[styles.aboutAuthor, { color: theme.text }]}>Built by Santanu Bordoloi</Text>
+          <Text style={[styles.aboutBody, { color: theme.textSecondary }]}>
+            Designed and developed with a focus on simplicity, privacy, and an easy-to-use experience.
+          </Text>
+
+          <View style={[styles.divider, { backgroundColor: theme.borderSubtle }]} />
+
+          <Text style={[styles.aboutMeta, { color: theme.textTertiary }]}>Version: {APP_VERSION}</Text>
+          <Text style={[styles.aboutMeta, { color: theme.textTertiary }]}>
+            © 2026 Santanu Bordoloi. All rights reserved.
+          </Text>
         </Card>
       </ScrollView>
     </Screen>
@@ -195,4 +223,10 @@ const styles = StyleSheet.create({
   exportRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.xs },
   exportLabel: { flex: 1, fontSize: fontSizes.base, fontWeight: '600' },
   divider: { height: StyleSheet.hairlineWidth, marginVertical: spacing.sm },
+  aboutHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
+  aboutLogo: { width: 40, height: 40 },
+  aboutTitle: { fontSize: fontSizes.base, fontWeight: '800' },
+  aboutBody: { fontSize: fontSizes.sm, lineHeight: 20 },
+  aboutAuthor: { fontSize: fontSizes.sm, fontWeight: '700', marginBottom: 2 },
+  aboutMeta: { fontSize: fontSizes.xs, lineHeight: 18 },
 });
