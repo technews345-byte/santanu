@@ -221,96 +221,133 @@ export default function TransactionEntryScreen() {
         ) : null}
       </View>
 
-      <ScrollView style={styles.metaScroll} contentContainerStyle={{ paddingBottom: spacing.sm }} keyboardShouldPersistTaps="handled">
-        {type !== 'transfer' && (
+      {/* The list is taller than the space left above the keypad, so its last
+          visible row would otherwise end in a hard horizontal cut. The fade
+          below softens that edge and reads as "more below". */}
+      <View style={styles.metaWrap}>
+        <ScrollView
+          style={styles.metaScroll}
+          contentContainerStyle={{ paddingBottom: spacing.md }}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* First in the list, and built like the fields below it: a pane with
+              its own badge rather than a hairline box that reads as empty space.
+              The scroll area is shorter than its contents, so a note placed last
+              sat below the fold behind the keypad. */}
+          <GlassSurface
+            level="row"
+            blur={false}
+            borderRadius={radius.lg}
+            style={styles.noteOuter}
+            contentStyle={styles.noteBox}
+          >
+            <IconBadge icon="document-text" color={theme.tint} size={36} />
+            <TextInput
+              onFocus={() => setNoteFocused(true)}
+              onBlur={() => setNoteFocused(false)}
+              placeholder="Add a note"
+              placeholderTextColor={theme.textSecondary}
+              value={note}
+              onChangeText={setNote}
+              style={[styles.noteInput, { color: theme.text }]}
+              multiline
+            />
+            {/* Lights the whole edge while the field holds focus. */}
+            <View
+              pointerEvents="none"
+              style={[
+                StyleSheet.absoluteFill,
+                {
+                  borderRadius: radius.lg,
+                  borderWidth: noteFocused ? 1.6 : 0,
+                  borderColor: theme.tint,
+                },
+              ]}
+            />
+          </GlassSurface>
+
+          {type !== 'transfer' && (
+            <MetaRow
+              icon={(selectedCategory?.icon as any) ?? 'pricetag-outline'}
+              iconColor={selectedCategory?.color ?? theme.tint}
+              label="Category"
+              value={selectedCategory?.name ?? 'Select category'}
+              onPress={() => setCategorySheetOpen(true)}
+            />
+          )}
           <MetaRow
-            icon={(selectedCategory?.icon as any) ?? 'pricetag-outline'}
-            iconColor={selectedCategory?.color ?? theme.tint}
-            label="Category"
-            value={selectedCategory?.name ?? 'Select category'}
-            onPress={() => setCategorySheetOpen(true)}
+            icon={(selectedAccount?.icon as any) ?? 'wallet-outline'}
+            iconColor={selectedAccount?.color ?? theme.tint}
+            label={type === 'transfer' ? 'From' : 'Account'}
+            value={selectedAccount?.name ?? 'Select account'}
+            onPress={() => setAccountSheetOpen(true)}
           />
-        )}
-        <MetaRow
-          icon={(selectedAccount?.icon as any) ?? 'wallet-outline'}
-          iconColor={selectedAccount?.color ?? theme.tint}
-          label={type === 'transfer' ? 'From' : 'Account'}
-          value={selectedAccount?.name ?? 'Select account'}
-          onPress={() => setAccountSheetOpen(true)}
-        />
-        {type === 'transfer' && (
+          {type === 'transfer' && (
+            <MetaRow
+              icon={(selectedToAccount?.icon as any) ?? 'wallet-outline'}
+              iconColor={selectedToAccount?.color ?? theme.tint}
+              label="To"
+              value={selectedToAccount?.name ?? 'Select account'}
+              onPress={() => setToAccountSheetOpen(true)}
+            />
+          )}
           <MetaRow
-            icon={(selectedToAccount?.icon as any) ?? 'wallet-outline'}
-            iconColor={selectedToAccount?.color ?? theme.tint}
-            label="To"
-            value={selectedToAccount?.name ?? 'Select account'}
-            onPress={() => setToAccountSheetOpen(true)}
+            icon="calendar-outline"
+            iconColor={theme.tint}
+            label="Date & Time"
+            value={format(date, "MMM d, yyyy '·' h:mm a")}
+            onPress={() => setShowDatePicker(true)}
           />
-        )}
-        <MetaRow
-          icon="calendar-outline"
-          iconColor={theme.tint}
-          label="Date & Time"
-          value={format(date, "MMM d, yyyy '·' h:mm a")}
-          onPress={() => setShowDatePicker(true)}
+          <View style={styles.quickDateRow}>
+            <Pill label="Today" onPress={() => setDate(new Date())} />
+            <Pill
+              label="-1 day"
+              onPress={() =>
+                setDate((prev) => {
+                  const d = new Date(prev);
+                  d.setDate(d.getDate() - 1);
+                  return d;
+                })
+              }
+            />
+            <Pill label="Now" onPress={() => setDate(new Date())} />
+          </View>
+
+          <MetaRow
+            icon="repeat-outline"
+            iconColor={theme.tint}
+            label="Repeat"
+            value={RECURRENCE_OPTIONS.find((r) => r.key === recurrence)?.label ?? 'Never'}
+            onPress={() => setRecurrenceSheetOpen(true)}
+          />
+
+          <View style={styles.attachmentsRow}>
+            {attachments.map((uri) => (
+              <View key={uri} style={styles.thumbWrap}>
+                <Image source={{ uri }} style={styles.thumb} />
+                <Pressable
+                  style={[styles.thumbRemove, { backgroundColor: theme.danger }]}
+                  onPress={() => setAttachments((prev) => prev.filter((u) => u !== uri))}
+                >
+                  <Ionicons name="close" size={12} color="#fff" />
+                </Pressable>
+              </View>
+            ))}
+            <Pressable style={[styles.addAttachment, { borderColor: theme.border }]} onPress={() => pickImage(false)}>
+              <Ionicons name="image-outline" size={20} color={theme.textSecondary} />
+            </Pressable>
+            <Pressable style={[styles.addAttachment, { borderColor: theme.border }]} onPress={() => pickImage(true)}>
+              <Ionicons name="camera-outline" size={20} color={theme.textSecondary} />
+            </Pressable>
+          </View>
+        </ScrollView>
+        <LinearGradient
+          pointerEvents="none"
+          colors={['transparent', theme.bg]}
+          style={styles.scrollFade}
         />
-        <View style={styles.quickDateRow}>
-          <Pill label="Today" onPress={() => setDate(new Date())} />
-          <Pill
-            label="-1 day"
-            onPress={() =>
-              setDate((prev) => {
-                const d = new Date(prev);
-                d.setDate(d.getDate() - 1);
-                return d;
-              })
-            }
-          />
-          <Pill label="Now" onPress={() => setDate(new Date())} />
-        </View>
-
-        <MetaRow
-          icon="repeat-outline"
-          iconColor={theme.tint}
-          label="Repeat"
-          value={RECURRENCE_OPTIONS.find((r) => r.key === recurrence)?.label ?? 'Never'}
-          onPress={() => setRecurrenceSheetOpen(true)}
-        />
-
-        <View style={[styles.noteBox, { backgroundColor: theme.surfaceAlt, borderColor: noteFocused ? theme.tint : theme.glassBorder }]}>
-          <Ionicons name="document-text-outline" size={18} color={theme.textTertiary} />
-          <TextInput
-            onFocus={() => setNoteFocused(true)}
-            onBlur={() => setNoteFocused(false)}
-            placeholder="Add a note"
-            placeholderTextColor={theme.textTertiary}
-            value={note}
-            onChangeText={setNote}
-            style={[styles.noteInput, { color: theme.text }]}
-            multiline
-          />
-        </View>
-
-        <View style={styles.attachmentsRow}>
-          {attachments.map((uri) => (
-            <View key={uri} style={styles.thumbWrap}>
-              <Image source={{ uri }} style={styles.thumb} />
-              <Pressable
-                style={[styles.thumbRemove, { backgroundColor: theme.danger }]}
-                onPress={() => setAttachments((prev) => prev.filter((u) => u !== uri))}
-              >
-                <Ionicons name="close" size={12} color="#fff" />
-              </Pressable>
-            </View>
-          ))}
-          <Pressable style={[styles.addAttachment, { borderColor: theme.border }]} onPress={() => pickImage(false)}>
-            <Ionicons name="image-outline" size={20} color={theme.textSecondary} />
-          </Pressable>
-          <Pressable style={[styles.addAttachment, { borderColor: theme.border }]} onPress={() => pickImage(true)}>
-            <Ionicons name="camera-outline" size={20} color={theme.textSecondary} />
-          </Pressable>
-        </View>
-      </ScrollView>
+      </View>
 
       <Keypad onKeyPress={onKeyPress} />
 
@@ -471,14 +508,17 @@ const styles = StyleSheet.create({
   amountArea: { alignItems: 'center', paddingVertical: spacing.md },
   amountValue: { fontSize: fontSizes.xxxl, fontWeight: '800', fontVariant: ['tabular-nums'] },
   amountResult: { fontSize: fontSizes.base, marginTop: spacing.xxs, fontVariant: ['tabular-nums'] },
+  metaWrap: { flex: 1 },
   metaScroll: { flex: 1, paddingHorizontal: spacing.md },
+  scrollFade: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 26 },
   metaRowOuter: { marginBottom: spacing.xs },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.sm },
   metaLabel: { fontSize: fontSizes.sm, fontWeight: '600', width: 66 },
   metaValue: { flex: 1, fontSize: fontSizes.base, fontWeight: '600' },
   quickDateRow: { flexDirection: 'row', paddingLeft: 44, marginBottom: spacing.xs },
-  noteBox: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs, borderWidth: StyleSheet.hairlineWidth, borderRadius: radius.md, padding: spacing.sm, marginTop: spacing.xs },
-  noteInput: { flex: 1, fontSize: fontSizes.base, minHeight: 20, padding: 0 },
+  noteOuter: { marginBottom: spacing.xs },
+  noteBox: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.sm },
+  noteInput: { flex: 1, fontSize: fontSizes.base, fontWeight: '600', minHeight: 24, padding: 0 },
   attachmentsRow: { flexDirection: 'row', gap: spacing.xs, marginTop: spacing.sm, flexWrap: 'wrap' },
   thumbWrap: { width: 52, height: 52, borderRadius: radius.sm, overflow: 'hidden' },
   thumb: { width: '100%', height: '100%' },
