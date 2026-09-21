@@ -46,7 +46,8 @@ export default function SettingsScreen() {
   const runExport = async (kind: 'xlsx' | 'pdf') => {
     setExporting(true);
     try {
-      const ctx = { transactions, categories, accounts, rangeLabel: 'All Transactions' };
+      // The report is addressed to whoever is signed in.
+      const ctx = { transactions, categories, accounts, rangeLabel: 'All Transactions', user };
       if (kind === 'xlsx') await exportToXlsx(ctx);
       else await exportToPdf(ctx);
     } catch (e: any) {
