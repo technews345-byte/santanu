@@ -14,6 +14,7 @@ import { useStore } from '../store/useStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { CategoryType } from '../types';
 import { exportToPdf, exportToXlsx } from '../utils/export';
+import { adsSupported, showRewardedAd } from '../services/ads';
 import Constants from 'expo-constants';
 
 const LOGO = require('../../assets/splash-icon.png');
@@ -23,11 +24,23 @@ const APP_VERSION = Constants.expoConfig?.version ?? '1.0.0';
 export default function SettingsScreen() {
   const { theme, preference, setPreference } = useTheme();
   const navigation = useNavigation<any>();
-  const { accounts, categories, transactions, biometricLockEnabled, setBiometricLockEnabled } = useStore();
+  const {
+    accounts,
+    categories,
+    transactions,
+    biometricLockEnabled,
+    setBiometricLockEnabled,
+    supportCount,
+    recordSupport,
+    appOpenAdsEnabled,
+    setAppOpenAdsEnabled,
+  } = useStore();
   const user = useAuthStore((s) => s.user);
   const pendingCount = useAuthStore((s) => s.pendingCount);
   const [categoryTab, setCategoryTab] = useState<CategoryType>('expense');
   const [exporting, setExporting] = useState(false);
+  const [watchingAd, setWatchingAd] = useState(false);
+  const canShowAds = adsSupported();
 
   const visibleCategories = categories.filter((c) => c.type === categoryTab && !c.archived);
 
@@ -54,6 +67,28 @@ export default function SettingsScreen() {
       Alert.alert('Export failed', e?.message ?? 'Something went wrong');
     } finally {
       setExporting(false);
+    }
+  };
+
+  /**
+   * The one place Spendly shows an ad, and only when asked. The reward is a
+   * thank-you rather than access to anything: gating a feature people already
+   * have behind an ad would be taking something away.
+   */
+  const handleSupport = async () => {
+    setWatchingAd(true);
+    try {
+      const outcome = await showRewardedAd({ userId: user?.uid, customData: 'support' });
+      if (outcome.status === 'earned') {
+        recordSupport();
+        Alert.alert('Thank you!', 'That genuinely helps keep Spendly free.');
+      } else if (outcome.status === 'dismissed') {
+        Alert.alert('No reward earned', 'The ad closed early, so nothing was counted. Feel free to try again.');
+      } else {
+        Alert.alert('No ad available', outcome.reason);
+      }
+    } finally {
+      setWatchingAd(false);
     }
   };
 
@@ -164,6 +199,64 @@ export default function SettingsScreen() {
           </Pressable>
         </Card>
 
+        <SectionLabel label="Support" />
+        <Card>
+          <View style={styles.supportHeader}>
+            <IconBadge icon="heart" color={theme.expense} size={40} />
+            <View style={styles.supportHeading}>
+              <Text style={[styles.supportTitle, { color: theme.text }]}>Support Spendly</Text>
+              <Text style={[styles.supportBody, { color: theme.textSecondary }]}>
+                Spendly has no ads anywhere else and never sells your data. If you would like to chip
+                in, watching one short ad is the whole ask.
+              </Text>
+            </View>
+          </View>
+
+          {supportCount > 0 && (
+            <View style={[styles.supporterBadge, { backgroundColor: theme.successMuted }]}>
+              <Ionicons name="ribbon" size={15} color={theme.success} />
+              <Text style={[styles.supporterLabel, { color: theme.success }]}>
+                Supporter · {supportCount} {supportCount === 1 ? 'ad' : 'ads'} watched
+              </Text>
+            </View>
+          )}
+
+          <Pressable
+            style={[styles.supportButton, { borderColor: theme.tint, opacity: canShowAds ? 1 : 0.5 }]}
+            onPress={handleSupport}
+            disabled={watchingAd || !canShowAds}
+          >
+            <Ionicons
+              name={watchingAd ? 'hourglass-outline' : 'play-circle-outline'}
+              size={20}
+              color={theme.tint}
+            />
+            <Text style={[styles.supportButtonLabel, { color: theme.tint }]}>
+              {watchingAd
+                ? 'Loading ad\u2026'
+                : canShowAds
+                  ? 'Watch a short ad'
+                  : 'Not available in this build'}
+            </Text>
+          </Pressable>
+
+          <View style={[styles.divider, { backgroundColor: theme.borderSubtle }]} />
+
+          <View style={styles.row}>
+            <View style={styles.rowHeading}>
+              <Text style={[styles.rowLabel, { color: theme.text }]}>Ad on app open</Text>
+              <Text style={[styles.rowSub, { color: theme.textTertiary }]}>
+                At most one every few hours, never on a quick switch back
+              </Text>
+            </View>
+            <Switch
+              value={appOpenAdsEnabled}
+              onValueChange={setAppOpenAdsEnabled}
+              trackColor={{ true: theme.tint }}
+            />
+          </View>
+        </Card>
+
         <SectionLabel label="About" />
         <Card>
           <View style={styles.aboutHeader}>
@@ -211,6 +304,33 @@ function SectionLabel({ label, action }: { label: string; action?: { label: stri
 }
 
 const styles = StyleSheet.create({
+  supportHeader: { flexDirection: 'row', gap: spacing.sm },
+  rowHeading: { flex: 1, paddingRight: spacing.sm },
+  supportHeading: { flex: 1, gap: spacing.xxs },
+  supportTitle: { fontSize: fontSizes.base, fontWeight: '700' },
+  supportBody: { fontSize: fontSizes.sm, lineHeight: 19 },
+  supporterBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 6,
+    marginTop: spacing.sm,
+    paddingVertical: 5,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.pill,
+  },
+  supporterLabel: { fontSize: fontSizes.xs, fontWeight: '700' },
+  supportButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.lg,
+    borderWidth: 1.4,
+  },
+  supportButtonLabel: { fontSize: fontSizes.base, fontWeight: '700' },
   title: { fontSize: fontSizes.xl, fontWeight: '800', marginBottom: spacing.md },
   sectionLabelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing.lg, marginBottom: spacing.xs },
   sectionLabel: { fontSize: fontSizes.sm, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },

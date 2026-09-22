@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { AppState, AppStateStatus, Pressable, StyleSheet, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -12,6 +12,7 @@ import { RootNavigator } from './src/navigation/RootNavigator';
 import { BrandSplash } from './src/components/BrandSplash';
 import { useStore } from './src/store/useStore';
 import { useAuthStore } from './src/store/useAuthStore';
+import { initAds, maybeShowAppOpenAd, preloadAppOpenAd } from './src/services/ads';
 import { fontSizes, radius, spacing } from './src/theme/tokens';
 
 // Hold the native splash until the branded one is on screen, so the handoff
@@ -21,6 +22,7 @@ SplashScreen.preventAutoHideAsync().catch(() => {});
 function AppContent() {
   const { theme } = useTheme();
   const { hydrated, hydrationError, hydrate, biometricLockEnabled } = useStore();
+  const appOpenAdsEnabled = useStore((s) => s.appOpenAdsEnabled);
   const initAuth = useAuthStore((s) => s.init);
   const authReady = useAuthStore((s) => s.ready);
   const [unlocked, setUnlocked] = useState(false);
@@ -29,6 +31,16 @@ function AppContent() {
   useEffect(() => {
     hydrate();
     initAuth();
+    // Google asks for the ads SDK to be initialized before the first ad is
+    // requested; doing it here rather than on the Settings tap means the one
+    // ad in the app is ready when someone asks for it. Deliberately not
+    // awaited: nothing on screen depends on it, and it no-ops where ads are
+    // unsupported.
+    initAds();
+    // Fetched now so one is in hand the next time the app comes forward. It is
+    // never shown on this launch: the first thing a new user sees should be
+    // Spendly, not an advert.
+    preloadAppOpenAd();
   }, []);
 
   // Paint the root view in the theme colour too: it is what shows in the frame
@@ -53,6 +65,31 @@ function AppContent() {
     });
     if (result.success) setUnlocked(true);
   };
+
+  // An ad when the app is brought back, under the service's own guards: not
+  // after a glance at another app, not more than once every few hours, and
+  // never while the screen is locked or another ad is up.
+  const wentToBackgroundAt = useRef<number | null>(null);
+
+  useEffect(() => {
+    const onChange = (next: AppStateStatus) => {
+      if (next === 'background' || next === 'inactive') {
+        if (wentToBackgroundAt.current === null) wentToBackgroundAt.current = Date.now();
+        return;
+      }
+      if (next !== 'active') return;
+
+      const away = wentToBackgroundAt.current;
+      wentToBackgroundAt.current = null;
+      if (away === null) return;
+      if (!appOpenAdsEnabled || !unlocked || !splashDone) return;
+
+      maybeShowAppOpenAd(Date.now() - away);
+    };
+
+    const subscription = AppState.addEventListener('change', onChange);
+    return () => subscription.remove();
+  }, [appOpenAdsEnabled, unlocked, splashDone]);
 
   const handleSplashShown = useCallback(() => {
     SplashScreen.hideAsync().catch(() => {});
