@@ -19,13 +19,15 @@ import { AdsModule, loadAdsModule } from './adsModule';
 const LOAD_TIMEOUT_MS = 15000;
 
 /**
- * Guards on the app open ad. Spendly is opened in ten-second bursts — log a
- * coffee, close it again — so showing an ad on every return to the foreground
- * would cost more in uninstalls than it could earn. It is capped to once every
- * few hours, and a quick switch away and back never triggers one.
+ * The only spacing on the app open ad: a short pause after any full-screen ad
+ * is dismissed.
+ *
+ * Showing an ad puts the app itself into the background, so returning from one
+ * looks exactly like the user reopening the app. Without this, closing an ad
+ * would immediately qualify for the next one and the app would never be
+ * reachable behind them.
  */
-const APP_OPEN_MIN_GAP_MS = 4 * 60 * 60 * 1000;
-const APP_OPEN_MIN_BACKGROUND_MS = 30 * 1000;
+const AD_COOLDOWN_MS = 15 * 1000;
 
 /** Google drops an app open ad that has been sitting in memory for too long. */
 const APP_OPEN_MAX_AGE_MS = 4 * 60 * 60 * 1000;
@@ -128,6 +130,9 @@ export function initAds(): Promise<void> {
  */
 let adOnScreen = false;
 
+/** When the last full-screen ad was dismissed, for the cooldown above. */
+let lastAdDismissedAt = 0;
+
 /**
  * Loads a rewarded ad, shows it, and resolves once the user is done with it.
  *
@@ -184,6 +189,9 @@ export function showRewardedAd(
           if (settled) return;
           settled = true;
           adOnScreen = false;
+          // Returning from a rewarded ad is a foreground event too, so it has
+          // to start the cooldown or it would be answered with another ad.
+          lastAdDismissedAt = Date.now();
           clearLoadTimer();
           try {
             ad.removeAllListeners();
@@ -231,107 +239,121 @@ export function showRewardedAd(
 type AppOpenHandle = {
   ad: ReturnType<NonNullable<AdsModule>['AppOpenAd']['createForAdRequest']>;
   loadedAt: number;
-  ready: boolean;
 };
 
-let appOpen: AppOpenHandle | null = null;
-let appOpenPending = false;
-let appOpenLastShownAt = 0;
+/** An ad that has loaded and is waiting to be shown. */
+let readyAppOpen: AppOpenHandle | null = null;
+/** The load in flight, so callers arriving together share one request. */
+let appOpenLoad: Promise<AppOpenHandle | null> | null = null;
 
 /**
- * Fetches an app open ad and holds it until the app is next brought forward.
+ * Resolves with an app open ad ready to show, or null if none can be had.
  *
- * App open ads have to be ready *before* the moment they are shown — loading
- * one when the user returns would leave them staring at the app behind a
- * spinner — so this is called at launch and again after each one is used.
+ * A caller that arrives while a load is in flight waits for it rather than
+ * starting a second one or giving up — which is what makes an ad on a cold
+ * start possible, since at launch there has been no time to preload.
  */
-export function preloadAppOpenAd(): void {
+function ensureAppOpenAd(): Promise<AppOpenHandle | null> {
+  if (readyAppOpen && Date.now() - readyAppOpen.loadedAt < APP_OPEN_MAX_AGE_MS) {
+    return Promise.resolve(readyAppOpen);
+  }
+  readyAppOpen = null;
+  if (appOpenLoad) return appOpenLoad;
+
   const mod = ads();
-  if (!mod || appOpenPending) return;
-  if (appOpen?.ready && Date.now() - appOpen.loadedAt < APP_OPEN_MAX_AGE_MS) return;
+  if (!mod) return Promise.resolve(null);
 
-  appOpenPending = true;
-  initAds().then(() => {
-    const { AppOpenAd, AdEventType } = mod;
-    const ad = AppOpenAd.createForAdRequest(appOpenUnitId(mod));
-    const handle: AppOpenHandle = { ad, loadedAt: Date.now(), ready: false };
+  appOpenLoad = initAds().then(
+    () =>
+      new Promise<AppOpenHandle | null>((resolve) => {
+        const { AppOpenAd, AdEventType } = mod;
+        const ad = AppOpenAd.createForAdRequest(appOpenUnitId(mod));
 
-    ad.addAdEventListener(AdEventType.LOADED, () => {
-      handle.ready = true;
-      handle.loadedAt = Date.now();
-      appOpenPending = false;
-    });
+        let settled = false;
+        const done = (handle: AppOpenHandle | null) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          appOpenLoad = null;
+          resolve(handle);
+        };
 
-    ad.addAdEventListener(AdEventType.ERROR, () => {
-      // No fill, or no network. Drop it and try again at the next foreground
-      // rather than retrying in a loop.
-      appOpenPending = false;
-      if (appOpen === handle) appOpen = null;
-      try {
-        ad.removeAllListeners();
-        ad.destroy();
-      } catch {
-        // Already released.
-      }
-    });
+        const timer = setTimeout(() => done(null), LOAD_TIMEOUT_MS);
 
-    appOpen = handle;
-    ad.load();
-  });
+        ad.addAdEventListener(AdEventType.LOADED, () => {
+          // Recorded even if the wait above already timed out, so a slow fill
+          // is shown at the next opportunity instead of being thrown away.
+          readyAppOpen = { ad, loadedAt: Date.now() };
+          done(readyAppOpen);
+        });
+
+        ad.addAdEventListener(AdEventType.ERROR, () => {
+          // No fill or no network. Released here; the next open tries again.
+          try {
+            ad.removeAllListeners();
+            ad.destroy();
+          } catch {
+            // Already released.
+          }
+          done(null);
+        });
+
+        ad.load();
+      })
+  );
+
+  return appOpenLoad;
+}
+
+/** Fetches an app open ad now so one is in hand when it is wanted. */
+export function preloadAppOpenAd(): void {
+  ensureAppOpenAd();
 }
 
 /**
- * Shows the preloaded app open ad, if showing one is appropriate right now.
+ * Shows an app open ad: on launch, and whenever the app is brought forward.
  *
- * @param backgroundedForMs How long the app spent in the background. A glance
- *   at another app is not a new session, and being interrupted by an ad for it
- *   is what makes this format infuriating.
+ * It waits for an ad that is still loading rather than declining, so the first
+ * open of a session gets one too. It declines only when another ad is already
+ * up, when one was just dismissed, or when nothing could be loaded.
+ *
  * @returns Whether an ad was shown.
  */
-export async function maybeShowAppOpenAd(backgroundedForMs: number): Promise<boolean> {
+export async function showAppOpenAd(): Promise<boolean> {
   const mod = ads();
   if (!mod) return false;
   if (adOnScreen) return false;
-  if (backgroundedForMs < APP_OPEN_MIN_BACKGROUND_MS) return false;
-  if (Date.now() - appOpenLastShownAt < APP_OPEN_MIN_GAP_MS) return false;
+  if (Date.now() - lastAdDismissedAt < AD_COOLDOWN_MS) return false;
 
-  const handle = appOpen;
-  if (!handle?.ready) {
-    // Nothing in hand: get one ready for next time instead of showing a
-    // loading screen now.
-    preloadAppOpenAd();
-    return false;
-  }
-  if (Date.now() - handle.loadedAt >= APP_OPEN_MAX_AGE_MS) {
-    appOpen = null;
-    preloadAppOpenAd();
-    return false;
-  }
+  const handle = await ensureAppOpenAd();
+  if (!handle) return false;
+  // The wait above yields, so re-check: an ad may have gone up meanwhile.
+  if (adOnScreen) return false;
+
+  readyAppOpen = null;
+  adOnScreen = true;
 
   const { AdEventType } = mod;
-  appOpen = null;
-  adOnScreen = true;
-  appOpenLastShownAt = Date.now();
-
-  const released = new Promise<void>((resolve) => {
+  const dismissed = new Promise<void>((resolve) => {
     handle.ad.addAdEventListener(AdEventType.CLOSED, () => resolve());
   });
 
   try {
     await handle.ad.show();
-    await released;
+    await dismissed;
     return true;
   } catch {
     return false;
   } finally {
     adOnScreen = false;
+    lastAdDismissedAt = Date.now();
     try {
       handle.ad.removeAllListeners();
       handle.ad.destroy();
     } catch {
       // Already released.
     }
-    // Have the next one ready well before it is needed.
+    // Have the next one ready before it is wanted.
     preloadAppOpenAd();
   }
 }

@@ -12,7 +12,7 @@ import { RootNavigator } from './src/navigation/RootNavigator';
 import { BrandSplash } from './src/components/BrandSplash';
 import { useStore } from './src/store/useStore';
 import { useAuthStore } from './src/store/useAuthStore';
-import { initAds, maybeShowAppOpenAd, preloadAppOpenAd } from './src/services/ads';
+import { initAds, preloadAppOpenAd, showAppOpenAd } from './src/services/ads';
 import { fontSizes, radius, spacing } from './src/theme/tokens';
 
 // Hold the native splash until the branded one is on screen, so the handoff
@@ -36,9 +36,8 @@ function AppContent() {
     // awaited: nothing on screen depends on it, and it no-ops where ads are
     // unsupported.
     initAds();
-    // Fetched now so one is in hand the next time the app comes forward. It is
-    // never shown on this launch: the first thing a new user sees should be
-    // Spendly, not an advert.
+    // Started at once so the launch ad below has as little to wait for as
+    // possible.
     preloadAppOpenAd();
   }, []);
 
@@ -65,25 +64,25 @@ function AppContent() {
     if (result.success) setUnlocked(true);
   };
 
-  // An ad when the app is brought back, under the service's own guards: not
-  // after a glance at another app, not more than once every few hours, and
-  // never while the screen is locked or another ad is up.
-  const wentToBackgroundAt = useRef<number | null>(null);
+  // An ad on every open: once the app is actually usable after launch, and
+  // again each time it is brought back. The service holds the only limits —
+  // one ad at a time, and a short pause after one is dismissed, since
+  // returning from an ad looks exactly like reopening the app.
+  const launchAdShown = useRef(false);
+
+  useEffect(() => {
+    if (!unlocked || !splashDone || launchAdShown.current) return;
+    launchAdShown.current = true;
+    // Behind the splash the app has already loaded, so this covers the ad
+    // rather than standing in front of an empty screen.
+    showAppOpenAd();
+  }, [unlocked, splashDone]);
 
   useEffect(() => {
     const onChange = (next: AppStateStatus) => {
-      if (next === 'background' || next === 'inactive') {
-        if (wentToBackgroundAt.current === null) wentToBackgroundAt.current = Date.now();
-        return;
-      }
       if (next !== 'active') return;
-
-      const away = wentToBackgroundAt.current;
-      wentToBackgroundAt.current = null;
-      if (away === null) return;
       if (!unlocked || !splashDone) return;
-
-      maybeShowAppOpenAd(Date.now() - away);
+      showAppOpenAd();
     };
 
     const subscription = AppState.addEventListener('change', onChange);
