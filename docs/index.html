@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spendly — Your Money, Simplified</title>
+<meta name="description" content="A private expense and budget tracker for Android. Your money data stays on your phone.">
+<style>
+  :root {
+    --bg: #eef3fc;
+    --surface: rgba(255,255,255,.66);
+    --border: #d7e0f2;
+    --text: #0b1220;
+    --muted: #46536b;
+    --tint: #3b5bff;
+    --aurora-a: rgba(59,91,255,.20);
+    --aurora-b: rgba(34,184,240,.18);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #070c1a;
+      --surface: rgba(20,30,54,.72);
+      --border: #24324f;
+      --text: #f2f5fc;
+      --muted: #9fb0cd;
+      --tint: #6e8bff;
+      --aurora-a: rgba(110,139,255,.16);
+      --aurora-b: rgba(34,184,240,.12);
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 0 16px 80px;
+    background: var(--bg);
+    background-image:
+      radial-gradient(60vw 60vw at 15% -10%, var(--aurora-a), transparent 70%),
+      radial-gradient(50vw 50vw at 95% 20%, var(--aurora-b), transparent 70%);
+    background-attachment: fixed;
+    color: var(--text);
+    font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; }
+  header { padding: 48px 0 0; }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .mark {
+    width: 52px; height: 52px; border-radius: 16px; flex: none;
+    background: linear-gradient(135deg, #22b8f0, #3b5bff);
+    display: grid; place-items: center;
+    color: #fff; font-weight: 800; font-size: 26px;
+    box-shadow: 0 8px 22px rgba(59,91,255,.32);
+  }
+  .brand h1 { font-size: 28px; margin: 0; }
+  .tagline { font-size: 21px; font-weight: 600; color: var(--muted); margin: 22px 0 0; }
+  .tagline b { color: var(--tint); font-weight: 700; }
+  .lede { margin-top: 12px; color: var(--muted); }
+  .cta {
+    display: inline-block; margin-top: 22px;
+    padding: 13px 24px; border-radius: 999px;
+    background: linear-gradient(135deg, #3b5bff, #22b8f0);
+    color: #fff; font-weight: 700; text-decoration: none;
+    box-shadow: 0 8px 22px rgba(59,91,255,.32);
+  }
+  .cta-note { font-size: 14px; color: var(--muted); margin-top: 10px; }
+  h2 { font-size: 19px; margin: 44px 0 10px; }
+  .grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 16px 18px;
+  }
+  .card h3 { margin: 0 0 4px; font-size: 16px; }
+  .card p { margin: 0; color: var(--muted); font-size: 15px; }
+  a { color: var(--tint); }
+  footer {
+    margin-top: 56px; padding-top: 20px;
+    border-top: 1px solid var(--border);
+    font-size: 14px; color: var(--muted);
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="brand">
+    <span class="mark">S</span>
+    <h1>Spendly</h1>
+  </div>
+  <p class="tagline">Your Money, <b>Simplified</b></p>
+  <p class="lede">
+    A personal expense and budget tracker for Android. Record what you spend, see where it goes,
+    and keep your finances in one place — with your data kept on your own phone.
+  </p>
+  <a class="cta" href="https://github.com/technews345-byte/santanu/releases/download/android-apk/app-release.apk">Download for Android</a>
+  <p class="cta-note">Installs from an .apk — allow installation from unknown sources when prompted.</p>
+</header>
+
+<h2>What it does</h2>
+<div class="grid">
+  <div class="card">
+    <h3>Track spending</h3>
+    <p>Income, expenses, transfers and investments, with categories, accounts and receipt photos.</p>
+  </div>
+  <div class="card">
+    <h3>Set budgets</h3>
+    <p>Give a category a monthly limit and watch how much of it is left as the month goes on.</p>
+  </div>
+  <div class="card">
+    <h3>See the shape of it</h3>
+    <p>Charts for where the money went, how it trends, and what your net position looks like.</p>
+  </div>
+  <div class="card">
+    <h3>Take it with you</h3>
+    <p>Export a formatted PDF report or an Excel sheet whenever you need one.</p>
+  </div>
+  <div class="card">
+    <h3>Private by default</h3>
+    <p>Everything lives on your phone. Sign in only if you want a backup that survives losing it.</p>
+  </div>
+  <div class="card">
+    <h3>Lock it</h3>
+    <p>Fingerprint or face unlock, handled by Android itself.</p>
+  </div>
+</div>
+
+<h2>Privacy</h2>
+<p>
+  Your financial records stay on the device unless you sign in, receipt photos are never uploaded
+  at all, and nothing you record is used for advertising or sold to anyone. The full detail is in
+  the <a href="./privacy.html">privacy policy</a>.
+</p>
+
+<footer>
+  Built by Santanu Bordoloi · <a href="./privacy.html">Privacy Policy</a> ·
+  <a href="https://github.com/technews345-byte/santanu">Source on GitHub</a><br>
+  © 2026 Santanu Bordoloi. All rights reserved.
+</footer>
+
+</div>
+</body>
+</html>
