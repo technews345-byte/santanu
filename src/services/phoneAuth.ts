@@ -114,9 +114,18 @@ const SERVER_CODES: Record<string, string> = {
 
 function toAuthError(body: any): Error & { code?: string; serverMessage?: string } {
   const raw = String(body?.error?.message ?? 'Something went wrong. Please try again.');
-  const key = Object.keys(SERVER_CODES).find((k) => raw.startsWith(k));
   const error = new Error(raw) as Error & { code?: string; serverMessage?: string };
   error.serverMessage = raw;
+
+  // A blocked SMS region arrives as OPERATION_NOT_ALLOWED with the reason only
+  // in the trailing text, so it would otherwise read as "the provider is
+  // switched off" and send someone to the wrong console page.
+  if (/region/i.test(raw)) {
+    error.code = 'auth/sms-region-blocked';
+    return error;
+  }
+
+  const key = Object.keys(SERVER_CODES).find((k) => raw.startsWith(k));
   if (key) error.code = SERVER_CODES[key];
   return error;
 }
