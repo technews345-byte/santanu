@@ -22,7 +22,6 @@ SplashScreen.preventAutoHideAsync().catch(() => {});
 function AppContent() {
   const { theme } = useTheme();
   const { hydrated, hydrationError, hydrate, biometricLockEnabled } = useStore();
-  const appOpenAdsEnabled = useStore((s) => s.appOpenAdsEnabled);
   const initAuth = useAuthStore((s) => s.init);
   const authReady = useAuthStore((s) => s.ready);
   const [unlocked, setUnlocked] = useState(false);
@@ -82,14 +81,14 @@ function AppContent() {
       const away = wentToBackgroundAt.current;
       wentToBackgroundAt.current = null;
       if (away === null) return;
-      if (!appOpenAdsEnabled || !unlocked || !splashDone) return;
+      if (!unlocked || !splashDone) return;
 
       maybeShowAppOpenAd(Date.now() - away);
     };
 
     const subscription = AppState.addEventListener('change', onChange);
     return () => subscription.remove();
-  }, [appOpenAdsEnabled, unlocked, splashDone]);
+  }, [unlocked, splashDone]);
 
   const handleSplashShown = useCallback(() => {
     SplashScreen.hideAsync().catch(() => {});

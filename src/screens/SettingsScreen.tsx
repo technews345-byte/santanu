@@ -32,8 +32,6 @@ export default function SettingsScreen() {
     setBiometricLockEnabled,
     supportCount,
     recordSupport,
-    appOpenAdsEnabled,
-    setAppOpenAdsEnabled,
   } = useStore();
   const user = useAuthStore((s) => s.user);
   const pendingCount = useAuthStore((s) => s.pendingCount);
@@ -239,22 +237,6 @@ export default function SettingsScreen() {
                   : 'Not available in this build'}
             </Text>
           </Pressable>
-
-          <View style={[styles.divider, { backgroundColor: theme.borderSubtle }]} />
-
-          <View style={styles.row}>
-            <View style={styles.rowHeading}>
-              <Text style={[styles.rowLabel, { color: theme.text }]}>Ad on app open</Text>
-              <Text style={[styles.rowSub, { color: theme.textTertiary }]}>
-                At most one every few hours, never on a quick switch back
-              </Text>
-            </View>
-            <Switch
-              value={appOpenAdsEnabled}
-              onValueChange={setAppOpenAdsEnabled}
-              trackColor={{ true: theme.tint }}
-            />
-          </View>
         </Card>
 
         <SectionLabel label="About" />
@@ -305,7 +287,6 @@ function SectionLabel({ label, action }: { label: string; action?: { label: stri
 
 const styles = StyleSheet.create({
   supportHeader: { flexDirection: 'row', gap: spacing.sm },
-  rowHeading: { flex: 1, paddingRight: spacing.sm },
   supportHeading: { flex: 1, gap: spacing.xxs },
   supportTitle: { fontSize: fontSizes.base, fontWeight: '700' },
   supportBody: { fontSize: fontSizes.sm, lineHeight: 19 },
