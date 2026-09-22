@@ -134,6 +134,29 @@ let adOnScreen = false;
 let lastAdDismissedAt = 0;
 
 /**
+ * How many screens are currently holding ads back.
+ *
+ * Signing in leaves the app on purpose — to read a code out of the SMS app, or
+ * to finish a security check — and every one of those returns looks like the
+ * user reopening Spendly. An ad on top of a half-finished login is how people
+ * lose the code and give up, so screens in the middle of a flow like that hold
+ * ads until they are done. Counted rather than a flag, because two screens can
+ * overlap and the first to finish must not release the second's hold.
+ */
+let suppressions = 0;
+
+/** Holds app open ads back until the returned function is called. */
+export function holdAppOpenAds(): () => void {
+  suppressions += 1;
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    suppressions = Math.max(0, suppressions - 1);
+  };
+}
+
+/**
  * Loads a rewarded ad, shows it, and resolves once the user is done with it.
  *
  * A fresh ad is built for every call and destroyed on the way out, which is
@@ -322,13 +345,14 @@ export function preloadAppOpenAd(): void {
 export async function showAppOpenAd(): Promise<boolean> {
   const mod = ads();
   if (!mod) return false;
-  if (adOnScreen) return false;
+  if (adOnScreen || suppressions > 0) return false;
   if (Date.now() - lastAdDismissedAt < AD_COOLDOWN_MS) return false;
 
   const handle = await ensureAppOpenAd();
   if (!handle) return false;
-  // The wait above yields, so re-check: an ad may have gone up meanwhile.
-  if (adOnScreen) return false;
+  // The wait above yields, so re-check: an ad may have gone up meanwhile, or a
+  // screen may have started a flow that must not be interrupted.
+  if (adOnScreen || suppressions > 0) return false;
 
   readyAppOpen = null;
   adOnScreen = true;

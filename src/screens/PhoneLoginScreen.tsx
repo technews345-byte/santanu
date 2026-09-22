@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { Screen } from '../components/Screen';
 import { BottomSheetModal } from '../components/BottomSheetModal';
+import { holdAppOpenAds } from '../services/ads';
 import { useTheme } from '../theme/ThemeContext';
 import { fontSizes, radius, spacing } from '../theme/tokens';
 import { RecaptchaGate, RecaptchaHandle } from '../services/RecaptchaGate';
@@ -20,6 +21,11 @@ import {
 import { isCloudConfigured } from '../services/cloudConfig';
 
 export default function PhoneLoginScreen() {
+  // No ad may land on top of signing in: the flow deliberately leaves the
+  // app — for the SMS, for a security check — and each return would
+  // otherwise read as the app being reopened.
+  useEffect(() => holdAppOpenAds(), []);
+
   const { theme } = useTheme();
   const navigation = useNavigation<any>();
   const recaptcha = useRef<RecaptchaHandle>(null);
