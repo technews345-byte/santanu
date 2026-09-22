@@ -3,6 +3,7 @@ import { Animated, Easing, Image, Pressable, StyleSheet, Text, View } from 'reac
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { Screen } from '../components/Screen';
+import { holdAppOpenAds } from '../services/ads';
 import { useTheme } from '../theme/ThemeContext';
 import { fontSizes, radius, spacing } from '../theme/tokens';
 import { useAuthStore } from '../store/useAuthStore';
@@ -15,6 +16,11 @@ const LOCKUP_LIGHT = require('../../assets/logo-lockup-light.png');
 const LOCKUP_DARK = require('../../assets/logo-lockup-dark.png');
 
 export default function LoginScreen() {
+  // No ad may land on top of signing in: the flow deliberately leaves the
+  // app — for the SMS, for a security check — and each return would
+  // otherwise read as the app being reopened.
+  useEffect(() => holdAppOpenAds(), []);
+
   const { theme } = useTheme();
   const navigation = useNavigation<any>();
   const continueAsGuest = useAuthStore((s) => s.continueAsGuest);
