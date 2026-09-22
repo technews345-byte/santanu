@@ -105,6 +105,8 @@ export function describeAuthError(error: any): string {
       return 'Text-message sign-in needs billing enabled on the Firebase project. A test number still works.';
     case 'auth/configuration-not-found':
       return 'Sign-in is not switched on for this project yet. Enable Authentication in the Firebase console, then try again.';
+    case 'auth/sms-region-blocked':
+      return 'Text messages are not allowed to this country yet. In the Firebase console, open Authentication to Settings to SMS region policy and allow it.';
     case 'auth/operation-not-allowed':
       return 'This sign-in method is switched off in the Firebase console. Enable it under Authentication to use it.';
     case 'auth/invalid-app-credential':
