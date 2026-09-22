@@ -72,7 +72,7 @@
       [
         "react-native-google-mobile-ads",
         {
-          "androidAppId": "ca-app-pub-3940256099942544~3347511713",
+          "androidAppId": "ca-app-pub-6027969494449969~1654126855",
           "iosAppId": "ca-app-pub-3940256099942544~1458002511"
         }
       ]
@@ -92,7 +92,7 @@
       "ads": {
         "androidRewardedUnitId": "ca-app-pub-3940256099942544/5224354917",
         "iosRewardedUnitId": "ca-app-pub-3940256099942544/1712485313",
-        "androidAppOpenUnitId": "ca-app-pub-3940256099942544/9257395921",
+        "androidAppOpenUnitId": "ca-app-pub-6027969494449969/4792349524",
         "iosAppOpenUnitId": "ca-app-pub-3940256099942544/5575463023"
       }
     }
