@@ -8,6 +8,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const ACTIVE_ACCOUNT_KEY = 'settings:activeAccountId';
 const BALANCE_VISIBLE_KEY = 'settings:balanceVisible';
 const BIOMETRIC_KEY = 'settings:biometricLockEnabled';
+const SUPPORT_COUNT_KEY = 'settings:supportCount';
+const APP_OPEN_ADS_KEY = 'settings:appOpenAdsEnabled';
 
 interface StoreState {
   hydrated: boolean;
@@ -19,11 +21,17 @@ interface StoreState {
   activeAccountId: string | null; // null = All Accounts
   balanceVisible: boolean;
   biometricLockEnabled: boolean;
+  /** How many rewarded ads the user has chosen to watch to support the app. */
+  supportCount: number;
+  /** Whether an ad may appear when the app is brought back to the foreground. */
+  appOpenAdsEnabled: boolean;
 
   hydrate: () => Promise<void>;
   setActiveAccountId: (id: string | null) => void;
   toggleBalanceVisible: () => void;
   setBiometricLockEnabled: (enabled: boolean) => void;
+  recordSupport: () => void;
+  setAppOpenAdsEnabled: (enabled: boolean) => void;
 
   addAccount: (input: Omit<Account, 'id' | 'createdAt' | 'archived' | 'sortOrder'>) => Promise<Account>;
   updateAccount: (id: string, patch: Partial<Account>) => Promise<void>;
@@ -52,10 +60,12 @@ export const useStore = create<StoreState>((set, get) => ({
   activeAccountId: null,
   balanceVisible: true,
   biometricLockEnabled: false,
+  supportCount: 0,
+  appOpenAdsEnabled: true,
 
   hydrate: async () => {
     try {
-      const [accounts, categories, transactions, budgets, storedActive, storedVisible, storedBiometric] = await Promise.all([
+      const [accounts, categories, transactions, budgets, storedActive, storedVisible, storedBiometric, storedSupport, storedAppOpenAds] = await Promise.all([
         AccountsRepo.list(),
         CategoriesRepo.list(),
         TransactionsRepo.list(),
@@ -63,6 +73,8 @@ export const useStore = create<StoreState>((set, get) => ({
         AsyncStorage.getItem(ACTIVE_ACCOUNT_KEY),
         AsyncStorage.getItem(BALANCE_VISIBLE_KEY),
         AsyncStorage.getItem(BIOMETRIC_KEY),
+        AsyncStorage.getItem(SUPPORT_COUNT_KEY),
+        AsyncStorage.getItem(APP_OPEN_ADS_KEY),
       ]);
       set({
         accounts,
@@ -72,6 +84,8 @@ export const useStore = create<StoreState>((set, get) => ({
         activeAccountId: storedActive || null,
         balanceVisible: storedVisible === null ? true : storedVisible === 'true',
         biometricLockEnabled: storedBiometric === 'true',
+        supportCount: Number(storedSupport) || 0,
+        appOpenAdsEnabled: storedAppOpenAds === null ? true : storedAppOpenAds === 'true',
         hydrated: true,
         hydrationError: null,
       });
@@ -94,6 +108,17 @@ export const useStore = create<StoreState>((set, get) => ({
   setBiometricLockEnabled: (enabled) => {
     set({ biometricLockEnabled: enabled });
     AsyncStorage.setItem(BIOMETRIC_KEY, String(enabled)).catch(() => {});
+  },
+
+  recordSupport: () => {
+    const next = get().supportCount + 1;
+    set({ supportCount: next });
+    AsyncStorage.setItem(SUPPORT_COUNT_KEY, String(next)).catch(() => {});
+  },
+
+  setAppOpenAdsEnabled: (enabled) => {
+    set({ appOpenAdsEnabled: enabled });
+    AsyncStorage.setItem(APP_OPEN_ADS_KEY, String(enabled)).catch(() => {});
   },
 
   addAccount: async (input) => {

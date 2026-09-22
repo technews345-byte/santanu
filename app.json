@@ -2,7 +2,10 @@
   "expo": {
     "name": "Spendly",
     "slug": "santanu",
-    "scheme": ["spendly", "com.santanu.spendly"],
+    "scheme": [
+      "spendly",
+      "com.santanu.spendly"
+    ],
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -65,7 +68,14 @@
         }
       ],
       "expo-system-ui",
-      "expo-sqlite"
+      "expo-sqlite",
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-3940256099942544~3347511713",
+          "iosAppId": "ca-app-pub-3940256099942544~1458002511"
+        }
+      ]
     ],
     "extra": {
       "firebase": {
@@ -78,6 +88,12 @@
         "measurementId": "G-B15CZ9850M",
         "googleWebClientId": "877074760062-og0f8g02jpv16i0tbc12n7m594252j63.apps.googleusercontent.com",
         "googleAndroidClientId": "877074760062-ljgqnfifds25ug2163ltte8jb3e2tb7s.apps.googleusercontent.com"
+      },
+      "ads": {
+        "androidRewardedUnitId": "ca-app-pub-3940256099942544/5224354917",
+        "iosRewardedUnitId": "ca-app-pub-3940256099942544/1712485313",
+        "androidAppOpenUnitId": "ca-app-pub-3940256099942544/9257395921",
+        "iosAppOpenUnitId": "ca-app-pub-3940256099942544/5575463023"
       }
     }
   }
