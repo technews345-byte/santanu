@@ -254,7 +254,7 @@ export default function SettingsScreen() {
 
           <View style={[styles.divider, { backgroundColor: theme.borderSubtle }]} />
 
-          <Text style={[styles.aboutAuthor, { color: theme.text }]}>Built by Santanu Bordoloi</Text>
+          <Text style={[styles.aboutAuthor, { color: theme.text }]}>Developed by Santanu Bordoloi</Text>
           <Text style={[styles.aboutBody, { color: theme.textSecondary }]}>
             Designed and developed with a focus on simplicity, privacy, and an easy-to-use experience.
           </Text>
