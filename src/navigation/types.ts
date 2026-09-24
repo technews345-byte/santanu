@@ -9,7 +9,6 @@ export type RootStackParamList = {
   BudgetForm: { categoryId: string };
   Welcome: undefined;
   Login: undefined;
-  PhoneLogin: undefined;
   Account: undefined;
 };
 

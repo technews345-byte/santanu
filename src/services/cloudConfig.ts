@@ -51,7 +51,4 @@ export const googleClientId = Platform.select({
 
 export const cloudProviders = {
   google: !!googleClientId,
-  // Phone verification needs no extra client id, only the provider enabled
-  // in the Firebase console.
-  phone: isCloudConfigured,
 };

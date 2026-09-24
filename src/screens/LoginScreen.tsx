@@ -109,13 +109,6 @@ export default function LoginScreen() {
             />
           )}
 
-          <ProviderButton
-            icon="phone-portrait-outline"
-            label="Continue with Mobile Number"
-            onPress={() => (isCloudConfigured ? navigation.navigate('PhoneLogin') : handleUnconfigured())}
-            loading={false}
-          />
-
           {notice && (
             <View style={[styles.notice, { backgroundColor: theme.warningMuted }]}>
               <Ionicons name="information-circle-outline" size={16} color={theme.warning} />
