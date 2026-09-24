@@ -9,7 +9,6 @@ import AccountFormScreen from '../screens/AccountFormScreen';
 import CategoryFormScreen from '../screens/CategoryFormScreen';
 import BudgetFormScreen from '../screens/BudgetFormScreen';
 import LoginScreen from '../screens/LoginScreen';
-import PhoneLoginScreen from '../screens/PhoneLoginScreen';
 import AccountScreen from '../screens/AccountScreen';
 import { RootStackParamList } from './types';
 import { useAuthStore } from '../store/useAuthStore';
@@ -51,11 +50,6 @@ export function RootNavigator() {
         {askToSignIn ? (
           <>
             <Stack.Screen name="Welcome" component={LoginScreen} />
-            <Stack.Screen
-              name="PhoneLogin"
-              component={PhoneLoginScreen}
-              options={{ presentation: 'modal', animation: 'slide_from_bottom', animationDuration: 300 }}
-            />
           </>
         ) : (
           <>
@@ -66,7 +60,6 @@ export function RootNavigator() {
               <Stack.Screen name="CategoryForm" component={CategoryFormScreen} />
               <Stack.Screen name="BudgetForm" component={BudgetFormScreen} />
               <Stack.Screen name="Login" component={LoginScreen} />
-              <Stack.Screen name="PhoneLogin" component={PhoneLoginScreen} />
             </Stack.Group>
             <Stack.Screen name="CategoryDetail" component={CategoryDetailScreen} />
             <Stack.Screen name="Account" component={AccountScreen} />

@@ -1,6 +1,5 @@
 import {
   GoogleAuthProvider,
-  PhoneAuthProvider,
   User,
   deleteUser,
   linkWithCredential,
@@ -70,10 +69,6 @@ export function signInWithGoogleIdToken(idToken: string, accessToken?: string): 
   return signInOrLink(GoogleAuthProvider.credential(idToken, accessToken));
 }
 
-export function signInWithPhoneCode(verificationId: string, code: string): Promise<AuthUser> {
-  return signInOrLink(PhoneAuthProvider.credential(verificationId, code));
-}
-
 export async function signOut(): Promise<void> {
   await firebaseSignOut(getFirebaseAuth());
 }
@@ -91,8 +86,6 @@ export function describeAuthError(error: any): string {
       return 'That code is not right. Check the digits and try again.';
     case 'auth/code-expired':
       return 'That code has expired. Send a new one.';
-    case 'auth/invalid-phone-number':
-      return 'That phone number does not look right.';
     case 'auth/too-many-requests':
       return 'Too many attempts. Wait a few minutes before trying again.';
     case 'auth/network-request-failed':
@@ -101,17 +94,10 @@ export function describeAuthError(error: any): string {
       return 'This account already exists with a different sign-in method. Use that one, then link this from Account.';
     case 'auth/requires-recent-login':
       return 'For security, sign in again before making this change.';
-    case 'auth/billing-not-enabled':
-      return 'Text-message sign-in needs billing enabled on the Firebase project. A test number still works.';
     case 'auth/configuration-not-found':
       return 'Sign-in is not switched on for this project yet. Enable Authentication in the Firebase console, then try again.';
-    case 'auth/sms-region-blocked':
-      return 'Text messages are not allowed to this country yet. In the Firebase console, open Authentication to Settings to SMS region policy and allow it.';
     case 'auth/operation-not-allowed':
       return 'This sign-in method is switched off in the Firebase console. Enable it under Authentication to use it.';
-    case 'auth/invalid-app-credential':
-    case 'auth/captcha-check-failed':
-      return 'The phone sign-in check failed. Confirm the app domain is listed under Authentication to Settings to Authorized domains.';
     case 'auth/unauthorized-domain':
       return 'This domain is not on the authorized list for sign-in. Add it under Authentication to Settings to Authorized domains.';
     default:
