@@ -1,5 +1,5 @@
 import React, { useId, useMemo, useState } from 'react';
-import { Image, Pressable, SectionList, StyleSheet, View } from 'react-native';
+import { Image, Platform, Pressable, SectionList, StyleSheet, View } from 'react-native';
 import { Text } from '../theme/type';
 import { format } from 'date-fns';
 import { Ionicons } from '@expo/vector-icons';
@@ -99,7 +99,13 @@ export default function DashboardScreen() {
     <Screen>
       <View style={styles.header}>
         <View style={styles.greetBlock}>
-          <Text style={[styles.greeting, { color: theme.text }]} numberOfLines={1}>
+          <Text
+            style={[styles.greeting, { color: theme.text }]}
+            numberOfLines={1}
+            // Shrinks a little rather than cutting the greeting off beside a
+            // long name. The web has no shrink-to-fit and would pass it to the DOM.
+            {...(Platform.OS !== 'web' ? { adjustsFontSizeToFit: true, minimumFontScale: 0.75 } : null)}
+          >
             {greeting(user)}
           </Text>
           <Text style={[styles.tagline, { color: theme.textSecondary }]}>Track. Plan. Save. Live Better.</Text>
@@ -794,7 +800,7 @@ const styles = StyleSheet.create({
 
   bentoRow: { flexDirection: 'row', gap: spacing.xs, alignItems: 'stretch' },
   budgetTileOuter: { flex: 1.12 },
-  budgetTile: { flex: 1, padding: spacing.md },
+  budgetTile: { padding: spacing.md },
   budgetEmpty: { flex: 1, alignItems: 'flex-start', justifyContent: 'center', gap: spacing.xs, marginTop: spacing.xs },
   budgetBar: { marginTop: spacing.sm },
   overRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
@@ -802,7 +808,7 @@ const styles = StyleSheet.create({
   tileValue: { fontSize: fontSizes.xl, fontWeight: '800', letterSpacing: -0.7, marginTop: 4 },
   smallCol: { flex: 1, gap: spacing.xs },
   smallTileOuter: { flex: 1 },
-  smallTile: { flex: 1, padding: spacing.sm, paddingHorizontal: spacing.md, justifyContent: 'center' },
+  smallTile: { padding: spacing.sm, paddingHorizontal: spacing.md, justifyContent: 'center' },
   smallValue: { fontSize: fontSizes.lg, fontWeight: '800', letterSpacing: -0.5, marginTop: 2 },
 
   tipCard: { marginTop: spacing.md },

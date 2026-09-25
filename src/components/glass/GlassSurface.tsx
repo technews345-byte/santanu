@@ -130,7 +130,10 @@ export function GlassSurface({
         style,
       ]}
     >
-      <View style={[styles.clip, { borderRadius }]}>
+      {/* The glass itself, pinned to the pane's edges: it takes the pane's
+          size from the pane and never lends it any, so a pane is exactly as
+          big as its caller or its contents make it. */}
+      <View style={[StyleSheet.absoluteFill, styles.clip, { borderRadius }]} pointerEvents="none">
         {solid && <View style={[StyleSheet.absoluteFill, { backgroundColor: theme.surfaceSolid }]} />}
         {method === 'ios' && (
           <BlurView intensity={theme.blurIntensity * strength} tint={theme.glassTint} style={StyleSheet.absoluteFill} />
@@ -203,8 +206,9 @@ export function GlassSurface({
           pointerEvents="none"
         />
 
-        <View style={contentStyle}>{children}</View>
       </View>
+
+      <View style={[styles.clip, { borderRadius }, contentStyle]}>{children}</View>
     </View>
   );
 }
@@ -213,10 +217,11 @@ type BlurMethod = 'ios' | 'android' | 'web';
 
 const styles = StyleSheet.create({
   outer: { overflow: 'visible' },
-  // Always the pane's full size: grown to a fixed height (a tile, a tab
-  // marker), and stretched across even when a caller's style centres the
-  // pane's contents — otherwise the glass shrinks to whatever it holds.
-  clip: { overflow: 'hidden', flexGrow: 1, alignSelf: 'stretch' },
+  // No flex here on purpose. Growing to fill looks harmless on the web, but
+  // Android's layout lets a growing child stretch an auto-sized pane to the
+  // whole height available, which pushed every screen's content off the
+  // bottom.
+  clip: { overflow: 'hidden' },
   edgeTop: { position: 'absolute', top: 0, left: 0, right: '18%', height: 1 },
   edgeLeft: { position: 'absolute', top: 0, left: 0, bottom: '45%', width: 1 },
 });
