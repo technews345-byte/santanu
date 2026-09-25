@@ -1,15 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import {
-  Alert,
-  Image,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { Alert, Image, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
+import { Text, TextInput } from '../theme/type';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
@@ -238,7 +229,6 @@ export default function TransactionEntryScreen() {
               sat below the fold behind the keypad. */}
           <GlassSurface
             level="row"
-            blur={false}
             borderRadius={radius.lg}
             style={styles.noteOuter}
             contentStyle={styles.noteBox}
@@ -350,14 +340,19 @@ export default function TransactionEntryScreen() {
         />
       </View>
 
-      <Keypad onKeyPress={onKeyPress} />
+      {/* The keypad is worked fast and by feel, so it sits on its own frosted
+          deck: whatever colour the room has behind it goes soft and even, and
+          every key reads the same. */}
+      <GlassSurface level="panel" solidWithoutBlur borderRadius={radius.xl} style={styles.deck} contentStyle={styles.deckInner}>
+        <Keypad onKeyPress={onKeyPress} />
 
-      <GlassButton
-        label={existing ? 'Save Changes' : 'Save Transaction'}
-        color={typeColor}
-        onPress={handleSave}
-        style={styles.saveButtonWrap}
-      />
+        <GlassButton
+          label={existing ? 'Save Changes' : 'Save Transaction'}
+          color={typeColor}
+          onPress={handleSave}
+          style={styles.saveButtonWrap}
+        />
+      </GlassSurface>
 
       <BottomSheetModal visible={categorySheetOpen} onClose={() => setCategorySheetOpen(false)} title="Category">
         <View style={styles.categoryGrid}>
@@ -481,7 +476,6 @@ function MetaRow({
   return (
     <GlassPressable
       level="row"
-      blur={false}
       borderRadius={radius.lg}
       style={styles.metaRowOuter}
       contentStyle={styles.metaRow}
@@ -521,6 +515,8 @@ const styles = StyleSheet.create({
   thumb: { width: '100%', height: '100%' },
   thumbRemove: { position: 'absolute', top: 2, right: 2, width: 16, height: 16, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   addAttachment: { width: 52, height: 52, borderRadius: radius.sm, borderWidth: StyleSheet.hairlineWidth, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' },
+  deck: { marginHorizontal: spacing.xxs, marginBottom: spacing.xxs },
+  deckInner: { paddingTop: spacing.xs },
   saveButtonWrap: { marginHorizontal: spacing.xs, marginTop: spacing.sm, marginBottom: spacing.xs },
   categoryGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
   categoryItem: { width: '23%', alignItems: 'center', marginBottom: spacing.md, gap: 4 },

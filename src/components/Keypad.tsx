@@ -1,5 +1,6 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Text } from '../theme/type';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../theme/ThemeContext';
@@ -69,7 +70,7 @@ export function Keypad({ onKeyPress }: { onKeyPress: (key: string) => void }) {
             // light caught along its top edge rather than a drawn outline.
             const labelColor = isOperator
               ? dark
-                ? shade(theme.tint, 0.3)
+                ? shade(theme.tint, 0.5)
                 : theme.tint
               : isAction
                 ? theme.expense

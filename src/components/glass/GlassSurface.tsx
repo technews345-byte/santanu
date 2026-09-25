@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import { StyleSheet, View, ViewStyle, StyleProp, Platform } from 'react-native';
 import { BlurView } from 'expo-blur';
+import { BlurTargetContext } from './Aurora';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../theme/ThemeContext';
 import { radius } from '../../theme/tokens';
@@ -43,18 +44,25 @@ const DEPTH: Record<GlassLevel, Depth> = {
  * Only (5) is bright, and only for a pixel, which is what keeps it from
  * looking like a white border.
  *
- * Blur runs on iOS only. Android's blur in this SDK needs the blurred content
- * wrapped in a target view and redraws every frame per pane; with nothing
- * behind these panes but already-soft light, a real blur there would look
- * identical and cost frame rate. Without a blur method Android's BlurView is
- * just an extra dark overlay, so it is skipped rather than left darkening
- * every pane.
+ * Behind all of it, on a screen with a room to blur, the pane blurs what is
+ * behind it for real, so the room's spheres soften into glowing colour through
+ * the glass and stay crisp outside it:
+ *
+ *  - iOS: the system material.
+ *  - Android 12 and up: a blur pointed at the screen's room (see `Screen`).
+ *    Older Android draws blur on the CPU every frame, so there the pane is
+ *    left as tinted glass.
+ *  - Web: the browser's backdrop filter.
+ *
+ * A frost layer over the blur keeps text on the pane readable wherever the
+ * brightest colour happens to fall behind it.
  */
 export function GlassSurface({
   children,
   level = 'panel',
   blur = true,
   opaque = false,
+  solidWithoutBlur = false,
   style,
   contentStyle,
   borderRadius = radius.xl,
@@ -72,6 +80,9 @@ export function GlassSurface({
   /** Hide whatever sits behind this pane: a row over its own swipe actions,
    *  or chrome that has to stay readable over any content. */
   opaque?: boolean;
+  /** For panes whose contents need calm behind them: blurred where the
+   *  platform can blur, solid where it can't, never bare glass. */
+  solidWithoutBlur?: boolean;
   style?: StyleProp<ViewStyle>;
   contentStyle?: StyleProp<ViewStyle>;
   borderRadius?: number;
@@ -88,7 +99,21 @@ export function GlassSurface({
           ? theme.surfaceAlt
           : theme.glass;
 
-  const useBlur = blur && !opaque && Platform.OS === 'ios';
+  const room = useContext(BlurTargetContext);
+  const dark = theme.mode === 'dark';
+  const method: BlurMethod | null =
+    !blur || opaque
+      ? null
+      : Platform.OS === 'ios'
+        ? 'ios'
+        : Platform.OS === 'web'
+          ? 'web'
+          : Platform.OS === 'android' && room && Number(Platform.Version) >= 31
+            ? 'android'
+            : null;
+  const solid = opaque || (solidWithoutBlur && !method);
+  // Rows are many and small: a lighter blur is enough and costs less.
+  const strength = level === 'row' ? 0.75 : 1;
 
   return (
     <View
@@ -106,10 +131,35 @@ export function GlassSurface({
       ]}
     >
       <View style={[styles.clip, { borderRadius }]}>
-        {opaque && <View style={[StyleSheet.absoluteFill, { backgroundColor: theme.surfaceSolid }]} />}
-        {useBlur && (
-          <BlurView intensity={theme.blurIntensity * (level === 'row' ? 0.6 : 1)} tint={theme.glassTint} style={StyleSheet.absoluteFill} />
+        {solid && <View style={[StyleSheet.absoluteFill, { backgroundColor: theme.surfaceSolid }]} />}
+        {method === 'ios' && (
+          <BlurView intensity={theme.blurIntensity * strength} tint={theme.glassTint} style={StyleSheet.absoluteFill} />
         )}
+        {method === 'android' && room && (
+          <BlurView
+            blurTarget={room}
+            blurMethod="dimezisBlurViewSdk31Plus"
+            // Intensity sets the overlay's strength, and intensity divided by
+            // the reduction factor the blur radius, in pixels: a light
+            // overlay, and a radius wide enough to melt a sphere's edge.
+            intensity={(dark ? 36 : 30) * strength}
+            blurReductionFactor={0.62}
+            tint={dark ? 'systemUltraThinMaterialDark' : 'systemUltraThinMaterialLight'}
+            style={StyleSheet.absoluteFill}
+          />
+        )}
+        {method === 'web' && (
+          <View
+            style={[
+              StyleSheet.absoluteFill,
+              {
+                backdropFilter: `blur(${Math.round(28 * strength)}px) saturate(160%)`,
+                WebkitBackdropFilter: `blur(${Math.round(28 * strength)}px) saturate(160%)`,
+              } as ViewStyle,
+            ]}
+          />
+        )}
+        {method && <View style={[StyleSheet.absoluteFill, { backgroundColor: theme.glassFrost }]} />}
         <View style={[StyleSheet.absoluteFill, { backgroundColor: fill }]} />
         {tint && <View style={[StyleSheet.absoluteFill, { backgroundColor: tint }]} />}
 
@@ -158,6 +208,8 @@ export function GlassSurface({
     </View>
   );
 }
+
+type BlurMethod = 'ios' | 'android' | 'web';
 
 const styles = StyleSheet.create({
   outer: { overflow: 'visible' },

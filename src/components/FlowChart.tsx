@@ -1,5 +1,6 @@
 import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { Animated, Easing, LayoutChangeEvent, PanResponder, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, LayoutChangeEvent, PanResponder, StyleSheet, View } from 'react-native';
+import { Text } from '../theme/type';
 import Svg, { Circle, Defs, Line, LinearGradient, Path, Stop } from 'react-native-svg';
 import { useTheme } from '../theme/ThemeContext';
 import { useReducedMotion } from '../theme/useReducedMotion';
