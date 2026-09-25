@@ -7,7 +7,7 @@ import { radius } from '../theme/tokens';
 export const EXPENSE_ICONS: (keyof typeof Ionicons.glyphMap)[] = [
   'restaurant-outline', 'cart-outline', 'car-outline', 'flame-outline', 'flash-outline', 'bag-outline',
   'heart-outline', 'film-outline', 'repeat-outline', 'home-outline', 'school-outline', 'airplane-outline',
-  'paw-outline', 'fitness-outline', 'cut-outline', 'gift-outline', 'phone-portrait-outline', 'construct-outline',
+  'paw-outline', 'fitness-outline', 'sparkles-outline', 'cut-outline', 'gift-outline', 'phone-portrait-outline', 'construct-outline',
   'medkit-outline', 'beer-outline', 'book-outline', 'game-controller-outline', 'shirt-outline', 'ellipsis-horizontal-outline',
 ];
 

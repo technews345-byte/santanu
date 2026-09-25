@@ -5,10 +5,15 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
 import { useTheme } from '../theme/ThemeContext';
 import { shade, withAlpha } from '../theme/color';
+import { GlassIcon, hasGlassIcon } from './GlassIcon';
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
 /**
+ * A category's icon. Categories Spendly designs for get their own drawn
+ * glass object (see `GlassIcon`); any other glyph someone picks gets this
+ * general version of the same idea.
+ *
  * A layered glass icon: a vivid object behind, a frosted pane in front.
  *
  * Two layers, offset so they overlap. Behind, a sphere of the category's own
@@ -36,6 +41,7 @@ export function IconBadge({
   const { theme } = useTheme();
   const id = useId().replace(/[^a-zA-Z0-9]/g, '');
   const dark = theme.mode === 'dark';
+  if (hasGlassIcon(icon)) return <GlassIcon icon={icon} color={color} size={size} dark={dark} />;
   const glyph = solidGlyph(icon);
 
   // Geometry, as fractions of the icon's box.
