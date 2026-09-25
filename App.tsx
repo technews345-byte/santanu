@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { AppState, AppStateStatus, Pressable, StyleSheet, Text, View } from 'react-native';
+import { AppState, AppStateStatus, Pressable, StyleSheet, View } from 'react-native';
+import { fontAssets, Text } from './src/theme/type';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -7,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as SplashScreen from 'expo-splash-screen';
 import * as SystemUI from 'expo-system-ui';
+import { useFonts } from 'expo-font';
 import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { BrandSplash } from './src/components/BrandSplash';
@@ -26,6 +28,11 @@ function AppContent() {
   const authReady = useAuthStore((s) => s.ready);
   const [unlocked, setUnlocked] = useState(false);
   const [splashDone, setSplashDone] = useState(false);
+  // The typefaces are bundled with the app, so this takes a moment; the
+  // splash waits for it so nothing is ever drawn in a stand-in font first. A
+  // face that fails to load falls back to the system's, never blocks launch.
+  const [fontsLoaded, fontsError] = useFonts(fontAssets);
+  const fontsReady = fontsLoaded || !!fontsError;
 
   useEffect(() => {
     hydrate();
@@ -120,7 +127,7 @@ function AppContent() {
       {content}
       {!splashDone && (
         <BrandSplash
-          ready={hydrated && authReady}
+          ready={hydrated && authReady && fontsReady}
           onFirstFrame={handleSplashShown}
           onFinish={() => setSplashDone(true)}
         />

@@ -1,5 +1,6 @@
 import React from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { StyleSheet } from 'react-native';
+import { Text } from '../theme/type';
 import { useTheme } from '../theme/ThemeContext';
 import { shade, withAlpha } from '../theme/color';
 import { fontSizes, radius, spacing } from '../theme/tokens';

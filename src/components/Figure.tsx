@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Platform, StyleProp, TextStyle } from 'react-native';
+import { typeface } from '../theme/type';
 import { useReducedMotion } from '../theme/useReducedMotion';
 
 /**
@@ -73,7 +74,7 @@ export function Figure({
 
   return (
     <Animated.Text
-      style={[style, { opacity: glow, transform: [{ scale }] }]}
+      style={[style, typeface(style), { opacity: glow, transform: [{ scale }] }]}
       accessibilityLabel={hidden ? 'Hidden' : format(value)}
       numberOfLines={fit ? 1 : undefined}
       // Web has no shrink-to-fit and would pass the prop through to the DOM.

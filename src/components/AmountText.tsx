@@ -1,5 +1,6 @@
 import React from 'react';
-import { StyleProp, Text, TextStyle } from 'react-native';
+import { StyleProp, TextStyle } from 'react-native';
+import { Text } from '../theme/type';
 import { useTheme } from '../theme/ThemeContext';
 import { DEFAULT_CURRENCY } from '../utils/finance';
 import { formatMoney } from '../utils/money';

@@ -96,6 +96,8 @@ export interface Theme {
   glassDepth: string;
   glassTint: 'light' | 'dark';
   blurIntensity: number;
+  /** Laid over a real blur, so text reads wherever the room's colour falls. */
+  glassFrost: string;
   /** Light fields behind everything: primary, secondary, and the faint third. */
   auroraOne: string;
   auroraTwo: string;
@@ -129,6 +131,7 @@ export const lightTheme: Theme = {
   glassDepth: 'rgba(30, 41, 80, 0.06)',
   glassTint: 'light',
   blurIntensity: 34,
+  glassFrost: 'rgba(245, 248, 253, 0.32)',
   auroraOne: 'rgba(67, 83, 232, 0.20)',
   auroraTwo: 'rgba(15, 156, 140, 0.13)',
   auroraThree: 'rgba(118, 80, 214, 0.10)',
@@ -174,6 +177,7 @@ export const darkTheme: Theme = {
   glassDepth: 'rgba(0, 0, 0, 0.32)',
   glassTint: 'dark',
   blurIntensity: 42,
+  glassFrost: 'rgba(11, 14, 20, 0.26)',
   auroraOne: 'rgba(92, 106, 255, 0.30)',
   auroraTwo: 'rgba(45, 198, 178, 0.14)',
   auroraThree: 'rgba(110, 90, 240, 0.12)',

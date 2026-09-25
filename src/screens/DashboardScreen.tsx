@@ -1,5 +1,6 @@
 import React, { useId, useMemo, useState } from 'react';
-import { Image, Pressable, SectionList, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, SectionList, StyleSheet, View } from 'react-native';
+import { Text } from '../theme/type';
 import { format } from 'date-fns';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -170,7 +171,6 @@ export default function DashboardScreen() {
           return (
             <GlassPressable
               level="row"
-              blur={false}
               borderRadius={radius.lg}
               style={styles.txnRowOuter}
               contentStyle={styles.txnRow}
@@ -396,7 +396,6 @@ function SpendingBento({ transactions }: { transactions: Transaction[] }) {
     <View style={styles.bento}>
       <GlassPressable
         level="panel"
-        blur={false}
         borderRadius={radius.xl}
         contentStyle={styles.paceTile}
         onPress={() => navigation.navigate('Analytics' as never)}
@@ -452,7 +451,6 @@ function SpendingBento({ transactions }: { transactions: Transaction[] }) {
       <View style={styles.bentoRow}>
         <GlassPressable
           level="panel"
-          blur={false}
           borderRadius={radius.xl}
           style={styles.budgetTileOuter}
           contentStyle={styles.budgetTile}
@@ -502,7 +500,6 @@ function WindowTile({ label, value, count }: { label: string; value: number; cou
   return (
     <GlassPressable
       level="row"
-      blur={false}
       borderRadius={radius.lg}
       style={styles.smallTileOuter}
       contentStyle={styles.smallTile}
@@ -533,7 +530,6 @@ function QuickAction({ icon, label, color, onPress }: { icon: keyof typeof Ionic
   return (
     <GlassPressable
       level="row"
-      blur={false}
       borderRadius={radius.lg}
       style={styles.quickAction}
       contentStyle={styles.quickActionInner}
