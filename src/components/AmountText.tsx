@@ -1,9 +1,17 @@
 import React from 'react';
-import { Text, TextStyle } from 'react-native';
+import { StyleProp, Text, TextStyle } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
-import { DEFAULT_CURRENCY, formatCurrency } from '../utils/finance';
+import { DEFAULT_CURRENCY } from '../utils/finance';
+import { formatMoney } from '../utils/money';
 import { TransactionType } from '../types';
 
+/**
+ * A transaction's amount, signed and coloured by what it did to the balance.
+ *
+ * The sign is written out — `+ ₹5,000`, `− ₹450` — so direction never rests
+ * on colour alone, and the colours are the validated income/expense pair, so
+ * the two stay apart for colour-blind readers too.
+ */
 export function AmountText({
   amount,
   type,
@@ -13,7 +21,7 @@ export function AmountText({
   amount: number;
   type: TransactionType;
   currency?: string;
-  style?: TextStyle;
+  style?: StyleProp<TextStyle>;
 }) {
   const { theme } = useTheme();
   const color =
@@ -24,11 +32,10 @@ export function AmountText({
         : type === 'investment'
           ? theme.investment
           : theme.transfer;
-  const sign = type === 'income' ? '+' : type === 'expense' || type === 'investment' ? '-' : '';
+  const sign = type === 'income' ? '+' : type === 'expense' || type === 'investment' ? '-' : null;
   return (
-    <Text style={[{ color, fontWeight: '700', fontVariant: ['tabular-nums'] }, style]}>
-      {sign}
-      {formatCurrency(Math.abs(amount), currency)}
+    <Text style={[{ color, fontWeight: '700', fontVariant: ['tabular-nums'], letterSpacing: -0.2 }, style]}>
+      {formatMoney(Math.abs(amount), currency, sign)}
     </Text>
   );
 }

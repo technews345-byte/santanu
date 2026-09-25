@@ -10,7 +10,8 @@ import { EmptyState } from '../components/EmptyState';
 import { useTheme } from '../theme/ThemeContext';
 import { fontSizes, radius, spacing } from '../theme/tokens';
 import { useStore } from '../store/useStore';
-import { formatCurrency } from '../utils/finance';
+import { formatMoney } from '../utils/money';
+import { Figure } from '../components/Figure';
 
 export default function CategoryDetailScreen() {
   const { theme } = useTheme();
@@ -39,7 +40,7 @@ export default function CategoryDetailScreen() {
       <View style={styles.summaryRow}>
         <IconBadge icon={(category?.icon as any) ?? 'pricetag-outline'} color={category?.color ?? theme.tint} size={56} />
         <View style={{ marginLeft: spacing.md }}>
-          <Text style={[styles.totalValue, { color: theme.text }]}>{formatCurrency(total)}</Text>
+          <Figure value={total} format={(n) => formatMoney(n)} fit style={[styles.totalValue, { color: theme.text }]} />
           <Text style={[styles.totalLabel, { color: theme.textTertiary }]}>{items.length} transactions</Text>
         </View>
       </View>

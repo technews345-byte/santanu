@@ -15,8 +15,13 @@ type ThemeContextValue = {
 
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 
+// Dark is the primary experience: the glass is designed to float in a dark
+// room. Anyone who has picked a theme keeps their choice; this only decides
+// what someone who never touched the setting sees.
+const DEFAULT_PREFERENCE: ThemePreference = 'dark';
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [preference, setPreferenceState] = useState<ThemePreference>('system');
+  const [preference, setPreferenceState] = useState<ThemePreference>(DEFAULT_PREFERENCE);
   const [systemScheme, setSystemScheme] = useState<ColorSchemeName>(() => Appearance.getColorScheme() ?? 'light');
 
   useEffect(() => {

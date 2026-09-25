@@ -6,6 +6,7 @@ import { useNavigation } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../theme/ThemeContext';
 import { fontSizes, motion, radius, spacing } from '../theme/tokens';
+import { shade, withAlpha } from '../theme/color';
 import { GlassSurface } from './glass/GlassSurface';
 
 /**
@@ -88,16 +89,29 @@ export function QuickAddFab() {
           }}
         >
           <Animated.View style={[styles.fabWrap, { shadowColor: theme.tint, transform: [{ scale }] }]}>
-            <LinearGradient
-              colors={[theme.tint, theme.investment]}
-              start={{ x: 0.1, y: 0 }}
-              end={{ x: 0.9, y: 1 }}
-              style={[styles.fab, { borderColor: theme.glassBorder }]}
+            {/* Accent glass rather than a painted disc: the colour is in the
+                glass, the rim catches it brighter, and a hard specular spot
+                sits where the room's light strikes — the sharper highlight a
+                denser, more reflective material gets. */}
+            <GlassSurface
+              level="control"
+              blur={false}
+              borderRadius={radius.pill}
+              contentStyle={styles.fab}
+              tint={withAlpha(theme.tint, theme.mode === 'dark' ? 0.62 : 0.88)}
+              tintBorder={withAlpha(shade(theme.tint, 0.45), 0.85)}
             >
+              <LinearGradient
+                colors={['rgba(255, 255, 255, 0.42)', 'rgba(255, 255, 255, 0)']}
+                start={{ x: 0.2, y: 0 }}
+                end={{ x: 0.55, y: 0.6 }}
+                style={styles.specular}
+                pointerEvents="none"
+              />
               <Animated.View style={{ transform: [{ rotate }] }}>
                 <Ionicons name="add" size={30} color="#FFFFFF" />
               </Animated.View>
-            </LinearGradient>
+            </GlassSurface>
           </Animated.View>
         </Pressable>
       </View>
@@ -140,7 +154,7 @@ function Action({
       style={[styles.action, { opacity: progress, transform: [{ translateY }, { scale }] }]}
     >
       <Pressable onPress={onPress}>
-        <GlassSurface level="raised" borderRadius={radius.pill} contentStyle={styles.actionInner}>
+        <GlassSurface level="control" blur={false} opaque borderRadius={radius.pill} contentStyle={styles.actionInner}>
           <Ionicons name={icon} size={20} color={color} />
           <Text style={[styles.actionLabel, { color: theme.text }]}>{label}</Text>
         </GlassSurface>
@@ -170,9 +184,8 @@ const styles = StyleSheet.create({
   fab: {
     width: 62,
     height: 62,
-    borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
   },
+  specular: { position: 'absolute', top: 3, left: 8, width: 34, height: 22, borderRadius: 17 },
 });

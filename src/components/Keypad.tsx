@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../theme/ThemeContext';
+import { shade, withAlpha } from '../theme/color';
 import { fontSizes, radius, spacing } from '../theme/tokens';
 
 type KeyKind = 'digit' | 'operator' | 'action';
@@ -62,16 +63,32 @@ export function Keypad({ onKeyPress }: { onKeyPress: (key: string) => void }) {
           {row.map((def) => {
             const isOperator = def.kind === 'operator';
             const isAction = def.kind === 'action';
-            const labelColor = isOperator ? theme.tint : isAction ? theme.expense : theme.text;
+            const dark = theme.mode === 'dark';
+            // Keys are small panes of the same glass as everything else:
+            // operators tinted with the accent, the rest plain, each with
+            // light caught along its top edge rather than a drawn outline.
+            const labelColor = isOperator
+              ? dark
+                ? shade(theme.tint, 0.3)
+                : theme.tint
+              : isAction
+                ? theme.expense
+                : theme.text;
+            const rest = isOperator ? withAlpha(theme.tint, dark ? 0.14 : 0.1) : theme.glass;
+            const pressedFill = isOperator ? withAlpha(theme.tint, dark ? 0.26 : 0.18) : theme.glassControl;
             return (
               <Pressable
                 key={def.key}
                 onPress={() => handlePress(def.key)}
+                accessibilityRole="button"
+                accessibilityLabel={def.icon ? 'Delete' : def.key === 'clear' ? 'Clear' : def.label}
                 style={({ pressed }) => [
                   styles.key,
                   {
-                    borderColor: isOperator ? theme.tint : theme.border,
-                    backgroundColor: pressed ? theme.surfaceAlt : isOperator ? theme.tintMuted : theme.surface,
+                    backgroundColor: pressed ? pressedFill : rest,
+                    borderColor: isOperator ? withAlpha(theme.tint, dark ? 0.3 : 0.28) : theme.glassBorder,
+                    borderTopColor: dark ? 'rgba(235, 242, 255, 0.16)' : 'rgba(255, 255, 255, 0.95)',
+                    transform: [{ scale: pressed ? 0.96 : 1 }],
                   },
                 ]}
               >

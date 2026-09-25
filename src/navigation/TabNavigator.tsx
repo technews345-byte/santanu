@@ -28,10 +28,11 @@ export function TabNavigator() {
       tabBar={(props) => <GlassTabBar {...props} />}
       screenOptions={({ route }) => ({
         headerShown: false,
-        // Switching tabs cut straight to the next screen; a short cross-fade
-        // reads as one surface changing rather than two screens swapping.
-        animation: 'fade',
-        transitionSpec: { animation: 'timing', config: { duration: 180 } },
+        // The incoming screen drifts a few points in the direction of travel
+        // as it fades up, so moving between tabs has a direction — the same
+        // way the selected pane glides along the shelf below.
+        animation: 'shift',
+        transitionSpec: { animation: 'timing', config: { duration: 240 } },
         tabBarActiveTintColor: theme.tint,
         tabBarInactiveTintColor: theme.textTertiary,
 
