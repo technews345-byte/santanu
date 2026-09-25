@@ -138,7 +138,8 @@ export default function SettingsScreen() {
               <Text style={[styles.rowLabel, { color: theme.text }]}>Biometric Lock</Text>
               <Text style={[styles.rowSub, { color: theme.textTertiary }]}>Require Face ID / Fingerprint to open</Text>
             </View>
-            <Switch value={biometricLockEnabled} onValueChange={handleBiometricToggle} trackColor={{ true: theme.tint }} />
+            <Switch value={biometricLockEnabled} onValueChange={handleBiometricToggle} trackColor={{ true: theme.tint, false: theme.mode === 'dark' ? 'rgba(190, 205, 240, 0.24)' : 'rgba(100, 116, 139, 0.32)' }}
+            thumbColor={theme.mode === 'dark' ? '#ECEFF6' : '#FFFFFF'} />
           </View>
         </Card>
 

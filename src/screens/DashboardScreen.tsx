@@ -1,34 +1,40 @@
-import React, { useMemo, useState } from 'react';
-import { FlatList, Image, Modal, Pressable, SectionList, StyleSheet, Text, View } from 'react-native';
+import React, { useId, useMemo, useState } from 'react';
+import { Image, Pressable, SectionList, StyleSheet, Text, View } from 'react-native';
 import { format } from 'date-fns';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import Svg, { Defs, RadialGradient, Rect, Stop } from 'react-native-svg';
 import { Screen } from '../components/Screen';
 import { Card } from '../components/Card';
-import { Pill } from '../components/Pill';
 import { IconBadge } from '../components/IconBadge';
 import { AmountText } from '../components/AmountText';
 import { EmptyState } from '../components/EmptyState';
 import { QuickAddFab } from '../components/QuickAddFab';
+import { Figure } from '../components/Figure';
+import { FlowChart } from '../components/FlowChart';
+import { ProgressBar } from '../components/ProgressBar';
+import { BottomSheetModal } from '../components/BottomSheetModal';
 import { GlassPressable } from '../components/glass/GlassPressable';
 import { GlassSurface } from '../components/glass/GlassSurface';
 import { GlassTabs } from '../components/glass/GlassTabs';
-import { GradientBadge } from '../components/glass/GradientBadge';
 import { useTheme } from '../theme/ThemeContext';
+import { shade, withAlpha } from '../theme/color';
 import { fontSizes, radius, spacing } from '../theme/tokens';
 import { useStore } from '../store/useStore';
 import { useAuthStore } from '../store/useAuthStore';
 import {
   accountBalance,
-  formatCurrency,
+  daysRemainingInMonth,
   groupByRelativeDate,
+  monthKeyFor,
   periodInterval,
   summarize,
   totalBalance,
   transactionsInRange,
 } from '../utils/finance';
-import { PeriodKey } from '../types';
+import { budgetRows, budgetTotals, spendingPace, spendWindows } from '../utils/insights';
+import { formatCompact, formatMoney } from '../utils/money';
+import { PeriodKey, Transaction } from '../types';
 
 const MARK = require('../../assets/splash-icon.png');
 
@@ -39,6 +45,14 @@ const PERIODS: { key: PeriodKey; label: string }[] = [
   { key: 'year', label: 'Year' },
 ];
 
+/**
+ * The command centre.
+ *
+ * Read top to bottom it goes from the one number that matters to the detail
+ * behind it: the balance on the nearest, brightest pane; then how spending is
+ * going this month, laid out as tiles sized by importance rather than a row of
+ * equal boxes; then the actions; then what just happened.
+ */
 export default function DashboardScreen() {
   const { theme } = useTheme();
   const navigation = useNavigation<any>();
@@ -46,6 +60,7 @@ export default function DashboardScreen() {
     accounts,
     categories,
     transactions,
+    budgets,
     activeAccountId,
     setActiveAccountId,
     balanceVisible,
@@ -58,8 +73,11 @@ export default function DashboardScreen() {
 
   const activeAccount = accounts.find((a) => a.id === activeAccountId) ?? null;
 
-  const scopedTransactions = useMemo(
-    () => (activeAccountId ? transactions.filter((t) => t.accountId === activeAccountId || t.toAccountId === activeAccountId) : transactions),
+  const scoped = useMemo(
+    () =>
+      activeAccountId
+        ? transactions.filter((t) => t.accountId === activeAccountId || t.toAccountId === activeAccountId)
+        : transactions,
     [transactions, activeAccountId]
   );
 
@@ -69,24 +87,10 @@ export default function DashboardScreen() {
   }, [activeAccount, accounts, transactions]);
 
   const { start, end } = periodInterval(period);
-  const periodTxns = useMemo(() => transactionsInRange(scopedTransactions, start, end), [scopedTransactions, start, end]);
+  const periodTxns = useMemo(() => transactionsInRange(scoped, start, end), [scoped, start, end]);
   const { income, expense, investment, net } = summarize(periodTxns);
 
-  // Last month over this one, so the chip says something true rather than
-  // decorative. Only spending is compared: it is the number people act on.
-  const delta = useMemo(() => {
-    const now = new Date();
-    const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const a = periodInterval('month', now);
-    const b = periodInterval('month', prevMonth);
-    const thisSpend = summarize(transactionsInRange(scopedTransactions, a.start, a.end)).expense;
-    const lastSpend = summarize(transactionsInRange(scopedTransactions, b.start, b.end)).expense;
-    if (lastSpend <= 0) return null;
-    return ((thisSpend - lastSpend) / lastSpend) * 100;
-  }, [scopedTransactions]);
-
-  const recentSections = useMemo(() => groupByRelativeDate(scopedTransactions.slice(0, 60)), [scopedTransactions]);
-
+  const recentSections = useMemo(() => groupByRelativeDate(scoped.slice(0, 60)), [scoped]);
   const categoryById = (id: string | null) => categories.find((c) => c.id === id);
   const accountById = (id: string) => accounts.find((a) => a.id === id);
 
@@ -97,18 +101,16 @@ export default function DashboardScreen() {
           <Text style={[styles.greeting, { color: theme.text }]} numberOfLines={1}>
             {greeting(user)}
           </Text>
-          <Text style={[styles.tagline, { color: theme.textSecondary }]}>
-            Track. Plan. Save. Live Better.
-          </Text>
+          <Text style={[styles.tagline, { color: theme.textSecondary }]}>Track. Plan. Save. Live Better.</Text>
         </View>
         <View style={styles.headerActions}>
-          <RoundGlassButton icon="search-outline" onPress={() => navigation.navigate('Transactions' as never)} />
+          <RoundGlassButton icon="search-outline" label="Search transactions" onPress={() => navigation.navigate('Transactions' as never)} />
           <ProfileChip />
         </View>
       </View>
 
-      <Pressable style={styles.switcher} onPress={() => setSwitcherOpen(true)}>
-        <GlassSurface level="row" blur={false} borderRadius={radius.pill} contentStyle={styles.switcherInner}>
+      <Pressable style={styles.switcher} onPress={() => setSwitcherOpen(true)} accessibilityRole="button">
+        <GlassSurface level="control" blur={false} borderRadius={radius.pill} contentStyle={styles.switcherInner}>
           <Ionicons name="wallet-outline" size={15} color={theme.textSecondary} />
           <Text style={[styles.switcherLabel, { color: theme.textSecondary }]}>
             {activeAccount ? activeAccount.name : 'All Accounts'}
@@ -121,69 +123,21 @@ export default function DashboardScreen() {
         sections={recentSections}
         keyExtractor={(item) => item.id}
         stickySectionHeadersEnabled={false}
+        showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 168, paddingHorizontal: spacing.md }}
         ListHeaderComponent={
-          <View style={{ marginBottom: spacing.md }}>
-            <Card level="raised" style={styles.balanceCard}>
-              {/* The hero pane takes a breath of brand colour, strongest at
-                  the lit corner, so it sits above the panes below it without
-                  needing a heavier fill that would shut out the backdrop. */}
-              <LinearGradient
-                colors={[`${theme.tint}22`, `${theme.investment}14`, 'transparent']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={StyleSheet.absoluteFill}
-                pointerEvents="none"
-              />
-              <View style={styles.balanceRow}>
-                {/* Label and its own control together on the left; the brand
-                    takes the right corner, under the avatar in the header. */}
-                <View style={styles.balanceLabelGroup}>
-                  <Text style={[styles.balanceLabel, { color: theme.textSecondary }]}>Total Balance</Text>
-                  <Pressable onPress={toggleBalanceVisible} hitSlop={10}>
-                    <Ionicons name={balanceVisible ? 'eye-outline' : 'eye-off-outline'} size={18} color={theme.textSecondary} />
-                  </Pressable>
-                </View>
-
-                <View style={styles.brandMark}>
-                  <Image source={MARK} style={styles.brandImage} resizeMode="contain" />
-                  <Text style={[styles.brandName, { color: theme.text }]}>Spendly</Text>
-                </View>
-              </View>
-              <Text style={[styles.balanceValue, { color: theme.text }]}>
-                {balanceVisible ? formatCurrency(balance) : '••••••'}
-              </Text>
-
-              {delta !== null && (
-                <View style={[styles.deltaChip, { backgroundColor: delta <= 0 ? theme.successMuted : theme.expenseMuted }]}>
-                  <Ionicons
-                    name={delta <= 0 ? 'arrow-down' : 'arrow-up'}
-                    size={13}
-                    color={delta <= 0 ? theme.success : theme.expense}
-                  />
-                  <Text style={[styles.deltaText, { color: delta <= 0 ? theme.success : theme.expense }]}>
-                    {Math.abs(delta).toFixed(0)}%
-                  </Text>
-                  <Text style={[styles.deltaSub, { color: theme.textSecondary }]}>vs last month</Text>
-                </View>
-              )}
-
-              <View style={styles.periodRow}>
-                <GlassTabs options={PERIODS.map((p) => ({ key: p.key, label: p.label }))} value={period} onChange={setPeriod} />
-              </View>
-
-              <View style={styles.summaryRow}>
-                <SummaryChip label="Income" value={income} color={theme.success} visible={balanceVisible} />
-                <SummaryChip label="Expenses" value={expense} color={theme.expense} visible={balanceVisible} />
-                <SummaryChip label="Invested" value={investment} color={theme.investment} visible={balanceVisible} />
-                <SummaryChip
-                  label="Net"
-                  value={net}
-                  color={net >= 0 ? theme.success : theme.expense}
-                  visible={balanceVisible}
-                />
-              </View>
-            </Card>
+          <View style={{ marginBottom: spacing.xs }}>
+            <BalanceHero
+              balance={balance}
+              visible={balanceVisible}
+              onToggleVisible={toggleBalanceVisible}
+              period={period}
+              onPeriod={setPeriod}
+              income={income}
+              expense={expense}
+              investment={investment}
+              net={net}
+            />
 
             <View style={styles.quickActions}>
               <QuickAction icon="arrow-up-circle" label="Add Expense" color={theme.expense} onPress={() => navigation.navigate('TransactionEntry', { initialType: 'expense' })} />
@@ -192,7 +146,10 @@ export default function DashboardScreen() {
               <QuickAction icon="stats-chart" label="Analytics" color={theme.transfer} onPress={() => navigation.navigate('Analytics' as never)} />
             </View>
 
-            <SmartTip transactions={scopedTransactions} categories={categories} />
+            <Text style={[styles.overline, { color: theme.textTertiary }]}>Spending</Text>
+            <SpendingBento transactions={scoped} />
+
+            <SmartTip transactions={scoped} categories={categories} />
 
             <View style={styles.sectionHead}>
               <Text style={[styles.sectionTitle, { color: theme.text }]}>Recent Transactions</Text>
@@ -219,7 +176,11 @@ export default function DashboardScreen() {
               contentStyle={styles.txnRow}
               onPress={() => navigation.navigate('TransactionEntry', { transactionId: item.id })}
             >
-              <IconBadge icon={(cat?.icon as any) ?? (item.type === 'transfer' ? 'swap-horizontal' : 'help-outline')} color={cat?.color ?? theme.transfer} />
+              <IconBadge
+                icon={(cat?.icon as any) ?? (item.type === 'transfer' ? 'swap-horizontal' : 'help-outline')}
+                color={cat?.color ?? theme.transfer}
+                size={42}
+              />
               <View style={styles.txnMeta}>
                 <Text style={[styles.txnTitle, { color: theme.text }]} numberOfLines={1}>
                   {item.note || cat?.name || (item.type === 'transfer' ? 'Transfer' : 'Uncategorized')}
@@ -229,8 +190,7 @@ export default function DashboardScreen() {
                   {toAccount ? ` · ${account?.name} → ${toAccount.name}` : account ? ` · ${account.name}` : ''}
                 </Text>
               </View>
-              <AmountText amount={item.amount} type={item.type} currency={item.currency} />
-              <Ionicons name="chevron-forward" size={15} color={theme.textTertiary} />
+              <AmountText amount={item.amount} type={item.type} currency={item.currency} style={styles.txnAmount} />
             </GlassPressable>
           );
         }}
@@ -239,68 +199,332 @@ export default function DashboardScreen() {
 
       <QuickAddFab />
 
-      <Modal visible={switcherOpen} animationType="slide" transparent onRequestClose={() => setSwitcherOpen(false)}>
-        <Pressable style={[styles.modalOverlay, { backgroundColor: theme.overlay }]} onPress={() => setSwitcherOpen(false)}>
-          <Pressable style={[styles.modalSheet, { backgroundColor: theme.surface }]}>
-            <Text style={[styles.modalTitle, { color: theme.text }]}>Switch Account</Text>
-            <FlatList
-              data={[null, ...accounts]}
-              keyExtractor={(item) => (item ? item.id : 'all')}
-              renderItem={({ item }) => (
-                <Pressable
-                  onPress={() => {
-                    setActiveAccountId(item ? item.id : null);
-                    setSwitcherOpen(false);
-                  }}
-                  style={styles.accountRow}
-                >
-                  <IconBadge icon={item ? (item.icon as any) : 'layers-outline'} color={item ? item.color : theme.tint} />
-                  <Text style={[styles.accountName, { color: theme.text }]}>{item ? item.name : 'All Accounts'}</Text>
-                  {(item ? item.id : null) === activeAccountId ? (
-                    <Ionicons name="checkmark-circle" size={20} color={theme.tint} />
-                  ) : null}
-                </Pressable>
-              )}
-            />
+      <BottomSheetModal visible={switcherOpen} onClose={() => setSwitcherOpen(false)} title="Switch Account" maxHeightPct={70}>
+        {[null, ...accounts].map((item) => (
+          <Pressable
+            key={item ? item.id : 'all'}
+            onPress={() => {
+              setActiveAccountId(item ? item.id : null);
+              setSwitcherOpen(false);
+            }}
+            style={styles.accountRow}
+            accessibilityRole="button"
+          >
+            <IconBadge icon={item ? (item.icon as any) : 'layers-outline'} color={item ? item.color : theme.tint} />
+            <Text style={[styles.accountName, { color: theme.text }]}>{item ? item.name : 'All Accounts'}</Text>
+            {(item ? item.id : null) === activeAccountId ? (
+              <Ionicons name="checkmark-circle" size={20} color={theme.tint} />
+            ) : null}
           </Pressable>
-        </Pressable>
-      </Modal>
+        ))}
+      </BottomSheetModal>
     </Screen>
   );
 }
 
 /**
- * Each figure on its own pane rather than a flat colour swatch.
+ * The nearest pane on the screen, carrying the one figure it leads with.
  *
- * A muted fill is opaque, so the scene behind it stops dead at the chip's
- * edge and the panel it sits on stops looking like glass. These are panes in
- * their own right: the backdrop carries through, and the colour arrives as a
- * wash falling across the surface rather than a block of paint, with a dot of
- * the full colour to name it.
+ * The balance is large, bright and faintly luminous; everything else on the
+ * pane is quieter so it cannot compete. The four period figures sit in a
+ * grid divided by hairlines rather than four boxes of their own, so the pane
+ * reads as one object with structure inside it.
  */
-function SummaryChip({ label, value, color, visible }: { label: string; value: number; color: string; visible: boolean }) {
+function BalanceHero({
+  balance,
+  visible,
+  onToggleVisible,
+  period,
+  onPeriod,
+  income,
+  expense,
+  investment,
+  net,
+}: {
+  balance: number;
+  visible: boolean;
+  onToggleVisible: () => void;
+  period: PeriodKey;
+  onPeriod: (p: PeriodKey) => void;
+  income: number;
+  expense: number;
+  investment: number;
+  net: number;
+}) {
+  const { theme } = useTheme();
+  const id = useId().replace(/[^a-zA-Z0-9]/g, '');
+  const dark = theme.mode === 'dark';
+
+  return (
+    <Card level="raised" style={styles.hero} padded={false}>
+      {/* Light reflected into the pane from the room: teal at the far corner,
+          the accent low at the near one. Barely there, but it is what makes
+          this pane read as closer to the light than the rest. */}
+      <View style={StyleSheet.absoluteFill} pointerEvents="none">
+        <Svg width="100%" height="100%">
+          <Defs>
+            <RadialGradient id={`${id}a`} cx="100%" cy="0%" rx="70%" ry="60%" fx="100%" fy="0%">
+              <Stop offset="0" stopColor={theme.teal} stopOpacity={dark ? 0.2 : 0.12} />
+              <Stop offset="1" stopColor={theme.teal} stopOpacity={0} />
+            </RadialGradient>
+            <RadialGradient id={`${id}b`} cx="0%" cy="100%" rx="70%" ry="55%" fx="0%" fy="100%">
+              <Stop offset="0" stopColor={theme.tint} stopOpacity={dark ? 0.16 : 0.08} />
+              <Stop offset="1" stopColor={theme.tint} stopOpacity={0} />
+            </RadialGradient>
+          </Defs>
+          <Rect x="0" y="0" width="100%" height="100%" fill={`url(#${id}a)`} />
+          <Rect x="0" y="0" width="100%" height="100%" fill={`url(#${id}b)`} />
+        </Svg>
+      </View>
+
+      <View style={styles.heroInner}>
+        <View style={styles.balanceRow}>
+          <View style={styles.balanceLabelGroup}>
+            <Text style={[styles.overlineTight, { color: theme.textSecondary }]}>Total Balance</Text>
+            <Pressable
+              onPress={onToggleVisible}
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel={visible ? 'Hide balance' : 'Show balance'}
+            >
+              <Ionicons name={visible ? 'eye-outline' : 'eye-off-outline'} size={17} color={theme.textSecondary} />
+            </Pressable>
+          </View>
+          <View style={styles.brandMark}>
+            <Image source={MARK} style={styles.brandImage} resizeMode="contain" />
+            <Text style={[styles.brandName, { color: theme.text }]}>Spendly</Text>
+          </View>
+        </View>
+
+        <Figure
+          value={balance}
+          format={(n) => formatMoney(n)}
+          hidden={!visible}
+          fit
+          style={[
+            styles.balanceValue,
+            {
+              color: theme.text,
+              textShadowColor: dark ? withAlpha(theme.tint, 0.45) : 'transparent',
+            },
+          ]}
+        />
+
+        <View style={styles.periodRow}>
+          <GlassTabs options={PERIODS.map((p) => ({ key: p.key, label: p.label }))} value={period} onChange={onPeriod} />
+        </View>
+
+        <View style={[styles.grid, { borderColor: theme.borderSubtle }]}>
+          <View style={styles.gridRow}>
+            <SummaryFigure label="Income" value={income} color={theme.success} visible={visible} />
+            <View style={[styles.vRule, { backgroundColor: theme.borderSubtle }]} />
+            <SummaryFigure label="Expenses" value={expense} color={theme.expense} visible={visible} />
+          </View>
+          <View style={[styles.hRule, { backgroundColor: theme.borderSubtle }]} />
+          <View style={styles.gridRow}>
+            <SummaryFigure label="Invested" value={investment} color={theme.investment} visible={visible} />
+            <View style={[styles.vRule, { backgroundColor: theme.borderSubtle }]} />
+            <SummaryFigure label="Net" value={net} color={net >= 0 ? theme.success : theme.expense} visible={visible} />
+          </View>
+        </View>
+      </View>
+    </Card>
+  );
+}
+
+/**
+ * A figure in the hero's grid. The value is written in plain text ink and the
+ * colour rides on the dot beside the label — a light hue as text is harder to
+ * read than the same hue as a mark next to it.
+ */
+function SummaryFigure({ label, value, color, visible }: { label: string; value: number; color: string; visible: boolean }) {
   const { theme } = useTheme();
   return (
-    <GlassSurface
-      level="row"
-      blur={false}
-      borderRadius={radius.lg}
-      style={styles.summaryChip}
-      contentStyle={styles.summaryInner}
-    >
-      <LinearGradient
-        colors={[`${color}2E`, `${color}0A`]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={StyleSheet.absoluteFill}
-        pointerEvents="none"
-      />
+    <View style={styles.summaryCell}>
       <View style={styles.summaryHead}>
         <View style={[styles.summaryDot, { backgroundColor: color, shadowColor: color }]} />
         <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>{label}</Text>
       </View>
-      <Text style={[styles.summaryValue, { color }]}>{visible ? formatCurrency(value) : '••••'}</Text>
-    </GlassSurface>
+      <Figure
+        value={value}
+        format={(n) => formatMoney(n)}
+        hidden={!visible}
+        mask="••••"
+        fit
+        style={[styles.summaryValue, { color: theme.text }]}
+      />
+    </View>
+  );
+}
+
+/**
+ * Spending as tiles of different weights: the month as the dominant tile
+ * with its pace drawn out, the budget beside the two short windows.
+ */
+function SpendingBento({ transactions }: { transactions: Transaction[] }) {
+  const { theme } = useTheme();
+  const navigation = useNavigation<any>();
+  const { categories, budgets } = useStore();
+
+  const now = new Date();
+  const pace = useMemo(() => spendingPace(transactions, now), [transactions]);
+  const windows = useMemo(() => spendWindows(transactions, now), [transactions]);
+
+  const monthKey = monthKeyFor(now);
+  const budget = useMemo(() => {
+    const { start, end } = periodInterval('month', now);
+    return budgetTotals(budgetRows(categories, transactionsInRange(transactions, start, end), budgets, monthKey));
+  }, [transactions, categories, budgets, monthKey]);
+
+  const counts = useMemo(() => {
+    const count = (p: 'day' | 'week') => {
+      const { start, end } = periodInterval(p, now);
+      return transactionsInRange(transactions, start, end).filter((t) => t.type === 'expense').length;
+    };
+    return { today: count('day'), week: count('week') };
+  }, [transactions]);
+
+  // Against the same day of last month, not all of last month: halfway
+  // through September, the fair question is whether you are ahead of where
+  // you were halfway through August.
+  const day = now.getDate();
+  const sameDayLast = pace.lastMonth[Math.min(day, pace.lastMonth.length) - 1] ?? 0;
+  const delta = sameDayLast > 0 ? ((windows.month - sameDayLast) / sameDayLast) * 100 : null;
+  const hasCompare = pace.lastMonth[pace.lastMonth.length - 1] > 0;
+
+  return (
+    <View style={styles.bento}>
+      <GlassPressable
+        level="panel"
+        blur={false}
+        borderRadius={radius.xl}
+        contentStyle={styles.paceTile}
+        onPress={() => navigation.navigate('Analytics' as never)}
+        accessibilityLabel={`Monthly spending ${formatMoney(windows.month)}. Opens analytics.`}
+      >
+        <View style={styles.tileHead}>
+          <View>
+            <Text style={[styles.tileLabel, { color: theme.textSecondary }]}>Monthly spending</Text>
+            <Figure value={windows.month} format={(n) => formatMoney(n)} fit style={[styles.paceValue, { color: theme.text }]} />
+          </View>
+          {delta !== null && Math.abs(delta) >= 1 && (
+            <View
+              style={[
+                styles.deltaChip,
+                {
+                  backgroundColor: delta <= 0 ? theme.successMuted : theme.expenseMuted,
+                  borderColor: withAlpha(delta <= 0 ? theme.success : theme.expense, 0.35),
+                },
+              ]}
+            >
+              <Ionicons name={delta <= 0 ? 'arrow-down' : 'arrow-up'} size={12} color={delta <= 0 ? theme.success : theme.expense} />
+              <Text style={[styles.deltaText, { color: delta <= 0 ? theme.success : theme.expense }]}>
+                {Math.abs(delta).toFixed(0)}%
+              </Text>
+            </View>
+          )}
+        </View>
+        <Text style={[styles.tileSub, { color: theme.textTertiary }]}>
+          {delta !== null && Math.abs(delta) >= 1
+            ? `${delta <= 0 ? 'Less' : 'More'} than this time last month`
+            : `Spent in ${format(now, 'MMMM')}`}
+        </Text>
+
+        <View style={styles.paceChart}>
+          <FlowChart
+            values={pace.thisMonth}
+            compare={hasCompare ? pace.lastMonth : undefined}
+            slots={Math.max(pace.slots, pace.lastMonth.length)}
+            height={96}
+            labelFor={(i) => format(new Date(now.getFullYear(), now.getMonth(), i + 1), 'd MMM')}
+            format={(n) => formatMoney(n)}
+          />
+        </View>
+
+        {hasCompare && (
+          <View style={styles.legend}>
+            <LegendKey color={theme.tint} label="This month" />
+            <LegendKey color={theme.textTertiary} label="Last month" faint />
+          </View>
+        )}
+      </GlassPressable>
+
+      <View style={styles.bentoRow}>
+        <GlassPressable
+          level="panel"
+          blur={false}
+          borderRadius={radius.xl}
+          style={styles.budgetTileOuter}
+          contentStyle={styles.budgetTile}
+          onPress={() => navigation.navigate('Budgets' as never)}
+          accessibilityLabel="Remaining budget. Opens budgets."
+        >
+          <Text style={[styles.tileLabel, { color: theme.textSecondary }]}>Remaining budget</Text>
+          {budget.count === 0 ? (
+            <View style={styles.budgetEmpty}>
+              <IconBadge icon="pie-chart-outline" color={theme.investment} size={36} />
+              <Text style={[styles.tileSub, { color: theme.textSecondary }]}>No budget set yet</Text>
+              <Text style={[styles.cta, { color: theme.tint }]}>Set one</Text>
+            </View>
+          ) : budget.remaining >= 0 ? (
+            <>
+              <Figure value={budget.remaining} format={(n) => formatCompact(n)} fit style={[styles.tileValue, { color: theme.text }]} />
+              <Text style={[styles.tileSub, { color: theme.textTertiary }]}>of {formatCompact(budget.planned)}</Text>
+              <View style={styles.budgetBar}>
+                <ProgressBar progress={budget.planned > 0 ? budget.spent / budget.planned : 0} height={6} />
+              </View>
+              <Text style={[styles.tileFoot, { color: theme.textTertiary }]}>{daysRemainingInMonth(now)} days left</Text>
+            </>
+          ) : (
+            <>
+              <Figure value={budget.remaining} format={(n) => formatCompact(n)} fit style={[styles.tileValue, { color: theme.danger }]} />
+              <View style={styles.overRow}>
+                <Ionicons name="alert-circle" size={14} color={theme.danger} />
+                <Text style={[styles.tileSub, { color: theme.danger }]}>Over budget</Text>
+              </View>
+              <Text style={[styles.tileFoot, { color: theme.textTertiary }]}>of {formatCompact(budget.planned)} planned</Text>
+            </>
+          )}
+        </GlassPressable>
+
+        <View style={styles.smallCol}>
+          <WindowTile label="Today" value={windows.today} count={counts.today} />
+          <WindowTile label="This week" value={windows.week} count={counts.week} />
+        </View>
+      </View>
+    </View>
+  );
+}
+
+function WindowTile({ label, value, count }: { label: string; value: number; count: number }) {
+  const { theme } = useTheme();
+  const navigation = useNavigation<any>();
+  return (
+    <GlassPressable
+      level="row"
+      blur={false}
+      borderRadius={radius.lg}
+      style={styles.smallTileOuter}
+      contentStyle={styles.smallTile}
+      onPress={() => navigation.navigate('Transactions' as never)}
+      accessibilityLabel={`${label}: ${formatMoney(value)} across ${count} expenses`}
+    >
+      <Text style={[styles.tileLabel, { color: theme.textSecondary }]}>{label}</Text>
+      <Figure value={value} format={(n) => formatCompact(n)} fit style={[styles.smallValue, { color: theme.text }]} />
+      <Text style={[styles.tileFoot, { color: theme.textTertiary }]}>
+        {count === 0 ? 'Nothing spent' : `${count} ${count === 1 ? 'expense' : 'expenses'}`}
+      </Text>
+    </GlassPressable>
+  );
+}
+
+function LegendKey({ color, label, faint }: { color: string; label: string; faint?: boolean }) {
+  const { theme } = useTheme();
+  return (
+    <View style={styles.legendItem}>
+      <View style={[styles.legendLine, { backgroundColor: color, opacity: faint ? 0.6 : 1, height: faint ? 1.5 : 2 }]} />
+      <Text style={[styles.legendLabel, { color: theme.textSecondary }]}>{label}</Text>
+    </View>
   );
 }
 
@@ -314,30 +538,29 @@ function QuickAction({ icon, label, color, onPress }: { icon: keyof typeof Ionic
       style={styles.quickAction}
       contentStyle={styles.quickActionInner}
       onPress={onPress}
+      accessibilityLabel={label}
     >
-      <GradientBadge icon={icon} color={color} size={48} />
+      <IconBadge icon={icon} color={color} size={44} />
       <Text numberOfLines={2} style={[styles.quickActionLabel, { color: theme.text }]}>{label}</Text>
     </GlassPressable>
   );
 }
 
-function RoundGlassButton({
-  icon,
-  onPress,
-  dot,
-}: {
-  icon: keyof typeof Ionicons.glyphMap;
-  onPress: () => void;
-  dot?: boolean;
-}) {
+function RoundGlassButton({ icon, label, onPress }: { icon: keyof typeof Ionicons.glyphMap; label: string; onPress: () => void }) {
   const { theme } = useTheme();
   return (
-    <Pressable onPress={onPress} hitSlop={8}>
-      <GlassSurface level="raised" borderRadius={radius.pill} contentStyle={styles.roundBtn}>
-        <Ionicons name={icon} size={20} color={theme.text} />
-      </GlassSurface>
-      {dot && <View style={[styles.dot, { backgroundColor: theme.expense, borderColor: theme.bg }]} />}
-    </Pressable>
+    <GlassPressable
+      feedback="press"
+      level="control"
+      blur={false}
+      borderRadius={radius.pill}
+      contentStyle={styles.roundBtn}
+      onPress={onPress}
+      accessibilityLabel={label}
+      haptic={false}
+    >
+      <Ionicons name={icon} size={19} color={theme.text} />
+    </GlassPressable>
   );
 }
 
@@ -352,7 +575,7 @@ function SmartTip({
   transactions,
   categories,
 }: {
-  transactions: import('../types').Transaction[];
+  transactions: Transaction[];
   categories: import('../types').Category[];
 }) {
   const { theme } = useTheme();
@@ -393,16 +616,16 @@ function SmartTip({
 
   const up = tip.pct > 0;
   return (
-    <Card level="raised" style={styles.tipCard}>
+    <Card level="panel" style={styles.tipCard}>
       <View style={styles.tipRow}>
-        <GradientBadge icon={up ? 'bulb' : 'checkmark-circle'} color={up ? theme.warning : theme.success} size={42} />
+        <IconBadge icon={up ? 'bulb-outline' : 'checkmark-circle-outline'} color={up ? theme.warning : theme.success} size={40} />
         <View style={styles.tipBody}>
           <Text style={[styles.tipTitle, { color: theme.text }]}>Smart Tip</Text>
           <Text style={[styles.tipText, { color: theme.textSecondary }]}>
             You spent {Math.abs(tip.pct).toFixed(0)}% {up ? 'more' : 'less'} on {tip.name} this month than last.
           </Text>
         </View>
-        <Pressable onPress={() => setDismissed(true)} hitSlop={10}>
+        <Pressable onPress={() => setDismissed(true)} hitSlop={10} accessibilityRole="button" accessibilityLabel="Dismiss tip">
           <Ionicons name="close" size={18} color={theme.textTertiary} />
         </Pressable>
       </View>
@@ -414,10 +637,12 @@ function SmartTip({
   );
 }
 
-/** Their name if the account carries one, so the app greets a person. */
+/** Time of day, and their first name if the account carries one. */
 function greeting(user: { displayName: string | null; email: string | null } | null): string {
+  const hour = new Date().getHours();
+  const part = hour >= 5 && hour < 12 ? 'Good morning' : hour >= 12 && hour < 17 ? 'Good afternoon' : 'Good evening';
   const name = user?.displayName?.trim().split(/\s+/)[0];
-  return name ? `Hi ${name} 👋` : 'Hi there 👋';
+  return name ? `${part}, ${name}` : part;
 }
 
 /**
@@ -439,6 +664,8 @@ function ProfileChip() {
       style={styles.profile}
       hitSlop={10}
       onPress={() => navigation.navigate(user ? 'Account' : 'Login')}
+      accessibilityRole="button"
+      accessibilityLabel={user ? 'Your account' : 'Sign in'}
     >
       {given && (
         <Text numberOfLines={1} style={[styles.profileName, { color: theme.text }]}>
@@ -448,15 +675,15 @@ function ProfileChip() {
       {photo ? (
         <Image
           source={{ uri: photo }}
-          style={[styles.avatar, { borderColor: theme.border }]}
+          style={[styles.avatar, { borderColor: theme.glassEdge }]}
           onError={() => setPhotoBroken(true)}
         />
       ) : user ? (
-        <View style={[styles.avatar, styles.avatarFallback, { backgroundColor: theme.tintMuted, borderColor: theme.border }]}>
-          <Text style={[styles.avatarInitial, { color: theme.tint }]}>{initial(user)}</Text>
+        <View style={[styles.avatar, styles.avatarFallback, { backgroundColor: theme.tintMuted, borderColor: theme.glassEdge }]}>
+          <Text style={[styles.avatarInitial, { color: shade(theme.tint, theme.mode === 'dark' ? 0.4 : 0) }]}>{initial(user)}</Text>
         </View>
       ) : (
-        <Ionicons name="person-circle-outline" size={30} color={theme.textSecondary} />
+        <Ionicons name="person-circle-outline" size={32} color={theme.textSecondary} />
       )}
     </Pressable>
   );
@@ -467,105 +694,141 @@ function greetingName(user: { displayName: string | null; email: string | null }
   return user?.displayName?.trim() || user?.email?.trim() || null;
 }
 
-function initial(user: { displayName: string | null; email: string | null; phoneNumber: string | null }): string {
+function initial(user: { displayName: string | null; email: string | null }): string {
   const source = user.displayName?.trim() || user.email?.trim() || '';
   const letter = source.replace(/[^A-Za-z]/g, '').charAt(0);
   return letter ? letter.toUpperCase() : '#';
 }
 
 const styles = StyleSheet.create({
-  profile: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, maxWidth: '62%' },
-  profileName: { fontSize: fontSizes.sm, fontWeight: '700', flexShrink: 1 },
-  avatar: { width: 32, height: 32, borderRadius: 16, borderWidth: StyleSheet.hairlineWidth },
-  avatarFallback: { alignItems: 'center', justifyContent: 'center' },
-  avatarInitial: { fontSize: fontSizes.sm, fontWeight: '800' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xs,
   },
-  headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  greetBlock: { flex: 1, paddingRight: spacing.sm },
+  greeting: { fontSize: fontSizes.xl, fontWeight: '800', letterSpacing: -0.6 },
+  tagline: { fontSize: fontSizes.xs, fontWeight: '500', marginTop: 2 },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   roundBtn: { width: 42, height: 42, alignItems: 'center', justifyContent: 'center' },
-  dot: { position: 'absolute', top: 2, right: 2, width: 10, height: 10, borderRadius: 5, borderWidth: 2 },
+  profile: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, maxWidth: 170 },
+  profileName: { fontSize: fontSizes.sm, fontWeight: '700', flexShrink: 1 },
+  avatar: { width: 34, height: 34, borderRadius: 17, borderWidth: 1 },
+  avatarFallback: { alignItems: 'center', justifyContent: 'center' },
+  avatarInitial: { fontSize: fontSizes.sm, fontWeight: '800' },
+
+  switcher: { alignSelf: 'flex-start', marginHorizontal: spacing.md, marginBottom: spacing.sm },
+  switcherInner: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: spacing.sm, paddingVertical: 7 },
+  switcherLabel: { fontSize: fontSizes.sm, fontWeight: '700' },
+
+  hero: { marginTop: spacing.xxs },
+  heroInner: { padding: spacing.lg, paddingBottom: spacing.md },
+  balanceRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   balanceLabelGroup: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  overlineTight: { fontSize: fontSizes.xs, fontWeight: '700', letterSpacing: 1.2, textTransform: 'uppercase' },
   brandMark: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  brandImage: { width: 26, height: 26 },
+  brandImage: { width: 24, height: 24 },
   brandName: { fontSize: fontSizes.sm, fontWeight: '800', letterSpacing: -0.2 },
+  // The one hero figure on the screen: large, and in proportional figures,
+  // which set a big standalone number tighter than tabular ones would.
+  balanceValue: {
+    fontSize: fontSizes.display,
+    fontWeight: '800',
+    letterSpacing: -1.8,
+    marginTop: spacing.xs,
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 24,
+  },
+  periodRow: { marginTop: spacing.md },
+  grid: { marginTop: spacing.md },
+  gridRow: { flexDirection: 'row', alignItems: 'stretch' },
+  vRule: { width: StyleSheet.hairlineWidth },
+  hRule: { height: StyleSheet.hairlineWidth },
+  summaryCell: { flex: 1, paddingVertical: spacing.sm, paddingHorizontal: spacing.xs },
+  summaryHead: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  summaryDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    shadowOpacity: 0.8,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 0 },
+  },
+  summaryLabel: { fontSize: fontSizes.xs, fontWeight: '600' },
+  summaryValue: { fontSize: 19, fontWeight: '800', marginTop: 4, letterSpacing: -0.4 },
+
+  quickActions: { flexDirection: 'row', gap: spacing.xs, marginTop: spacing.md },
+  quickAction: { flex: 1 },
+  quickActionInner: { alignItems: 'center', gap: spacing.xs, paddingVertical: spacing.md, paddingHorizontal: 4, minHeight: 100, justifyContent: 'center' },
+  quickActionLabel: { fontSize: fontSizes.xs, fontWeight: '700', textAlign: 'center', lineHeight: 15 },
+
+  overline: {
+    fontSize: fontSizes.xs,
+    fontWeight: '800',
+    letterSpacing: 1.4,
+    textTransform: 'uppercase',
+    marginTop: spacing.xl,
+    marginBottom: spacing.sm,
+  },
+  bento: { gap: spacing.xs },
+  paceTile: { padding: spacing.md, paddingBottom: spacing.sm },
+  tileHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  tileLabel: { fontSize: fontSizes.xs, fontWeight: '700' },
+  paceValue: { fontSize: fontSizes.xxl, fontWeight: '800', letterSpacing: -0.9, marginTop: 2 },
+  tileSub: { fontSize: fontSizes.xs, fontWeight: '600', marginTop: 2 },
+  tileFoot: { fontSize: 11, fontWeight: '600', marginTop: 4 },
   deltaChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    alignSelf: 'flex-start',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 6,
+    gap: 3,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: 4,
     borderRadius: radius.pill,
-    marginTop: spacing.sm,
+    borderWidth: 1,
   },
-  deltaText: { fontSize: fontSizes.sm, fontWeight: '800' },
-  deltaSub: { fontSize: fontSizes.xs, fontWeight: '600' },
-  sectionHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.lg },
-  seeAll: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  seeAllText: { fontSize: fontSizes.sm, fontWeight: '700' },
-  tipCard: { marginTop: spacing.lg },
+  deltaText: { fontSize: fontSizes.xs, fontWeight: '800' },
+  paceChart: { marginTop: spacing.sm, marginHorizontal: -4 },
+  legend: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.xs },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  legendLine: { width: 14, borderRadius: 1 },
+  legendLabel: { fontSize: 11, fontWeight: '600' },
+
+  bentoRow: { flexDirection: 'row', gap: spacing.xs, alignItems: 'stretch' },
+  budgetTileOuter: { flex: 1.12 },
+  budgetTile: { flex: 1, padding: spacing.md },
+  budgetEmpty: { flex: 1, alignItems: 'flex-start', justifyContent: 'center', gap: spacing.xs, marginTop: spacing.xs },
+  budgetBar: { marginTop: spacing.sm },
+  overRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
+  cta: { fontSize: fontSizes.sm, fontWeight: '800' },
+  tileValue: { fontSize: fontSizes.xl, fontWeight: '800', letterSpacing: -0.7, marginTop: 4 },
+  smallCol: { flex: 1, gap: spacing.xs },
+  smallTileOuter: { flex: 1 },
+  smallTile: { flex: 1, padding: spacing.sm, paddingHorizontal: spacing.md, justifyContent: 'center' },
+  smallValue: { fontSize: fontSizes.lg, fontWeight: '800', letterSpacing: -0.5, marginTop: 2 },
+
+  tipCard: { marginTop: spacing.md },
   tipRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
   tipBody: { flex: 1 },
   tipTitle: { fontSize: fontSizes.base, fontWeight: '800' },
   tipText: { fontSize: fontSizes.xs, lineHeight: 18, marginTop: 2 },
   tipCta: { flexDirection: 'row', alignItems: 'center', gap: 2, alignSelf: 'flex-end', marginTop: spacing.xs },
   tipCtaText: { fontSize: fontSizes.sm, fontWeight: '700' },
-  greetBlock: { flex: 1, paddingRight: spacing.sm },
-  greeting: { fontSize: fontSizes.lg, fontWeight: '800', letterSpacing: -0.3 },
-  tagline: { fontSize: fontSizes.xs, fontWeight: '500', marginTop: 2 },
-  switcher: { alignSelf: 'flex-start', marginHorizontal: spacing.md, marginBottom: spacing.xs },
-  switcherInner: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: spacing.sm, paddingVertical: 6 },
-  switcherLabel: { fontSize: fontSizes.sm, fontWeight: '700' },
-  balanceCard: { marginTop: spacing.xs, paddingBottom: spacing.xs },
-  balanceRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  balanceLabel: { fontSize: fontSizes.sm, fontWeight: '600' },
-  balanceValue: { fontSize: fontSizes.xxxl, fontWeight: '800', marginTop: spacing.xxs, letterSpacing: -1, fontVariant: ['tabular-nums'] },
-  periodRow: { marginTop: spacing.md },
-  summaryRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginTop: spacing.md },
-  summaryChip: { flexGrow: 1, flexBasis: '46%' },
-  summaryInner: { padding: spacing.sm },
-  summaryHead: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  summaryDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    shadowOpacity: 0.7,
-    shadowRadius: 5,
-    shadowOffset: { width: 0, height: 0 },
-    elevation: 2,
-  },
-  summaryLabel: { fontSize: fontSizes.xs, fontWeight: '600' },
-  summaryValue: { fontSize: fontSizes.base, fontWeight: '800', marginTop: 4, letterSpacing: -0.3, fontVariant: ['tabular-nums'] },
-  quickActions: { flexDirection: 'row', gap: spacing.xs, marginTop: spacing.lg },
-  quickAction: { flex: 1 },
-  quickActionInner: { alignItems: 'center', gap: spacing.xs, paddingVertical: spacing.md, paddingHorizontal: 4, minHeight: 116, justifyContent: 'center' },
-  quickIconWrap: {
-    width: 42,
-    height: 42,
-    borderRadius: radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 3,
-  },
-  quickActionLabel: { fontSize: fontSizes.xs, fontWeight: '700', textAlign: 'center', lineHeight: 15 },
-  sectionTitle: { fontSize: fontSizes.md, fontWeight: '800' },
-  dateHeader: { fontSize: fontSizes.xs, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, marginTop: spacing.sm, marginBottom: spacing.xs },
+
+  sectionHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.xl },
+  sectionTitle: { fontSize: fontSizes.md, fontWeight: '800', letterSpacing: -0.3 },
+  seeAll: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  seeAllText: { fontSize: fontSizes.sm, fontWeight: '700' },
+  dateHeader: { fontSize: fontSizes.xs, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1, marginTop: spacing.md, marginBottom: spacing.xs },
   txnRowOuter: { marginBottom: spacing.xs },
   txnRow: { flexDirection: 'row', alignItems: 'center', padding: spacing.sm, gap: spacing.sm },
   txnMeta: { flex: 1 },
-  txnTitle: { fontSize: fontSizes.base, fontWeight: '600' },
+  txnTitle: { fontSize: fontSizes.base, fontWeight: '700', letterSpacing: -0.2 },
   txnSub: { fontSize: fontSizes.xs, marginTop: 2 },
-  modalOverlay: { flex: 1, justifyContent: 'flex-end' },
-  modalSheet: { borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, padding: spacing.lg, maxHeight: '70%' },
-  modalTitle: { fontSize: fontSizes.lg, fontWeight: '700', marginBottom: spacing.md },
+  txnAmount: { fontSize: fontSizes.base },
+
   accountRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm },
   accountName: { flex: 1, fontSize: fontSizes.base, fontWeight: '600' },
 });

@@ -13,7 +13,10 @@ import { QuickAddFab } from '../components/QuickAddFab';
 import { useTheme } from '../theme/ThemeContext';
 import { fontSizes, radius, spacing } from '../theme/tokens';
 import { useStore } from '../store/useStore';
-import { daysRemainingInMonth, effectiveBudgetFor, formatCurrency, monthKeyFor, periodInterval, transactionsInRange } from '../utils/finance';
+import { daysRemainingInMonth, monthKeyFor, periodInterval, transactionsInRange } from '../utils/finance';
+import { formatMoney } from '../utils/money';
+import { Figure } from '../components/Figure';
+import { budgetRows, budgetTotals } from '../utils/insights';
 
 export default function BudgetsScreen() {
   const { theme } = useTheme();
@@ -29,27 +32,9 @@ export default function BudgetsScreen() {
   const { start, end } = periodInterval('month', anchor);
   const monthTxns = useMemo(() => transactionsInRange(scoped, start, end), [scoped, start, end]);
 
-  const expenseCategories = categories.filter((c) => c.type === 'expense' && !c.archived);
-
-  const rows = useMemo(() => {
-    return expenseCategories
-      .map((c) => {
-        const spent = monthTxns.filter((t) => t.type === 'expense' && t.categoryId === c.id).reduce((sum, t) => sum + t.amount, 0);
-        const budget = effectiveBudgetFor(budgets, c.id, monthKey);
-        return { category: c, spent, budget };
-      })
-      .sort((a, b) => {
-        if (a.budget && !b.budget) return -1;
-        if (!a.budget && b.budget) return 1;
-        return b.spent - a.spent;
-      });
-  }, [expenseCategories, monthTxns, budgets, monthKey]);
-
-  const totals = useMemo(() => {
-    const planned = rows.reduce((sum, r) => sum + (r.budget?.amount ?? 0), 0);
-    const spent = rows.reduce((sum, r) => sum + (r.budget ? r.spent : 0), 0);
-    return { planned, spent };
-  }, [rows]);
+  // Shared with the dashboard's budget tile, so the two always agree.
+  const rows = useMemo(() => budgetRows(categories, monthTxns, budgets, monthKey), [categories, monthTxns, budgets, monthKey]);
+  const totals = useMemo(() => budgetTotals(rows), [rows]);
 
   const remaining = totals.planned - totals.spent;
   const dailyAverage = remaining > 0 ? remaining / daysRemainingInMonth(new Date() > end ? start : new Date()) : 0;
@@ -79,15 +64,15 @@ export default function BudgetsScreen() {
             <View style={styles.summaryRow}>
               <View>
                 <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>Planned</Text>
-                <Text style={[styles.summaryValue, { color: theme.text }]}>{formatCurrency(totals.planned)}</Text>
+                <Figure value={totals.planned} format={(n) => formatMoney(n)} fit style={[styles.summaryValue, { color: theme.text }]} />
               </View>
               <View>
                 <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>Spent</Text>
-                <Text style={[styles.summaryValue, { color: theme.expense }]}>{formatCurrency(totals.spent)}</Text>
+                <Figure value={totals.spent} format={(n) => formatMoney(n)} fit style={[styles.summaryValue, { color: theme.expense }]} />
               </View>
               <View>
                 <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>Safe/Day</Text>
-                <Text style={[styles.summaryValue, { color: theme.success }]}>{formatCurrency(Math.max(dailyAverage, 0))}</Text>
+                <Figure value={Math.max(dailyAverage, 0)} format={(n) => formatMoney(n)} fit style={[styles.summaryValue, { color: theme.success }]} />
               </View>
             </View>
             <View style={{ marginTop: spacing.sm }}>
@@ -116,7 +101,7 @@ export default function BudgetsScreen() {
                   <Text style={[styles.budgetName, { color: theme.text }]}>{category.name}</Text>
                   {hasBudget ? (
                     <Text style={[styles.budgetSub, { color: theme.textTertiary }]}>
-                      {formatCurrency(spent)} of {formatCurrency(budget!.amount)}
+                      {formatMoney(spent)} of {formatMoney(budget!.amount)}
                     </Text>
                   ) : (
                     <Text style={[styles.budgetSub, { color: theme.textTertiary }]}>No budget set</Text>
@@ -125,11 +110,11 @@ export default function BudgetsScreen() {
                 {hasBudget ? (
                   overspent ? (
                     <Text style={[styles.overspentLabel, { color: theme.danger }]}>
-                      -{formatCurrency(spent - budget!.amount)}
+                      {formatMoney(-(spent - budget!.amount))}
                     </Text>
                   ) : (
                     <Text style={[styles.remainingLabel, { color: theme.textSecondary }]}>
-                      {formatCurrency(budget!.amount - spent)} left
+                      {formatMoney(budget!.amount - spent)} left
                     </Text>
                   )
                 ) : (

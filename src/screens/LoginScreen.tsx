@@ -3,6 +3,7 @@ import { Animated, Easing, Image, Pressable, StyleSheet, Text, View } from 'reac
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { Screen } from '../components/Screen';
+import { GlassPressable } from '../components/glass/GlassPressable';
 import { holdAppOpenAds } from '../services/ads';
 import { useTheme } from '../theme/ThemeContext';
 import { fontSizes, radius, spacing } from '../theme/tokens';
@@ -175,24 +176,23 @@ function ProviderButton({
   dimmed?: boolean;
 }) {
   const { theme } = useTheme();
+  // The same control glass as every other button: it sinks under the finger
+  // and catches the travelling light, rather than just fading.
   return (
-    <Pressable
-      onPress={onPress}
+    <GlassPressable
+      feedback="press"
+      level="control"
+      blur={false}
+      borderRadius={radius.pill}
       disabled={loading}
-      style={({ pressed }) => [
-        styles.provider,
-        {
-          backgroundColor: theme.surface,
-          borderColor: theme.border,
-          shadowColor: theme.shadow,
-          opacity: dimmed ? 0.55 : pressed ? 0.85 : 1,
-          transform: [{ scale: pressed ? 0.99 : 1 }],
-        },
-      ]}
+      onPress={onPress}
+      accessibilityLabel={label}
+      style={{ opacity: dimmed ? 0.55 : 1 }}
+      contentStyle={styles.provider}
     >
       <Ionicons name={loading ? 'ellipsis-horizontal' : icon} size={20} color={theme.text} />
       <Text style={[styles.providerLabel, { color: theme.text }]}>{label}</Text>
-    </Pressable>
+    </GlassPressable>
   );
 }
 
@@ -210,14 +210,9 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
-    borderRadius: radius.pill,
-    borderWidth: StyleSheet.hairlineWidth,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 1,
-    shadowRadius: 10,
-    elevation: 2,
+    minHeight: 56,
   },
-  providerLabel: { fontSize: fontSizes.base, fontWeight: '600' },
+  providerLabel: { fontSize: fontSizes.base, fontWeight: '700' },
   notice: { flexDirection: 'row', gap: spacing.xs, padding: spacing.sm, borderRadius: radius.md, alignItems: 'flex-start' },
   noticeText: { flex: 1, fontSize: fontSizes.xs, lineHeight: 17 },
   guest: { alignSelf: 'center', paddingVertical: spacing.sm, marginTop: spacing.xxs },

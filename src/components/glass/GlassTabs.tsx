@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, LayoutChangeEvent, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, LayoutChangeEvent, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
+import { shade, withAlpha } from '../../theme/color';
 import { fontSizes, motion, radius, spacing } from '../../theme/tokens';
 import { GlassSurface } from './GlassSurface';
 
@@ -10,12 +12,14 @@ export interface TabOption<T extends string> {
 }
 
 /**
- * A segmented control where the selection is a single pill that travels.
+ * A segmented control where the selection is a single pane that travels.
  *
- * One pill moves between positions rather than each option lighting up in
- * turn, so the eye follows the selection instead of hunting for it. It glides
- * on a spring: interrupt it mid-flight and it curves towards the new target
- * from wherever it had got to.
+ * The selection is a small piece of brighter glass tinted with the accent —
+ * the same material as the selected tab on the shelf below — rather than a
+ * block of paint. One pane moves between positions rather than each option
+ * lighting up in turn, so the eye follows the selection instead of hunting
+ * for it. It glides on a spring: interrupt it mid-flight and it curves toward
+ * the new target from wherever it had got to.
  */
 export function GlassTabs<T extends string>({
   options,
@@ -27,6 +31,7 @@ export function GlassTabs<T extends string>({
   onChange: (value: T) => void;
 }) {
   const { theme } = useTheme();
+  const dark = theme.mode === 'dark';
   const [width, setWidth] = useState(0);
   const index = Math.max(0, options.findIndex((o) => o.key === value));
   const travel = useRef(new Animated.Value(index)).current;
@@ -57,11 +62,21 @@ export function GlassTabs<T extends string>({
               {
                 width: slot,
                 transform: [{ translateX }],
-                backgroundColor: theme.tint,
                 shadowColor: theme.tint,
+                shadowOpacity: dark ? 0.4 : 0.16,
               },
             ]}
-          />
+          >
+            <GlassSurface
+              level="control"
+              blur={false}
+              borderRadius={radius.pill}
+              style={styles.pillGlass}
+              contentStyle={styles.pillGlass}
+              tint={withAlpha(theme.tint, dark ? 0.3 : 0.14)}
+              tintBorder={withAlpha(theme.tint, dark ? 0.55 : 0.35)}
+            />
+          </Animated.View>
         )}
 
         {options.map((option) => {
@@ -69,14 +84,19 @@ export function GlassTabs<T extends string>({
           return (
             <Pressable
               key={option.key}
-              onPress={() => onChange(option.key)}
+              onPress={() => {
+                if (!active && Platform.OS !== 'web') Haptics.selectionAsync().catch(() => {});
+                onChange(option.key);
+              }}
               style={styles.option}
               hitSlop={6}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: active }}
             >
               <Text
                 style={[
                   styles.label,
-                  { color: active ? theme.textInverted : theme.textSecondary },
+                  { color: active ? (dark ? shade(theme.tint, 0.62) : shade(theme.tint, -0.2)) : theme.textSecondary },
                 ]}
               >
                 {option.label}
@@ -98,11 +118,10 @@ const styles = StyleSheet.create({
     bottom: 4,
     left: 4,
     borderRadius: radius.pill,
-    shadowOpacity: 0.45,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
   },
+  pillGlass: { flex: 1 },
   option: { flex: 1, alignItems: 'center', paddingVertical: spacing.xs + 1 },
   label: { fontSize: fontSizes.sm, fontWeight: '700' },
 });

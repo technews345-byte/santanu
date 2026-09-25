@@ -5,19 +5,21 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
 import { fontSizes, motion, radius, spacing } from '../../theme/tokens';
+import { shade, withAlpha } from '../../theme/color';
 import { GlassSurface } from './GlassSurface';
 
 /**
- * A bar that floats above the content rather than sealing the bottom of the
- * screen.
+ * A thin shelf of glass floating above the content, not a bar sealing the
+ * bottom of the screen.
  *
- * It keeps the tint, sheen and lit border of glass but is backed solid: a
- * see-through bar let the list run visibly through its labels, and a control
- * that is hard to read is not worth the effect.
+ * It keeps the edge light and depth of glass but is backed solid: a
+ * see-through shelf let the list run visibly through its labels, and a
+ * control that is hard to read is not worth the effect.
  *
- * The selected marker is one pill that travels between destinations. The icon
- * of the destination being left shrinks as the one being entered grows, so
- * the two swap weight rather than one blinking off and another on.
+ * The selected destination is its own small pane — brighter glass tinted
+ * with the accent, lit on its edge and glowing faintly — that glides between
+ * tabs. The icon being left settles as the one being entered rises, so the two
+ * trade weight rather than one blinking off and another on.
  */
 export function GlassTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const { theme } = useTheme();
@@ -62,11 +64,21 @@ export function GlassTabBar({ state, descriptors, navigation }: BottomTabBarProp
                 {
                   width: slot,
                   transform: [{ translateX }],
-                  backgroundColor: theme.tintMuted,
-                  borderColor: theme.glassBorder,
+                  shadowColor: theme.tint,
+                  shadowOpacity: theme.mode === 'dark' ? 0.45 : 0.18,
                 },
               ]}
-            />
+            >
+              <GlassSurface
+                level="control"
+                blur={false}
+                borderRadius={radius.lg}
+                style={styles.pillGlass}
+                contentStyle={styles.pillFill}
+                tint={withAlpha(theme.tint, theme.mode === 'dark' ? 0.2 : 0.1)}
+                tintBorder={withAlpha(theme.tint, theme.mode === 'dark' ? 0.4 : 0.28)}
+              />
+            </Animated.View>
           )}
 
           {state.routes.map((route, index) => {
@@ -122,7 +134,9 @@ function TabItem({
 
   const scale = lift.interpolate({ inputRange: [0, 1], outputRange: [1, 1.12] });
   const rise = lift.interpolate({ inputRange: [0, 1], outputRange: [0, -2] });
-  const color = focused ? theme.tint : theme.textTertiary;
+  // The active icon is lifted toward white on dark, so it reads as lit by the
+  // pane beneath it rather than as the accent printed on glass.
+  const color = focused ? (theme.mode === 'dark' ? shade(theme.tint, 0.45) : theme.tint) : theme.textTertiary;
 
   return (
     <Pressable onPress={onPress} style={styles.item} hitSlop={4}>
@@ -145,15 +159,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
   },
   bar: { alignSelf: 'stretch' },
-  row: { flexDirection: 'row', paddingHorizontal: spacing.xs, paddingVertical: spacing.xs },
+  row: { flexDirection: 'row', paddingHorizontal: spacing.xs, paddingVertical: 5 },
   pill: {
     position: 'absolute',
-    top: spacing.xxs,
-    bottom: spacing.xxs,
+    top: 4,
+    bottom: 4,
     left: spacing.xs,
     borderRadius: radius.lg,
-    borderWidth: 1,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 4 },
   },
-  item: { flex: 1, alignItems: 'center', gap: 3, paddingVertical: spacing.xxs },
+  pillGlass: { flex: 1 },
+  pillFill: { flex: 1 },
+  item: { flex: 1, alignItems: 'center', gap: 2, paddingVertical: 6 },
   label: { fontSize: 10, fontWeight: '700' },
 });

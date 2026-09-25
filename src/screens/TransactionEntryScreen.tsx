@@ -19,6 +19,7 @@ import { IconBadge } from '../components/IconBadge';
 import { GlassPressable } from '../components/glass/GlassPressable';
 import { GlassSurface } from '../components/glass/GlassSurface';
 import { GlassTabs } from '../components/glass/GlassTabs';
+import { GlassButton } from '../components/glass/GlassButton';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Keypad } from '../components/Keypad';
 import { BottomSheetModal } from '../components/BottomSheetModal';
@@ -351,16 +352,12 @@ export default function TransactionEntryScreen() {
 
       <Keypad onKeyPress={onKeyPress} />
 
-      <Pressable style={[styles.saveButtonWrap, { shadowColor: typeColor }]} onPress={handleSave}>
-        <LinearGradient
-          colors={[typeColor, theme.tint]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={[styles.saveButton, { borderColor: theme.glassBorder }]}
-        >
-          <Text style={styles.saveButtonLabel}>{existing ? 'Save Changes' : 'Save Transaction'}</Text>
-        </LinearGradient>
-      </Pressable>
+      <GlassButton
+        label={existing ? 'Save Changes' : 'Save Transaction'}
+        color={typeColor}
+        onPress={handleSave}
+        style={styles.saveButtonWrap}
+      />
 
       <BottomSheetModal visible={categorySheetOpen} onClose={() => setCategorySheetOpen(false)} title="Category">
         <View style={styles.categoryGrid}>
@@ -524,18 +521,7 @@ const styles = StyleSheet.create({
   thumb: { width: '100%', height: '100%' },
   thumbRemove: { position: 'absolute', top: 2, right: 2, width: 16, height: 16, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   addAttachment: { width: 52, height: 52, borderRadius: radius.sm, borderWidth: StyleSheet.hairlineWidth, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' },
-  saveButtonWrap: {
-    marginHorizontal: spacing.xs,
-    marginTop: spacing.sm,
-    marginBottom: spacing.xs,
-    borderRadius: radius.lg,
-    shadowOpacity: 0.45,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 8,
-  },
-  saveButton: { paddingVertical: spacing.md, borderRadius: radius.lg, alignItems: 'center', borderWidth: 1 },
-  saveButtonLabel: { color: '#fff', fontWeight: '700', fontSize: fontSizes.base },
+  saveButtonWrap: { marginHorizontal: spacing.xs, marginTop: spacing.sm, marginBottom: spacing.xs },
   categoryGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
   categoryItem: { width: '23%', alignItems: 'center', marginBottom: spacing.md, gap: 4 },
   categoryLabel: { fontSize: fontSizes.xs, fontWeight: '600', textAlign: 'center' },

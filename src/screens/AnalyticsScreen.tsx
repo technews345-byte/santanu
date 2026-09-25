@@ -17,7 +17,8 @@ import { GlassTabs } from '../components/glass/GlassTabs';
 import { useTheme } from '../theme/ThemeContext';
 import { fontSizes, radius, spacing } from '../theme/tokens';
 import { useStore } from '../store/useStore';
-import { formatCurrency, last6MonthKeys, periodInterval, summarize, transactionsInRange } from '../utils/finance';
+import { last6MonthKeys, periodInterval, summarize, transactionsInRange } from '../utils/finance';
+import { formatMoney } from '../utils/money';
 import { PeriodKey } from '../types';
 
 const PERIODS: { key: PeriodKey; label: string }[] = [
@@ -124,6 +125,7 @@ export default function AnalyticsScreen() {
             </View>
 
             <Card level="raised" style={styles.chartCard}>
+              <View style={styles.chartInner}>
               {donutData.length > 0 ? (
                 <DonutChart
                   data={donutData}
@@ -132,18 +134,19 @@ export default function AnalyticsScreen() {
               ) : (
                 <EmptyState icon="pie-chart-outline" title="No data for this period" />
               )}
+              </View>
             </Card>
 
             <Card level="raised" style={styles.trendCard}>
               <Text style={[styles.cardTitle, { color: theme.text }]}>Income vs. Expenses</Text>
               <View style={styles.legendRow}>
                 <View style={styles.legendItem}>
-                  <View style={[styles.legendDot, { backgroundColor: theme.success }]} />
-                  <Text style={[styles.legendLabel, { color: theme.textSecondary }]}>Income {formatCurrency(income)}</Text>
+                  <View style={[styles.legendDot, { backgroundColor: theme.chartIncome }]} />
+                  <Text style={[styles.legendLabel, { color: theme.textSecondary }]}>Income {formatMoney(income)}</Text>
                 </View>
                 <View style={styles.legendItem}>
-                  <View style={[styles.legendDot, { backgroundColor: theme.expense }]} />
-                  <Text style={[styles.legendLabel, { color: theme.textSecondary }]}>Expense {formatCurrency(expense)}</Text>
+                  <View style={[styles.legendDot, { backgroundColor: theme.chartExpense }]} />
+                  <Text style={[styles.legendLabel, { color: theme.textSecondary }]}>Expense {formatMoney(expense)}</Text>
                 </View>
               </View>
               <TrendChart data={trendData} />
@@ -176,7 +179,7 @@ export default function AnalyticsScreen() {
               </View>
             </View>
             <View style={styles.rankRight}>
-              <Text style={[styles.rankValue, { color: theme.text }]}>{formatCurrency(item.value)}</Text>
+              <Text style={[styles.rankValue, { color: theme.text }]}>{formatMoney(item.value)}</Text>
               <Text style={[styles.rankPct, { color: theme.textTertiary }]}>{item.pct.toFixed(1)}%</Text>
             </View>
           </GlassPressable>
@@ -188,19 +191,20 @@ export default function AnalyticsScreen() {
 }
 
 const styles = StyleSheet.create({
-  title: { fontSize: fontSizes.xl, fontWeight: '800', marginBottom: spacing.sm },
+  title: { fontSize: fontSizes.xxl, fontWeight: '800', letterSpacing: -0.8, marginBottom: spacing.sm },
   periodRow: {},
   anchorRow: { alignSelf: 'center', marginTop: spacing.sm },
   anchorInner: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.xs, paddingVertical: 6 },
   anchorArrow: { paddingHorizontal: spacing.xs },
   anchorLabel: { fontSize: fontSizes.base, fontWeight: '700', minWidth: 150, textAlign: 'center' },
   typeToggle: { marginTop: spacing.md },
-  chartCard: { marginTop: spacing.md, alignItems: 'center', paddingVertical: spacing.xl },
+  chartCard: { marginTop: spacing.md },
+  chartInner: { alignItems: 'center', paddingVertical: spacing.md },
   trendCard: { marginTop: spacing.md },
-  cardTitle: { fontSize: fontSizes.base, fontWeight: '700', marginBottom: spacing.sm },
+  cardTitle: { fontSize: fontSizes.base, fontWeight: '800', letterSpacing: -0.2, marginBottom: spacing.sm },
   legendRow: { flexDirection: 'row', gap: spacing.md, marginBottom: spacing.sm },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  legendDot: { width: 8, height: 8, borderRadius: 4 },
+  legendDot: { width: 10, height: 10, borderRadius: 3 },
   legendLabel: { fontSize: fontSizes.xs, fontWeight: '600' },
   sectionTitle: { fontSize: fontSizes.md, fontWeight: '700', marginTop: spacing.lg, marginBottom: spacing.xs },
   rankRowOuter: { marginBottom: spacing.xs },

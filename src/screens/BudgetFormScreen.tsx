@@ -3,6 +3,7 @@ import { Alert, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'rea
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Screen } from '../components/Screen';
+import { GlassButton } from '../components/glass/GlassButton';
 import { IconBadge } from '../components/IconBadge';
 import { useTheme } from '../theme/ThemeContext';
 import { fontSizes, radius, spacing } from '../theme/tokens';
@@ -88,12 +89,11 @@ export default function BudgetFormScreen() {
             <Text style={[styles.recurringLabel, { color: theme.text }]}>Repeat every month</Text>
             <Text style={[styles.recurringSub, { color: theme.textTertiary }]}>Applies automatically to future months</Text>
           </View>
-          <Switch value={isRecurring} onValueChange={setIsRecurring} trackColor={{ true: theme.tint }} />
+          <Switch value={isRecurring} onValueChange={setIsRecurring} trackColor={{ true: theme.tint, false: theme.mode === 'dark' ? 'rgba(190, 205, 240, 0.24)' : 'rgba(100, 116, 139, 0.32)' }}
+            thumbColor={theme.mode === 'dark' ? '#ECEFF6' : '#FFFFFF'} />
         </View>
 
-        <Pressable style={[styles.saveButton, { backgroundColor: theme.tint }]} onPress={handleSave}>
-          <Text style={styles.saveButtonLabel}>Save Budget</Text>
-        </Pressable>
+        <GlassButton label="Save Budget" onPress={handleSave} style={styles.saveButton} />
       </View>
     </Screen>
   );
@@ -111,6 +111,5 @@ const styles = StyleSheet.create({
   recurringRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderTopWidth: StyleSheet.hairlineWidth, paddingTop: spacing.md, marginTop: spacing.lg },
   recurringLabel: { fontSize: fontSizes.base, fontWeight: '600' },
   recurringSub: { fontSize: fontSizes.xs, marginTop: 2, maxWidth: 220 },
-  saveButton: { marginTop: spacing.xl, paddingVertical: spacing.md, borderRadius: radius.lg, alignItems: 'center' },
-  saveButtonLabel: { color: '#fff', fontWeight: '700', fontSize: fontSizes.base },
+  saveButton: { marginTop: spacing.xl },
 });

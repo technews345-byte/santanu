@@ -3,6 +3,7 @@ import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Screen } from '../components/Screen';
+import { GlassButton } from '../components/glass/GlassButton';
 import { IconBadge } from '../components/IconBadge';
 import { ColorPicker } from '../components/ColorPicker';
 import { IconPicker, EXPENSE_ICONS, INCOME_ICONS, INVESTMENT_ICONS } from '../components/IconPicker';
@@ -91,9 +92,7 @@ export default function CategoryFormScreen() {
         <Text style={[styles.label, { color: theme.textSecondary }]}>Icon</Text>
         <IconPicker icons={iconSet} value={icon} color={color} onChange={setIcon} />
 
-        <Pressable style={[styles.saveButton, { backgroundColor: theme.tint }]} onPress={handleSave}>
-          <Text style={styles.saveButtonLabel}>Save Category</Text>
-        </Pressable>
+        <GlassButton label="Save Category" onPress={handleSave} style={styles.saveButton} />
       </ScrollView>
     </Screen>
   );
@@ -106,6 +105,5 @@ const styles = StyleSheet.create({
   previewRow: { alignItems: 'center', marginBottom: spacing.lg },
   label: { fontSize: fontSizes.sm, fontWeight: '700', marginBottom: spacing.xs, marginTop: spacing.md },
   input: { borderWidth: StyleSheet.hairlineWidth, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, fontSize: fontSizes.base },
-  saveButton: { marginTop: spacing.xl, paddingVertical: spacing.md, borderRadius: radius.lg, alignItems: 'center' },
-  saveButtonLabel: { color: '#fff', fontWeight: '700', fontSize: fontSizes.base },
+  saveButton: { marginTop: spacing.xl },
 });
