@@ -101,6 +101,13 @@ r.get('/track/:token', trackLimit, ah(async (req, res) => {
   const o = orderByToken(token); if (!o) throw notFound('We could not find that order. Check your tracking link.');
   res.set('Cache-Control', 'no-store'); res.json(trackingView(o));
 }));
+// "Where's my order?" form: order number + the phone used to order → the private tracking link.
+r.post('/track/lookup', trackLimit, ah(async (req, res) => {
+  const b = parse(z.object({ order_number: z.string().trim().toUpperCase().max(20), phone: optPhone }), req.body);
+  const o = db.prepare('SELECT tracking_token, customer_phone FROM orders WHERE order_number=?').get(b.order_number.startsWith('BM') ? b.order_number : 'BM' + b.order_number);
+  if (!o || !b.phone || o.customer_phone !== b.phone) throw notFound('No order found with that order number and phone. Check both and try again.');
+  res.json({ tracking_token: o.tracking_token });
+}));
 r.post('/track/:token/review', formLimit, ah(async (req, res) => {
   const { token } = parse(tokenParam, req.params);
   const b = parse(z.object({ rating: z.coerce.number().int().min(1).max(5), comment: text(1000).optional().default('') }), req.body);

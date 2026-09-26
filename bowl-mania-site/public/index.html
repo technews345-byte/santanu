@@ -42,7 +42,7 @@
 
 <div class="topbar">
   <div class="wrap topbar-inner">
-    <span>Delivering fresh in <b>Sonari</b> &amp; <b>Nazira</b><span class="hide-xs"> · Mornings from 7 AM</span></span>
+    <span class="status-pill" data-status-pill><i></i><span>Delivering fresh in <b>Sonari</b> &amp; <b>Nazira</b></span></span>
     <a href="https://www.instagram.com/bowlmaniasonarinazira" target="_blank" rel="noopener"><svg class="ic"><use href="#i-ig"/></svg>@bowlmaniasonarinazira</a>
   </div>
 </div>
@@ -59,7 +59,7 @@
       <a href="#story">Our story</a>
       <a href="#delivery">Delivery</a>
       <a href="#track">Track order</a>
-      <a href="#contact">Contact</a>
+      <a href="#write">Contact</a>
     </nav>
     <div class="header-actions">
       <button class="bag-btn" type="button" data-open-cart aria-label="Open your order"><svg class="ic"><use href="#i-bag"/></svg><span class="bag-count" data-cart-count hidden>0</span></button>
@@ -81,8 +81,8 @@
           <a class="btn btn-outline" href="https://wa.me/918099026415?text=Hi%20Bowl%20Mania%2C%20I%27d%20like%20to%20place%20an%20order." target="_blank" rel="noopener"><svg class="ic"><use href="#i-wa"/></svg> Order on WhatsApp</a>
         </div>
         <dl class="hero-stats">
-          <div><dt>6</dt><dd>Signature bowls</dd></div>
-          <div><dt>₹99</dt><dd>Starting price</dd></div>
+          <div><dt data-stat-count>6</dt><dd>Signature bowls</dd></div>
+          <div><dt data-stat-price>₹99</dt><dd>Starting price</dd></div>
           <div><dt>7 AM</dt><dd>Morning delivery</dd></div>
         </dl>
       </div>
@@ -109,6 +109,8 @@
       <div><svg class="ic-lg"><use href="#i-sun"/></svg><b>Fresh like a new morning</b><span>Made fresh, delivered to your door</span></div>
     </div>
   </section>
+
+  <section class="offers-strip" data-offers hidden aria-label="Current offers"><div class="wrap offers-inner" data-offers-list></div></section>
 
   <section id="menu" class="section">
     <div class="wrap">
@@ -197,9 +199,9 @@
           <p class="eyebrow">Delivery &amp; timings</p>
           <h2>Freshness, at your door.</h2>
         </div>
-        <p>Two locations, two delivery windows a day. Self pickup is always free.</p>
+        <p data-delivery-intro>Two locations, two delivery windows a day. Self pickup is always free.</p>
       </div>
-      <div class="delivery-grid">
+      <div class="delivery-grid" data-branches>
         <article class="branch">
           <header><svg class="ic"><use href="#i-pin"/></svg><h3>Sonari</h3></header>
           <ul class="slots">
@@ -242,20 +244,51 @@
       <div>
         <p class="eyebrow">Track your order</p>
         <h2>Where's my bowl?</h2>
-        <p class="lead">Enter your order number and the phone number you ordered with to see live status and your delivery partner's details.</p>
+        <p class="lead">Your tracking link comes with your order confirmation. Lost it? Enter your order number and phone number.</p>
         <form class="track-form" data-track-form novalidate>
-          <label class="field"><span>Order number</span><input name="order" id="track-order" inputmode="numeric" placeholder="e.g. 128" required></label>
+          <label class="field"><span>Order number</span><input name="order" id="track-order" placeholder="e.g. BM20260926001" autocomplete="off" required></label>
           <label class="field"><span>Phone number</span><input name="phone" id="track-phone" type="tel" inputmode="tel" placeholder="10-digit mobile" required></label>
           <button class="btn btn-primary" type="submit">Track order</button>
         </form>
-        <p class="fine" data-track-offline hidden>Online tracking is available on the live website. For an update now, message us on <a href="https://wa.me/918099026415" target="_blank" rel="noopener">WhatsApp</a>.</p>
+        <p class="form-msg" data-track-msg role="status"></p>
       </div>
-      <div class="track-card" data-track-result aria-live="polite">
-        <div class="track-empty">
-          <svg class="ic-xl"><use href="#i-scooter"/></svg>
-          <p>Your order status will appear here.</p>
-        </div>
+      <div class="track-card">
+        <ol class="timeline preview">
+          <li class="done"><span class="dot">✓</span><div><b>Order placed</b></div></li>
+          <li class="done"><span class="dot">✓</span><div><b>Confirmed</b></div></li>
+          <li class="current done"><span class="dot">✓</span><div><b>Preparing</b><span class="fine">Made fresh when you order</span></div></li>
+          <li><span class="dot"></span><div><b>Ready</b></div></li>
+          <li><span class="dot"></span><div><b>Out for delivery</b></div></li>
+          <li><span class="dot"></span><div><b>Delivered</b></div></li>
+        </ol>
       </div>
+    </div>
+  </section>
+
+  <section id="reviews" class="section" data-reviews hidden>
+    <div class="wrap">
+      <div class="section-head"><div><p class="eyebrow">Happy bowls</p><h2>What our guests say.</h2></div><p data-review-summary></p></div>
+      <div class="review-grid" data-review-list></div>
+    </div>
+  </section>
+
+  <section id="write" class="section section-tint">
+    <div class="wrap contact-grid">
+      <div>
+        <p class="eyebrow">Say hello</p>
+        <h2>Questions, bulk orders or feedback?</h2>
+        <p class="lead">Send us a message and we'll get back to you, usually the same day. For a quick answer, WhatsApp us.</p>
+        <div class="contact-links" data-contact-links></div>
+      </div>
+      <form class="contact-form" data-contact-form novalidate>
+        <div class="field-row"><label class="field"><span>Your name</span><input name="name" required maxlength="80" autocomplete="name"></label>
+          <label class="field"><span>Phone</span><input name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="10-digit mobile"></label></div>
+        <label class="field"><span>Email <em>(optional)</em></span><input name="email" type="email" autocomplete="email"></label>
+        <label class="field"><span>Message</span><textarea name="message" rows="4" required maxlength="2000"></textarea></label>
+        <input name="website" tabindex="-1" autocomplete="off" class="hp" aria-hidden="true">
+        <button class="btn btn-primary" type="submit">Send message</button>
+        <p class="form-msg" data-contact-msg role="status"></p>
+      </form>
     </div>
   </section>
 
@@ -279,11 +312,11 @@
       <img src="assets/logo.jpg" alt="Bowl Mania" width="64" height="64" loading="lazy">
       <p>Fresh, healthy, tasty and wholesome bowls — always. Real food, real people, a healthier tomorrow.</p>
     </div>
-    <div>
+    <div data-footer-area="0">
       <h4>Sonari</h4>
       <p><a href="tel:+918099026415">+91 80990 26415</a><br>7–9 AM · 4–8 PM</p>
     </div>
-    <div>
+    <div data-footer-area="1">
       <h4>Nazira</h4>
       <p><a href="tel:+918720915865">+91 87209 15865</a><br>7–11 AM · 4–8 PM</p>
     </div>
@@ -313,27 +346,35 @@
     </div>
     <ul class="cart-items" data-cart-items></ul>
     <form class="checkout" data-checkout hidden novalidate>
-      <h3>Delivery details</h3>
-      <div class="seg" role="radiogroup" aria-label="Kitchen">
-        <label><input type="radio" name="area" value="sonari" checked><span>Sonari</span></label>
-        <label><input type="radio" name="area" value="nazira"><span>Nazira</span></label>
-        <label><input type="radio" name="area" value="pickup"><span>Pickup</span></label>
+      <h3>How would you like it?</h3>
+      <div class="seg" role="radiogroup" aria-label="Delivery or pickup">
+        <label><input type="radio" name="fulfilment" value="delivery" checked><span>Delivery</span></label>
+        <label><input type="radio" name="fulfilment" value="pickup"><span>Pickup</span></label>
       </div>
-      <label class="field"><span>Your name</span><input name="customerName" autocomplete="name" required maxlength="80"></label>
-      <label class="field"><span>Phone number</span><input name="phone" type="tel" inputmode="tel" autocomplete="tel" required placeholder="10-digit mobile" pattern="[+0-9][0-9 \-]{7,15}"></label>
-      <label class="field" data-address-field><span>Delivery address</span><textarea name="address" rows="2" autocomplete="street-address" required maxlength="500"></textarea></label>
-      <label class="field"><span>Notes <em>(optional)</em></span><textarea name="notes" rows="2" maxlength="500" placeholder="e.g. less spicy, paneer instead of chicken"></textarea></label>
+      <div data-delivery-block>
+        <button type="button" class="btn btn-outline btn-block" data-locate><svg class="ic"><use href="#i-pin"/></svg> Use my current location</button>
+        <label class="field"><span>Or paste a Google Maps location <em>(link with coordinates, or "lat, lng")</em></span><input name="maplink" autocomplete="off" placeholder="27.0333, 95.0167"></label>
+        <p class="loc-status" data-loc-status>We use your location only to check distance and the delivery charge.</p>
+        <label class="field"><span>House / flat, street</span><textarea name="address" rows="2" autocomplete="street-address" maxlength="500"></textarea></label>
+        <label class="field"><span>Landmark <em>(optional)</em></span><input name="landmark" maxlength="200"></label>
+      </div>
+      <label class="field" data-pickup-block hidden><span>Pick up from</span><select name="area_id" data-pickup-areas></select></label>
+      <label class="field"><span>When</span><select name="slot_key" data-slots><option value="">Loading times…</option></select></label>
+      <h3>Your details</h3>
+      <label class="field"><span>Name</span><input name="customer_name" autocomplete="name" required maxlength="80"></label>
+      <label class="field"><span>Mobile number</span><input name="phone" type="tel" inputmode="tel" autocomplete="tel" required placeholder="10-digit mobile"></label>
+      <label class="field"><span>Email <em>(optional, for receipts)</em></span><input name="email" type="email" autocomplete="email"></label>
+      <label class="field"><span>Notes for the kitchen <em>(optional)</em></span><textarea name="notes" rows="2" maxlength="500" placeholder="e.g. less spicy, paneer instead of chicken"></textarea></label>
+      <div class="coupon-row"><label class="field"><span>Coupon code</span><input name="coupon_code" autocomplete="off" maxlength="40"></label><button type="button" class="btn btn-outline btn-sm" data-apply-coupon>Apply</button></div>
+      <p class="coupon-msg" data-coupon-msg></p>
+      <fieldset class="pay-methods" data-pay-methods><legend>Payment</legend></fieldset>
       <div class="form-msg" data-form-msg role="status"></div>
     </form>
   </div>
   <div class="drawer-foot" data-cart-foot hidden>
-    <dl class="totals">
-      <div><dt>Subtotal</dt><dd data-subtotal>₹0</dd></div>
-      <div><dt>Delivery <small>(from, within 1.5 km)</small></dt><dd data-delivery>₹10</dd></div>
-      <div class="total"><dt>Total</dt><dd data-total>₹0</dd></div>
-    </dl>
-    <button class="btn btn-primary btn-block" type="submit" data-place-order>Place order</button>
-    <a class="btn btn-wa btn-block" href="https://wa.me/918099026415" target="_blank" rel="noopener" data-wa-order><svg class="ic"><use href="#i-wa"/></svg> Send order on WhatsApp</a>
+    <dl class="totals" data-totals></dl>
+    <button class="btn btn-primary btn-block" type="button" data-place-order>Place order</button>
+    <a class="btn btn-wa btn-block" href="https://wa.me/918099026415" target="_blank" rel="noopener" data-wa-order hidden><svg class="ic"><use href="#i-wa"/></svg> Send order on WhatsApp</a>
   </div>
 </aside>
 
