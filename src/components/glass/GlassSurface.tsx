@@ -143,7 +143,10 @@ export function GlassSurface({
           shadowOpacity: dark ? 0.5 : 1,
           shadowRadius: d.shadowRadius,
           shadowOffset: { width: 0, height: d.shadowY },
-          elevation: d.elevation,
+          // Android casts an elevation shadow under the whole pane, and
+          // through see-through glass it shows as a dark box inside the card.
+          // Only solid panes get one.
+          elevation: solid ? d.elevation : 0,
         },
         style,
       ]}

@@ -156,7 +156,7 @@ export function solidGlyph(icon: IconName): IconName {
 
 const styles = StyleSheet.create({
   orb: { position: 'absolute', shadowOffset: { width: 0, height: 2 }, elevation: 3 },
-  pane: { position: 'absolute', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', elevation: 4 },
+  pane: { position: 'absolute', alignItems: 'center', justifyContent: 'center', shadowColor: '#000' },
   clip: { overflow: 'hidden' },
   rim: {
     borderWidth: 1,

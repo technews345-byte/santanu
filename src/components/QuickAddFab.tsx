@@ -180,7 +180,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.45,
     shadowRadius: 16,
-    elevation: 10,
+    // No Android elevation: the button is tinted glass, and the shadow would
+    // show through it as a dark shape inside.
   },
   fab: {
     width: 62,
