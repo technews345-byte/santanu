@@ -1,17 +1,26 @@
 {
-  "name": "bowl-mania-fullstack",
-  "version": "1.0.0",
+  "name": "bowl-mania",
+  "version": "2.0.0",
   "private": true,
   "type": "module",
   "scripts": {
     "start": "node --env-file-if-exists=.env server.js",
-    "dev": "node --watch --env-file-if-exists=.env server.js"
+    "dev": "node --watch --env-file-if-exists=.env server.js",
+    "test": "node --test --test-concurrency=1 test/*.test.js",
+    "create-admin": "node --env-file-if-exists=.env scripts/create-admin.js",
+    "backup": "node --env-file-if-exists=.env scripts/backup.js"
   },
   "dependencies": {
     "better-sqlite3": "^11.7.0",
+    "cookie-parser": "^1.4.7",
+    "exceljs": "^4.4.0",
     "express": "^5.1.0",
     "helmet": "^8.1.0",
-    "jsonwebtoken": "^9.0.2"
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^2.4.0",
+    "nodemailer": "^10.0.10",
+    "sharp": "^0.35.4",
+    "zod": "^4.6.5"
   },
   "engines": {
     "node": ">=20.12"
