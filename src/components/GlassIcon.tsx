@@ -4,11 +4,8 @@ import Svg, {
   ClipPath,
   Defs,
   Ellipse,
-  FeGaussianBlur,
-  Filter,
   G,
   LinearGradient,
-  Mask,
   Path,
   Rect,
   Stop,
@@ -386,7 +383,7 @@ function draw(shape: Shape, props: Record<string, unknown>, key?: React.Key) {
   }
 }
 
-export function GlassIcon({
+export const GlassIcon = React.memo(function GlassIcon({
   icon,
   color,
   size = 40,
@@ -403,12 +400,23 @@ export function GlassIcon({
   const second = rotateHue(color, design.turn);
   const bead = rotateHue(color, design.beadTurn ?? 150);
   const ink = dark ? '#FFFFFF' : shade(color, -0.42);
+  const veil = dark ? '#161B26' : '#F4F6FB';
 
   const body = `url(#${uid}b)`;
   const beadFill = `url(#${uid}d)`;
   const paintFor = (s: BackShape) => (s.paint === 'bead' ? beadFill : body);
-  const back = (extra: Record<string, unknown> = {}) =>
-    design.back.map((s, i) => draw(s, { fill: paintFor(s), ...extra }, i));
+  // The object's shapes; with a spread, each also grows outward by half of
+  // it in its own paint, which is how glow and diffusion are drawn cheaply.
+  const back = (spread = 0) =>
+    design.back.map((s, i) =>
+      draw(
+        s,
+        spread
+          ? { fill: paintFor(s), stroke: paintFor(s), strokeWidth: spread, strokeLinejoin: 'round' }
+          : { fill: paintFor(s) },
+        i
+      )
+    );
 
   return (
     <Svg width={size} height={size} viewBox="0 0 48 48">
@@ -435,31 +443,26 @@ export function GlassIcon({
           <Stop offset="0.55" stopColor="#FFFFFF" stopOpacity={dark ? 0.28 : 0.7} />
           <Stop offset="1" stopColor={dark ? '#FFFFFF' : shade(color, -0.2)} stopOpacity={dark ? 0.12 : 0.35} />
         </LinearGradient>
-        <Filter id={`${uid}f`} x="-50%" y="-50%" width="200%" height="200%">
-          <FeGaussianBlur stdDeviation={2.6} />
-        </Filter>
-        <Filter id={`${uid}h`} x="-50%" y="-50%" width="200%" height="200%">
-          <FeGaussianBlur stdDeviation={3.4} />
-        </Filter>
         <ClipPath id={`${uid}c`}>{design.glass.map((s, i) => draw(s, {}, i))}</ClipPath>
-        {/* Everywhere but under the glass. */}
-        <Mask id={`${uid}m`} x="0" y="0" width="48" height="48" maskUnits="userSpaceOnUse">
-          <Rect x="0" y="0" width="48" height="48" fill="#FFFFFF" />
-          {design.glass.map((s, i) => draw(s, { fill: '#000000' }, i))}
-        </Mask>
       </Defs>
 
-      {/* Bloom: the object's colour spilling softly into the room. */}
-      <G filter={`url(#${uid}h)`} opacity={dark ? 0.55 : 0.3}>
-        {back()}
-      </G>
+      {/* Bloom: the object's colour spilling softly into the room, as two
+          faint halos rather than a blur filter — Android draws SVG filters on
+          the CPU, into a bitmap, every time an icon is drawn. */}
+      <G opacity={dark ? 0.06 : 0.04}>{back(10)}</G>
+      <G opacity={dark ? 0.08 : 0.05}>{back(6.5)}</G>
+      <G opacity={dark ? 0.1 : 0.06}>{back(3)}</G>
       {/* The object, crisp where nothing covers it. */}
-      <G mask={`url(#${uid}m)`}>{back()}</G>
-      {/* The object again, diffused, where it is seen through the glass. */}
+      {back()}
+      {/* Frosted glass hides the sharp outline of what is behind it: a veil
+          of the glass's own body first, then the object's colour again,
+          spread soft, inside the pane only. */}
+      {design.glass.map((s, i) => draw(s, { fill: veil, fillOpacity: dark ? 0.8 : 0.82 }, `v${i}`))}
       <G clipPath={`url(#${uid}c)`}>
-        <G filter={`url(#${uid}f)`}>
-          {back()}
-        </G>
+        <G opacity={0.09}>{back(11)}</G>
+        <G opacity={0.12}>{back(7)}</G>
+        <G opacity={0.16}>{back(3.5)}</G>
+        <G opacity={0.3}>{back()}</G>
       </G>
       {/* The glass. */}
       {design.glass.map((s, i) =>
@@ -468,4 +471,4 @@ export function GlassIcon({
       {design.glyph(ink)}
     </Svg>
   );
-}
+});

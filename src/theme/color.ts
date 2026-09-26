@@ -91,3 +91,17 @@ export function rotateHue(color: string, degrees: number): string {
   const to = (v: number) => Math.round((v + m) * 255);
   return `rgb(${to(r1)}, ${to(g1)}, ${to(b1)})`;
 }
+
+/**
+ * `top` laid over `bottom`, as one colour: what the eye sees through two
+ * sheets of tinted glass, computed once instead of composited every frame.
+ */
+export function over(top: string, bottom: string): string {
+  const t = parseColor(top);
+  const b = parseColor(bottom);
+  if (!t || !b) return top;
+  const a = t.a + b.a * (1 - t.a);
+  if (a === 0) return 'rgba(0, 0, 0, 0)';
+  const mix = (ct: number, cb: number) => Math.round((ct * t.a + cb * b.a * (1 - t.a)) / a);
+  return `rgba(${mix(t.r, b.r)}, ${mix(t.g, b.g)}, ${mix(t.b, b.b)}, ${+a.toFixed(3)})`;
+}

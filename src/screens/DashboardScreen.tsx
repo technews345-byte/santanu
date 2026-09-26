@@ -2,7 +2,7 @@ import React, { useId, useMemo, useState } from 'react';
 import { Image, Platform, Pressable, SectionList, StyleSheet, View } from 'react-native';
 import { Text } from '../theme/type';
 import { format } from 'date-fns';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import Svg, { Defs, RadialGradient, Rect, Stop } from 'react-native-svg';
 import { Screen } from '../components/Screen';
@@ -37,7 +37,7 @@ import { budgetRows, budgetTotals, spendingPace, spendWindows } from '../utils/i
 import { formatCompact, formatMoney } from '../utils/money';
 import { PeriodKey, Transaction } from '../types';
 
-const MARK = require('../../assets/splash-icon.png');
+const MARK = require('../../assets/brand-mark.webp');
 
 const PERIODS: { key: PeriodKey; label: string }[] = [
   { key: 'day', label: 'Day' },

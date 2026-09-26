@@ -1,6 +1,6 @@
 import React, { useId } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
 import { useTheme } from '../theme/ThemeContext';
@@ -27,7 +27,7 @@ type IconName = keyof typeof Ionicons.glyphMap;
  * The glyph is the filled version, white in the dark theme: outline glyphs
  * thin to a hairline at this size.
  */
-export function IconBadge({
+export const IconBadge = React.memo(function IconBadge({
   icon,
   color,
   size = 40,
@@ -145,7 +145,7 @@ export function IconBadge({
 
     </View>
   );
-}
+});
 
 /** The filled version of an outline glyph, when the set has one. */
 export function solidGlyph(icon: IconName): IconName {

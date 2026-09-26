@@ -1,6 +1,6 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '../theme/ThemeContext';
 import DashboardScreen from '../screens/DashboardScreen';
 import TransactionsScreen from '../screens/TransactionsScreen';
@@ -28,6 +28,9 @@ export function TabNavigator() {
       tabBar={(props) => <GlassTabBar {...props} />}
       screenOptions={({ route }) => ({
         headerShown: false,
+        // A tab out of view stops re-rendering: adding a transaction used to
+        // redraw all five screens at once, four of them unseen.
+        freezeOnBlur: true,
         // The incoming screen drifts a few points in the direction of travel
         // as it fades up, so moving between tabs has a direction — the same
         // way the selected pane glides along the shelf below.

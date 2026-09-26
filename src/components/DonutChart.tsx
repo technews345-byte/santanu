@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Animated, Easing, StyleSheet, View } from 'react-native';
 import { Text } from '../theme/type';
 import Svg, { Circle, G } from 'react-native-svg';
@@ -48,14 +48,11 @@ export function DonutChart({
   const total = data.reduce((sum, d) => sum + d.value, 0);
   const slices = data.filter((d) => d.value > 0);
 
+  // The ring turns into place as it fades up, run by the native driver: the
+  // segments themselves are drawn once, not re-drawn every frame.
   const sweepValue = useRef(new Animated.Value(reduced ? 1 : 0)).current;
-  const [sweep, setSweep] = useState(reduced ? 1 : 0);
+  const sweep = 1;
   const signature = slices.map((d) => `${d.color}:${d.value}`).join('|');
-
-  useEffect(() => {
-    const id = sweepValue.addListener(({ value }) => setSweep(value));
-    return () => sweepValue.removeListener(id);
-  }, []);
 
   useEffect(() => {
     if (reduced) {
@@ -65,10 +62,9 @@ export function DonutChart({
     sweepValue.setValue(0);
     Animated.timing(sweepValue, {
       toValue: 1,
-      duration: 820,
+      duration: 760,
       easing: Easing.bezier(0.22, 1, 0.36, 1),
-      // Dash lengths are SVG attributes, not transforms.
-      useNativeDriver: false,
+      useNativeDriver: true,
     }).start();
   }, [signature, reduced]);
 
@@ -77,6 +73,15 @@ export function DonutChart({
 
   return (
     <View style={styles.wrap}>
+      <Animated.View
+        style={{
+          opacity: sweepValue,
+          transform: [
+            { rotate: sweepValue.interpolate({ inputRange: [0, 1], outputRange: ['-110deg', '0deg'] }) },
+            { scale: sweepValue.interpolate({ inputRange: [0, 1], outputRange: [0.86, 1] }) },
+          ],
+        }}
+      >
       <Svg width={size} height={size}>
         {/* Start at twelve o'clock. A plain SVG transform, since the rotation
             and origin props become a CSS transform-origin the DOM rejects. */}
@@ -117,6 +122,7 @@ export function DonutChart({
             })}
         </G>
       </Svg>
+      </Animated.View>
       <View style={styles.centerLabel} pointerEvents="none">
         <Figure value={total} format={(n) => formatMoney(n)} style={[styles.centerValue, { color: theme.text }]} />
         <Text style={[styles.centerCaption, { color: theme.textTertiary }]}>{centerLabel}</Text>

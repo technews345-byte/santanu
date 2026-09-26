@@ -73,7 +73,12 @@ export function GlassPressable({
   const sweep = useRef(new Animated.Value(0)).current;
   const tiltX = useRef(new Animated.Value(0)).current;
   const tiltY = useRef(new Animated.Value(0)).current;
-  const [size, setSize] = useState({ width: 0, height: 0 });
+  // Measured into a ref: storing the size in state re-rendered every card on
+  // screen once more just after it appeared.
+  const sizeRef = useRef({ width: 0, height: 0 });
+  // The travelling band of light is only built once the pane is first touched
+  // — most panes in a list never are.
+  const [armed, setArmed] = useState(false);
 
   const springTo = useCallback(
     (value: Animated.Value, toValue: number) =>
@@ -83,6 +88,8 @@ export function GlassPressable({
 
   const handlePressIn = (event: GestureResponderEvent) => {
     if (disabled) return;
+    const size = sizeRef.current;
+    if (!armed && !reduced) setArmed(true);
     const moves: Animated.CompositeAnimation[] = [springTo(press, 1)];
 
     if (!reduced) {
@@ -129,8 +136,9 @@ export function GlassPressable({
 
   // The travelling band: narrower than the pane and angled, so it reads as a
   // reflection passing over rather than the pane flashing.
-  const band = Math.max(60, size.width * 0.42);
-  const sweepX = sweep.interpolate({ inputRange: [0, 1], outputRange: [-band, size.width + band * 0.2] });
+  const paneWidth = sizeRef.current.width;
+  const band = Math.max(60, paneWidth * 0.42);
+  const sweepX = sweep.interpolate({ inputRange: [0, 1], outputRange: [-band, paneWidth + band * 0.2] });
   const sweepOpacity = sweep.interpolate({ inputRange: [0, 0.12, 0.7, 1], outputRange: [0, 1, 0.8, 0] });
   const reflection = theme.mode === 'dark' ? 'rgba(235, 242, 255, 0.11)' : 'rgba(255, 255, 255, 0.55)';
 
@@ -139,7 +147,9 @@ export function GlassPressable({
       disabled={disabled}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
-      onLayout={(e) => setSize(e.nativeEvent.layout)}
+      onLayout={(e) => {
+        sizeRef.current = e.nativeEvent.layout;
+      }}
       onPress={() => {
         if (haptic && Platform.OS !== 'web') {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
@@ -167,6 +177,7 @@ export function GlassPressable({
 
         {/* Overlays sit outside the surface so they cover the whole pane,
             not just the box its content happens to fill. */}
+        {(feedback === 'press' || armed) && (
         <View style={[StyleSheet.absoluteFill, styles.clip, { borderRadius }]} pointerEvents="none">
           {feedback === 'press' && (
             <Animated.View
@@ -179,7 +190,7 @@ export function GlassPressable({
               ]}
             />
           )}
-          {size.width > 0 && (
+          {armed && paneWidth > 0 && (
             <Animated.View
               style={[
                 styles.band,
@@ -195,6 +206,7 @@ export function GlassPressable({
             </Animated.View>
           )}
         </View>
+        )}
 
         {/* The edge brightens where it is touched — the one cue that survives
             reduce-motion, since it acknowledges the touch without travel. */}

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Image, Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../theme/type';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import { Screen } from '../components/Screen';
 import { GlassPressable } from '../components/glass/GlassPressable';
@@ -14,8 +14,8 @@ import { useGoogleSignIn } from '../services/oauth';
 
 // Two lockups, because the wordmark is near-black in one and near-white in
 // the other: each is legible only on the background it was drawn for.
-const LOCKUP_LIGHT = require('../../assets/logo-lockup-light.png');
-const LOCKUP_DARK = require('../../assets/logo-lockup-dark.png');
+const LOCKUP_LIGHT = require('../../assets/logo-lockup-light.webp');
+const LOCKUP_DARK = require('../../assets/logo-lockup-dark.webp');
 
 export default function LoginScreen() {
   // No ad may land on top of signing in: the flow deliberately leaves the
