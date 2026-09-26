@@ -67,7 +67,7 @@ function renderMenu() {
     const tag = TAGS[item.name];
     return `<article class="dish" data-id="${item.id}" data-diet="${esc(item.diet || 'veg')}">
       <div class="dish-media">
-        <img src="${esc(item.image)}" alt="${esc(item.name)}" loading="lazy" width="720" height="576">
+        <img src="${esc(item.image)}" alt="${esc(item.name)}" loading="lazy" width="1000" height="800">
         ${tag ? `<span class="dish-tag ${tag[1] || ''}">${esc(tag[0])}</span>` : ''}
       </div>
       <div class="dish-body">
