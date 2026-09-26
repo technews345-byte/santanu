@@ -1,5 +1,5 @@
 import React, { createContext, RefObject } from 'react';
-import { Image, StyleSheet, View } from 'react-native';
+import { Image, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useTheme } from '../../theme/ThemeContext';
 
 /**
@@ -29,11 +29,14 @@ const ROOM = {
  */
 export function Aurora() {
   const { theme } = useTheme();
+  // Sized to the window outright: some hosts give an image in an absolutely
+  // filled box its own pixel size instead of the box's.
+  const { width, height } = useWindowDimensions();
   return (
     <View style={[StyleSheet.absoluteFill, { backgroundColor: theme.bg }]} pointerEvents="none">
       <Image
         source={theme.mode === 'dark' ? ROOM.dark : ROOM.light}
-        style={StyleSheet.absoluteFill}
+        style={{ position: 'absolute', top: 0, left: 0, width, height }}
         resizeMode="cover"
         fadeDuration={0}
       />
