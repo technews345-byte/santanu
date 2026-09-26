@@ -36,16 +36,9 @@ export function TrendChart({ data, height = 160 }: { data: TrendPoint[]; height?
   const id = useId().replace(/[^a-zA-Z0-9]/g, '');
   const [width, setWidth] = useState(0);
   const [picked, setPicked] = useState<number | null>(null);
-  const [rise, setRise] = useState(reduced ? 1 : 0);
+  // The columns rise together from the baseline: the whole chart is scaled
+  // up from that line by the native driver, so nothing re-renders per frame.
   const riseValue = useRef(new Animated.Value(reduced ? 1 : 0)).current;
-
-  // One value drives every column, so they rise together rather than racing.
-  // Path geometry can only change on the JS side, so this re-renders per frame
-  // for the length of the rise — a dozen shapes, well within budget.
-  useEffect(() => {
-    const listener = riseValue.addListener(({ value }) => setRise(value));
-    return () => riseValue.removeListener(listener);
-  }, []);
 
   useEffect(() => {
     setPicked(null);
@@ -56,9 +49,9 @@ export function TrendChart({ data, height = 160 }: { data: TrendPoint[]; height?
     riseValue.setValue(0);
     Animated.timing(riseValue, {
       toValue: 1,
-      duration: 680,
+      duration: 620,
       easing: Easing.bezier(0.22, 1, 0.36, 1),
-      useNativeDriver: false,
+      useNativeDriver: true,
     }).start();
   }, [data, reduced]);
 
@@ -68,11 +61,19 @@ export function TrendChart({ data, height = 160 }: { data: TrendPoint[]; height?
   const plotHeight = height - AXIS_GAP;
   const groupWidth = data.length > 0 ? width / data.length : 0;
   const barWidth = Math.max(4, Math.min(MAX_BAR, (groupWidth - PAIR_GAP) / 2 - 8));
+  // Scaling happens about the view's centre; this shift holds the baseline
+  // still while it does.
+  const baseline = plotHeight - height / 2;
+  const riseTransform = [
+    { translateY: riseValue.interpolate({ inputRange: [0, 1], outputRange: [baseline * 0.99, 0] }) },
+    { scaleY: riseValue.interpolate({ inputRange: [0, 1], outputRange: [0.01, 1] }) },
+  ];
 
   return (
     <View>
       <View onLayout={onLayout}>
         {width > 0 && (
+          <Animated.View style={{ transform: riseTransform }}>
           <Svg width={width} height={height}>
             <Defs>
               {[
@@ -88,8 +89,8 @@ export function TrendChart({ data, height = 160 }: { data: TrendPoint[]; height?
             <Line x1={0} y1={plotHeight} x2={width} y2={plotHeight} stroke={theme.borderSubtle} strokeWidth={1} />
             {data.map((d, idx) => {
               const centerX = groupWidth * idx + groupWidth / 2;
-              const incomeH = (d.income / maxVal) * (plotHeight - 6) * rise;
-              const expenseH = (d.expense / maxVal) * (plotHeight - 6) * rise;
+              const incomeH = (d.income / maxVal) * (plotHeight - 6);
+              const expenseH = (d.expense / maxVal) * (plotHeight - 6);
               const dim = picked !== null && picked !== idx ? 0.3 : 1;
               return (
                 <React.Fragment key={idx}>
@@ -107,6 +108,7 @@ export function TrendChart({ data, height = 160 }: { data: TrendPoint[]; height?
               );
             })}
           </Svg>
+          </Animated.View>
         )}
 
         {/* One tap target per month, the full height of the plot, so a thin

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
 import { Text } from '../theme/type';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { Screen } from '../components/Screen';
@@ -18,7 +18,7 @@ import { exportToPdf, exportToXlsx } from '../utils/export';
 import { adsSupported, showRewardedAd } from '../services/ads';
 import Constants from 'expo-constants';
 
-const LOGO = require('../../assets/splash-icon.png');
+const LOGO = require('../../assets/brand-mark.webp');
 // Read from app.json, so the credit never drifts from what was shipped.
 const APP_VERSION = Constants.expoConfig?.version ?? '1.0.0';
 
@@ -36,12 +36,12 @@ export default function SettingsScreen() {
   } = useStore();
   const user = useAuthStore((s) => s.user);
   const pendingCount = useAuthStore((s) => s.pendingCount);
-  const [categoryTab, setCategoryTab] = useState<CategoryType>('expense');
   const [exporting, setExporting] = useState(false);
   const [watchingAd, setWatchingAd] = useState(false);
   const canShowAds = adsSupported();
 
-  const visibleCategories = categories.filter((c) => c.type === categoryTab && !c.archived);
+  const activeCategories = categories.filter((c) => !c.archived);
+  const countOf = (type: CategoryType) => activeCategories.filter((c) => c.type === type).length;
 
   const handleBiometricToggle = async (value: boolean) => {
     if (value) {
@@ -160,28 +160,32 @@ export default function SettingsScreen() {
           ))}
         </Card>
 
-        <SectionLabel
-          label="Categories"
-          action={{ label: 'Add', onPress: () => navigation.navigate('CategoryForm', { type: categoryTab }) }}
-        />
-        <View style={styles.chipsRow}>
-          <Pill label="Expense" active={categoryTab === 'expense'} color={theme.expense} onPress={() => setCategoryTab('expense')} />
-          <Pill label="Income" active={categoryTab === 'income'} color={theme.success} onPress={() => setCategoryTab('income')} />
-          <Pill label="Investment" active={categoryTab === 'investment'} color={theme.investment} onPress={() => setCategoryTab('investment')} />
-        </View>
-        <Card padded={false} style={{ marginTop: spacing.xs }}>
-          {visibleCategories.length === 0 && <Text style={[styles.emptyText, { color: theme.textTertiary }]}>No categories yet</Text>}
-          {visibleCategories.map((c, idx) => (
-            <Pressable
-              key={c.id}
-              style={[styles.listRow, idx < visibleCategories.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: theme.borderSubtle }]}
-              onPress={() => navigation.navigate('CategoryForm', { categoryId: c.id, type: c.type })}
-            >
-              <IconBadge icon={c.icon as any} color={c.color} size={36} />
-              <Text style={[styles.listLabel, { color: theme.text }]}>{c.name}</Text>
-              <Ionicons name="chevron-forward" size={16} color={theme.textTertiary} />
-            </Pressable>
-          ))}
+        {/* Categories are edited now and then, not read: one row here, the
+            full list a tap away rather than thirty rows in the middle of
+            Settings. */}
+        <SectionLabel label="Categories" />
+        <Card padded={false}>
+          <Pressable
+            style={styles.listRow}
+            onPress={() => navigation.navigate('Categories')}
+            accessibilityRole="button"
+            accessibilityLabel="Manage categories"
+          >
+            <View style={styles.categoryStack}>
+              {activeCategories.slice(0, 3).map((c, i) => (
+                <View key={c.id} style={{ marginLeft: i === 0 ? 0 : -14, zIndex: 3 - i }}>
+                  <IconBadge icon={c.icon as any} color={c.color} size={36} />
+                </View>
+              ))}
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.rowLabel, { color: theme.text }]}>Manage categories</Text>
+              <Text style={[styles.rowSub, { color: theme.textTertiary }]}>
+                {countOf('expense')} expense · {countOf('income')} income · {countOf('investment')} investment
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={theme.textTertiary} />
+          </Pressable>
         </Card>
 
         <SectionLabel label="Data & Export" />
@@ -323,7 +327,7 @@ const styles = StyleSheet.create({
   listRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.sm },
   listLabel: { flex: 1, fontSize: fontSizes.base, fontWeight: '600' },
   emptyText: { padding: spacing.md, fontSize: fontSizes.sm },
-  chipsRow: { flexDirection: 'row' },
+  categoryStack: { flexDirection: 'row', alignItems: 'center' },
   exportRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.xs },
   exportLabel: { flex: 1, fontSize: fontSizes.base, fontWeight: '600' },
   divider: { height: StyleSheet.hairlineWidth, marginVertical: spacing.sm },

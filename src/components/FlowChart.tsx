@@ -55,15 +55,11 @@ export function FlowChart({
   const id = useId().replace(/[^a-zA-Z0-9]/g, '');
   const [width, setWidth] = useState(0);
   const [scrub, setScrub] = useState<number | null>(null);
-  // The draw-on is JS-driven either way (dash offsets are SVG attributes), so
-  // it runs through state rather than an animated SVG component — which on
-  // web would also leak animation props onto the DOM.
+  // The chart arrives by being wiped on from the left. Drawing the line on
+  // through its dash offset meant re-rendering the whole chart every frame on
+  // the JS thread; a wipe is two opposed translations the native driver runs
+  // on its own — a window sliding right over a chart held still inside it.
   const draw = useRef(new Animated.Value(reduced ? 1 : 0)).current;
-  const [progress, setProgress] = useState(reduced ? 1 : 0);
-  useEffect(() => {
-    const listener = draw.addListener(({ value }) => setProgress(value));
-    return () => draw.removeListener(listener);
-  }, []);
 
   const n = Math.max(2, slots ?? Math.max(values.length, compare?.length ?? 0));
   const max = Math.max(1, ...values, ...(compare ?? [])) * 1.08;
@@ -84,16 +80,14 @@ export function FlowChart({
     if (width === 0) return;
     if (reduced) {
       draw.setValue(1);
-      setProgress(1);
       return;
     }
     draw.setValue(0);
     Animated.timing(draw, {
       toValue: 1,
-      duration: 1100,
+      duration: 900,
       easing: Easing.bezier(0.22, 1, 0.36, 1),
-      // strokeDashoffset is an SVG attribute, not a transform.
-      useNativeDriver: false,
+      useNativeDriver: true,
     }).start();
   }, [signature, reduced]);
 
@@ -144,9 +138,8 @@ export function FlowChart({
   const probe = scrub !== null ? main[scrub] : null;
   const surface = theme.mode === 'dark' ? '#1A1E27' : '#FFFFFF';
 
-  const dashOffset = line.length * (1 - progress);
-  // The wash arrives once the line is most of the way across.
-  const areaOpacity = Math.max(0, (progress - 0.55) / 0.45);
+  const windowX = draw.interpolate({ inputRange: [0, 1], outputRange: [-width, 0] });
+  const chartX = draw.interpolate({ inputRange: [0, 1], outputRange: [width, 0] });
 
   return (
     <View
@@ -159,6 +152,8 @@ export function FlowChart({
       {...responder.panHandlers}
     >
       {width > 0 && (
+        <Animated.View style={[styles.window, { transform: [{ translateX: windowX }] }]}>
+        <Animated.View style={{ transform: [{ translateX: chartX }] }}>
         <Svg width={width} height={height}>
           <Defs>
             <LinearGradient id={`${id}stroke`} x1="0" y1="0" x2="1" y2="0">
@@ -185,7 +180,7 @@ export function FlowChart({
 
           {main.length > 1 && (
             <>
-              <Path d={area} fill={`url(#${id}wash)`} opacity={areaOpacity} />
+              <Path d={area} fill={`url(#${id}wash)`} />
               {/* Glow: the same line, wide and faint, beneath the real one. */}
               <Path
                 d={line.d}
@@ -195,8 +190,6 @@ export function FlowChart({
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 fill="none"
-                strokeDasharray={[line.length, line.length]}
-                strokeDashoffset={dashOffset}
               />
               <Path
                 d={line.d}
@@ -205,13 +198,11 @@ export function FlowChart({
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 fill="none"
-                strokeDasharray={[line.length, line.length]}
-                strokeDashoffset={dashOffset}
               />
             </>
           )}
 
-          {last && !probe && progress > 0.9 && (
+          {last && !probe && (
             <>
               <Circle cx={last.x} cy={last.y} r={9} fill={accent} opacity={0.18} />
               <Circle cx={last.x} cy={last.y} r={4} fill={accent} stroke={surface} strokeWidth={2} />
@@ -225,6 +216,8 @@ export function FlowChart({
             </>
           )}
         </Svg>
+        </Animated.View>
+        </Animated.View>
       )}
 
       {probe && scrub !== null && (
@@ -281,6 +274,7 @@ function Tooltip({
 }
 
 const styles = StyleSheet.create({
+  window: { overflow: 'hidden' },
   tip: {
     position: 'absolute',
     top: -58,

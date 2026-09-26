@@ -4,6 +4,7 @@ import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/
 import { useTheme } from '../theme/ThemeContext';
 import { TabNavigator } from './TabNavigator';
 import TransactionEntryScreen from '../screens/TransactionEntryScreen';
+import CategoriesScreen from '../screens/CategoriesScreen';
 import CategoryDetailScreen from '../screens/CategoryDetailScreen';
 import AccountFormScreen from '../screens/AccountFormScreen';
 import CategoryFormScreen from '../screens/CategoryFormScreen';
@@ -62,6 +63,7 @@ export function RootNavigator() {
               <Stack.Screen name="Login" component={LoginScreen} />
             </Stack.Group>
             <Stack.Screen name="CategoryDetail" component={CategoryDetailScreen} />
+            <Stack.Screen name="Categories" component={CategoriesScreen} />
             <Stack.Screen name="Account" component={AccountScreen} />
           </>
         )}

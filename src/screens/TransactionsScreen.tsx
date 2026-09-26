@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Alert, FlatList, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text, TextInput } from '../theme/type';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { useNavigation } from '@react-navigation/native';
 import { format, parseISO } from 'date-fns';
@@ -211,6 +211,11 @@ export default function TransactionsScreen() {
         <FlatList
           data={sorted}
           keyExtractor={(item) => item.id}
+          // Enough rows to fill the screen at once, then the rest in small
+          // batches, so the first frame is quick and scrolling never waits.
+          initialNumToRender={9}
+          maxToRenderPerBatch={8}
+          windowSize={9}
           contentContainerStyle={{ paddingHorizontal: spacing.md, paddingBottom: 168 }}
           ListEmptyComponent={<EmptyState icon="filter-outline" title="No matching transactions" subtitle="Try adjusting your filters" />}
           renderItem={({ item }) => {

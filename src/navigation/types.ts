@@ -4,6 +4,7 @@ export type RootStackParamList = {
   Tabs: undefined;
   TransactionEntry: { transactionId?: string; initialType?: TransactionType };
   CategoryDetail: { categoryId: string };
+  Categories: undefined;
   AccountForm: { accountId?: string };
   CategoryForm: { categoryId?: string; type: 'expense' | 'income' };
   BudgetForm: { categoryId: string };

@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 import { Text } from '../../theme/type';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '../../theme/ThemeContext';
 import { withAlpha } from '../../theme/color';
 import { fontSizes, radius, spacing } from '../../theme/tokens';
