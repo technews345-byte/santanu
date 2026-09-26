@@ -43,7 +43,7 @@ sections.forEach(s => navObserver.observe(s));
 const reveal = new IntersectionObserver(entries => entries.forEach(e => {
   if (e.isIntersecting) { e.target.classList.add('in'); reveal.unobserve(e.target); }
 }), { threshold: .12 });
-function observeReveal(els) { els.forEach(el => { el.classList.add('reveal'); reveal.observe(el); }); }
+function observeReveal(els) { els.forEach(el => reveal.observe(el)); }
 observeReveal($$('.section-head, .steps li, .story-media, .story-copy, .branch, .video-grid video, .promise-grid > div'));
 
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -179,6 +179,9 @@ const cart = {
     $('[data-delivery]').textContent = t.delivery ? rupee(t.delivery) : 'Free';
     $('[data-total]').textContent = rupee(t.total);
     $('[data-address-field]').hidden = this.area() === 'pickup';
+    $('[data-place-order]').hidden = !apiAvailable;
+    $('[data-wa-order]').classList.toggle('btn-primary', !apiAvailable);
+    $('[data-wa-order]').classList.toggle('btn-wa', apiAvailable);
   }
 };
 
@@ -232,15 +235,15 @@ function orderText(fd) {
     area === 'pickup' ? '' : `Address: ${fd.get('address') || ''}`, fd.get('notes') ? `Notes: ${fd.get('notes')}` : ''
   ].filter((x, i, a) => x !== '' || a[i - 1] !== '').join('\n');
 }
-function sendWhatsApp() {
+// A real link (not window.open) so it works everywhere, including embedded viewers.
+$('[data-wa-order]').addEventListener('click', e => {
+  if (!validate()) { e.preventDefault(); return; }
   const fd = new FormData(form);
-  window.open(`https://wa.me/${WHATSAPP[fd.get('area')] || WHATSAPP.sonari}?text=${encodeURIComponent(orderText(fd))}`, '_blank', 'noopener');
-}
-$('[data-wa-order]').addEventListener('click', () => { if (validate()) sendWhatsApp(); });
+  e.currentTarget.href = `https://wa.me/${WHATSAPP[fd.get('area')] || WHATSAPP.sonari}?text=${encodeURIComponent(orderText(fd))}`;
+});
 
 $('[data-place-order]').addEventListener('click', async e => {
   if (!validate()) return;
-  if (!apiAvailable) { sendWhatsApp(); return; }
   const btn = e.currentTarget; btn.disabled = true; btn.textContent = 'Placing order…';
   msg.className = 'form-msg'; msg.textContent = '';
   const fd = new FormData(form);

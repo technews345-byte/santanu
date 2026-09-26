@@ -86,7 +86,7 @@ p{margin:0}
 .topbar a:hover{color:#fff}
 .topbar .ic{width:15px;height:15px}
 
-.header{position:sticky;top:0;z-index:50;background:rgba(251,248,239,.86);backdrop-filter:saturate(1.4) blur(14px);-webkit-backdrop-filter:saturate(1.4) blur(14px);border-bottom:1px solid transparent;transition:border-color .2s,box-shadow .2s}
+.header{position:sticky;top:env(safe-area-inset-top,0px);z-index:50;background:rgba(251,248,239,.86);backdrop-filter:saturate(1.4) blur(14px);-webkit-backdrop-filter:saturate(1.4) blur(14px);border-bottom:1px solid transparent;transition:border-color .2s,box-shadow .2s}
 .header.is-scrolled{border-color:var(--line);box-shadow:0 6px 24px -18px rgba(14,51,32,.4)}
 .header-inner{display:flex;align-items:center;gap:32px;height:74px}
 .brand{display:flex;align-items:center;gap:12px;text-decoration:none}
