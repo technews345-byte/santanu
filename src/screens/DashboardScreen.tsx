@@ -111,7 +111,6 @@ export default function DashboardScreen() {
           <Text style={[styles.tagline, { color: theme.textSecondary }]}>Track. Plan. Save. Live Better.</Text>
         </View>
         <View style={styles.headerActions}>
-          <RoundGlassButton icon="search-outline" label="Search transactions" onPress={() => navigation.navigate('Transactions' as never)} />
           <ProfileChip />
         </View>
       </View>
@@ -548,24 +547,6 @@ function QuickAction({ icon, label, color, onPress }: { icon: keyof typeof Ionic
   );
 }
 
-function RoundGlassButton({ icon, label, onPress }: { icon: keyof typeof Ionicons.glyphMap; label: string; onPress: () => void }) {
-  const { theme } = useTheme();
-  return (
-    <GlassPressable
-      feedback="press"
-      level="control"
-      blur={false}
-      borderRadius={radius.pill}
-      contentStyle={styles.roundBtn}
-      onPress={onPress}
-      accessibilityLabel={label}
-      haptic={false}
-    >
-      <Ionicons name={icon} size={19} color={theme.text} />
-    </GlassPressable>
-  );
-}
-
 /**
  * One observation drawn from the person's own spending, or nothing at all.
  *
@@ -715,7 +696,6 @@ const styles = StyleSheet.create({
   greeting: { fontSize: fontSizes.xl, fontWeight: '800', letterSpacing: -0.6 },
   tagline: { fontSize: fontSizes.xs, fontWeight: '500', marginTop: 2 },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  roundBtn: { width: 42, height: 42, alignItems: 'center', justifyContent: 'center' },
   profile: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, maxWidth: 170 },
   profileName: { fontSize: fontSizes.sm, fontWeight: '700', flexShrink: 1 },
   avatar: { width: 34, height: 34, borderRadius: 17, borderWidth: 1 },
