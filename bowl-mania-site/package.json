@@ -8,7 +8,8 @@
     "dev": "node --watch --env-file-if-exists=.env server.js",
     "test": "node --test --test-concurrency=1 test/*.test.js",
     "create-admin": "node --env-file-if-exists=.env scripts/create-admin.js",
-    "backup": "node --env-file-if-exists=.env scripts/backup.js"
+    "backup": "node --env-file-if-exists=.env scripts/backup.js",
+    "build": "node -e \"console.log('No build step needed: the website and admin are plain HTML/CSS/JS served as-is.')\""
   },
   "dependencies": {
     "better-sqlite3": "^11.7.0",
