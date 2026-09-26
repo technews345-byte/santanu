@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Alert, Image, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
+import { Alert, Image, Linking, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
 import { Text } from '../theme/type';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
@@ -270,6 +270,18 @@ export default function SettingsScreen() {
           <Text style={[styles.aboutMeta, { color: theme.textTertiary }]}>Version: {APP_VERSION}</Text>
           <Text style={[styles.aboutMeta, { color: theme.textTertiary }]}>
             © 2026 Santanu Bordoloi. All rights reserved.
+          </Text>
+          {/* The 3D objects in the background come from a stock file whose
+              licence asks for this credit. */}
+          <Text style={[styles.aboutMeta, { color: theme.textTertiary }]}>
+            Background artwork: Image by Xvector on{' '}
+            <Text
+              style={{ color: theme.tint }}
+              onPress={() => Linking.openURL('https://www.freepik.com').catch(() => {})}
+              accessibilityRole="link"
+            >
+              Freepik
+            </Text>
           </Text>
         </Card>
       </ScrollView>

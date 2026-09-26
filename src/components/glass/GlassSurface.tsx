@@ -5,7 +5,7 @@ import { BlurTargetContext } from './Aurora';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../theme/ThemeContext';
 import { radius } from '../../theme/tokens';
-import { over } from '../../theme/color';
+import { over, withAlpha } from '../../theme/color';
 
 /**
  * How near the viewer a pane sits. Nearer panes are brighter, catch more
@@ -126,7 +126,10 @@ export function GlassSurface({
   // every frame.
   let glass = fill;
   if (tint) glass = over(tint, glass);
-  if (method) glass = over(glass, theme.glassFrost);
+  // Every pane is frosted, blurred or not: over the room's bright spheres a
+  // clear pane left text sitting straight on vivid orange or cyan.
+  // Without a live blur to soften it, the room needs a heavier frost.
+  glass = over(glass, method ? theme.glassFrost : withAlpha(dark ? theme.bg : '#F5F8FD', dark ? 0.46 : 0.5));
   const base = solid ? over(glass, theme.surfaceSolid) : glass;
 
   // The many small panes of a list keep only what reads at their size: the
