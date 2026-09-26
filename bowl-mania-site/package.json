@@ -3,11 +3,17 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "scripts": {"start": "node server.js", "dev": "node --watch server.js"},
+  "scripts": {
+    "start": "node --env-file-if-exists=.env server.js",
+    "dev": "node --watch --env-file-if-exists=.env server.js"
+  },
   "dependencies": {
     "better-sqlite3": "^11.7.0",
     "express": "^5.1.0",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2"
+  },
+  "engines": {
+    "node": ">=20.12"
   }
 }

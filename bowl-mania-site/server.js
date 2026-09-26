@@ -51,6 +51,10 @@ CREATE TABLE IF NOT EXISTS contacts (
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );`);
 
+// Migration: dietary marker for the veg / non-veg symbol shown on the menu.
+const cols = db.prepare('PRAGMA table_info(menu_items)').all().map(c => c.name);
+if (!cols.includes('diet')) db.exec(`ALTER TABLE menu_items ADD COLUMN diet TEXT DEFAULT 'veg'`);
+
 const count = db.prepare('SELECT COUNT(*) AS count FROM menu_items').get().count;
 if (!count) {
   const items = [
@@ -58,7 +62,7 @@ if (!count) {
     ['Bean Vitality Bowl','Steamed Beans · Paneer · Fresh Veggies · Herbs & Dressing'],
     ['Grill Power Bowl','Grilled Chicken or Paneer · Fresh Veggies · Signature Dressing'],
     ['Chicken Crunch Bowl','Grilled Chicken · Crunchy Fresh Veggies · Sweet Corn · Sesame · Signature Dressing'],
-    ['Sprout Bowl (Indi Touch)','Sprouts · Dates · Pomegranate · Nuts · Coriander · Indian Masala & Chutney'],
+    ['Sprout Bowl (Indic Touch)','Sprouts · Dates · Pomegranate · Nuts · Coriander · Indian Masala & Chutney'],
     ['Super Protein Bowl','Chicken + Paneer + Egg + Nuts & Seeds + Fresh Veggies + Dressing']
   ];
   const add = db.prepare('INSERT INTO menu_items (name,description) VALUES (?,?)');
@@ -73,7 +77,31 @@ if (!count) {
   seed();
 }
 
-app.use(helmet({ crossOriginResourcePolicy: false }));
+// Per-bowl photography and diet markers (also upgrades databases seeded by older versions).
+const bowlDetails = [
+  ['Morning Glow Bowl', 'assets/bowls/morning-glow.jpg', 'veg'],
+  ['Bean Vitality Bowl', 'assets/bowls/bean-vitality.jpg', 'veg'],
+  ['Grill Power Bowl', 'assets/bowls/grill-power.jpg', 'both'],
+  ['Chicken Crunch Bowl', 'assets/bowls/chicken-crunch.jpg', 'nonveg'],
+  ['Sprout Bowl (Indic Touch)', 'assets/bowls/sprout.jpg', 'veg'],
+  ['Super Protein Bowl', 'assets/bowls/super-protein.jpg', 'nonveg']
+];
+db.prepare(`UPDATE menu_items SET name='Sprout Bowl (Indic Touch)' WHERE name='Sprout Bowl (Indi Touch)'`).run();
+const setDetails = db.prepare(`UPDATE menu_items SET image=?, diet=? WHERE name=? AND image='assets/menu-poster.jpeg'`);
+for (const [name, image, diet] of bowlDetails) setDetails.run(image, diet, name);
+
+if (!process.env.ADMIN_PASSWORD || !process.env.JWT_SECRET)
+  console.warn('⚠  ADMIN_PASSWORD / JWT_SECRET are not set — using insecure defaults. Set them in .env before going live.');
+
+app.use(helmet({
+  crossOriginResourcePolicy: false,
+  contentSecurityPolicy: {
+    directives: {
+      'style-src': ["'self'", 'https://fonts.googleapis.com', "'unsafe-inline'"],
+      'font-src': ["'self'", 'https://fonts.gstatic.com']
+    }
+  }
+}));
 app.use(express.json({ limit: '100kb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
@@ -83,17 +111,19 @@ function auth(req,res,next){
   try { req.admin = jwt.verify(token, JWT_SECRET); next(); }
   catch { res.status(401).json({error:'Unauthorized'}); }
 }
+// Base charge (within 1.5 km). The final amount for longer distances is confirmed on the phone call.
 function deliveryCharge(area){
   return area === 'pickup' ? 0 : 10;
 }
+const AREAS = ['sonari','nazira','pickup'];
 
 app.get('/api/health',(req,res)=>res.json({ok:true,service:'Bowl Mania API'}));
 app.get('/api/menu',(req,res)=>{
-  const rows = db.prepare(`SELECT m.id,m.name,m.description,m.image,m.category,p.size,p.price
+  const rows = db.prepare(`SELECT m.id,m.name,m.description,m.image,m.category,m.diet,p.size,p.price
     FROM menu_items m JOIN prices p ON p.menu_item_id=m.id WHERE m.active=1 ORDER BY m.id,p.id`).all();
   const map = new Map();
   for (const r of rows) {
-    if(!map.has(r.id)) map.set(r.id,{id:r.id,name:r.name,description:r.description,image:r.image,category:r.category,prices:[]});
+    if(!map.has(r.id)) map.set(r.id,{id:r.id,name:r.name,description:r.description,image:r.image,category:r.category,diet:r.diet,prices:[]});
     map.get(r.id).prices.push({size:r.size,price:r.price});
   }
   res.json([...map.values()]);
@@ -103,6 +133,9 @@ app.post('/api/orders',(req,res)=>{
   const {customerName,phone,area,address,notes='',items} = req.body || {};
   if(!customerName || !phone || !area || !address || !Array.isArray(items) || !items.length)
     return res.status(400).json({error:'Name, phone, area, address and at least one item are required.'});
+  if(!AREAS.includes(area)) return res.status(400).json({error:'Please choose Sonari, Nazira or self pickup.'});
+  if(!/^[+\d][\d\s-]{7,15}$/.test(String(phone).trim())) return res.status(400).json({error:'Please enter a valid phone number.'});
+  if(items.length > 30) return res.status(400).json({error:'Too many items in one order.'});
   const clean=[]; let subtotal=0;
   for(const item of items){
     const id=Number(item.menuItemId), qty=Math.max(1,Math.min(20,Number(item.quantity)||1));
@@ -114,7 +147,7 @@ app.post('/api/orders',(req,res)=>{
   const delivery = deliveryCharge(area);
   const total=subtotal+delivery;
   const result=db.prepare(`INSERT INTO orders(customer_name,phone,area,address,notes,items_json,subtotal,delivery_charge,total) VALUES (?,?,?,?,?,?,?,?,?)`)
-    .run(customerName.trim(),phone.trim(),area,address.trim(),String(notes).slice(0,500),JSON.stringify(clean),subtotal,delivery,total);
+    .run(String(customerName).trim().slice(0,80),String(phone).trim(),area,String(address).trim().slice(0,500),String(notes).slice(0,500),JSON.stringify(clean),subtotal,delivery,total);
   res.status(201).json({orderId:result.lastInsertRowid,subtotal,deliveryCharge:delivery,total,status:'new'});
 });
 
@@ -143,6 +176,6 @@ app.patch('/api/admin/orders/:id',auth,(req,res)=>{
 app.get('/api/admin/contacts',auth,(req,res)=>res.json(db.prepare('SELECT * FROM contacts ORDER BY id DESC LIMIT 200').all()));
 
 app.get('/admin',(req,res)=>res.sendFile(path.join(__dirname,'public','admin.html')));
-app.get('*',(req,res)=>res.sendFile(path.join(__dirname,'public','index.html')));
+app.get('/{*splat}',(req,res)=>res.sendFile(path.join(__dirname,'public','index.html')));
 
 app.listen(PORT,()=>console.log(`Bowl Mania running at http://localhost:${PORT}`));

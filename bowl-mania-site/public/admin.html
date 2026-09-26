@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Orders · Bowl Mania Admin</title>
+<link rel="icon" href="assets/logo.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Fraunces:opsz,wght@9..144,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="admin.css">
+</head>
+<body>
+<section id="login" class="login" hidden>
+  <form class="login-card" id="loginForm">
+    <img src="assets/logo.jpg" alt="Bowl Mania" width="72" height="72">
+    <h1>Admin sign in</h1>
+    <p class="muted">Manage incoming Bowl Mania orders.</p>
+    <label><span>Password</span><input id="password" type="password" autocomplete="current-password" required></label>
+    <button class="btn" type="submit">Sign in</button>
+    <p class="error" id="loginMsg" role="alert"></p>
+  </form>
+</section>
+
+<div id="dashboard" hidden>
+  <header class="topbar">
+    <div class="brand"><img src="assets/logo.jpg" alt="" width="36" height="36"><b>Bowl Mania</b><span>Admin</span></div>
+    <div class="top-actions">
+      <span class="muted small" id="updated"></span>
+      <button class="btn ghost" id="refresh" type="button">Refresh</button>
+      <button class="btn ghost" id="logout" type="button">Log out</button>
+    </div>
+  </header>
+  <main class="wrap">
+    <div class="stats" id="stats"></div>
+    <div class="toolbar">
+      <h1>Orders</h1>
+      <div class="tabs" id="tabs" role="tablist"></div>
+      <input class="search" id="search" type="search" placeholder="Search name, phone, #id">
+    </div>
+    <div id="orders" class="orders"></div>
+  </main>
+</div>
+<script src="admin.js"></script>
+</body>
+</html>
