@@ -23,7 +23,10 @@ const NEXT = {
   completed: [], cancelled: [], refunded: []
 };
 const KITCHEN = new Set(['accepted', 'preparing', 'ready']);
-export const nextStatuses = (o) => (NEXT[o.status] || []).filter(s => !(o.fulfilment === 'pickup' && s === 'out_for_delivery'));
+// Delivery orders go ready → out for delivery → delivered; pickup orders go ready → completed.
+export const nextStatuses = (o) => (NEXT[o.status] || []).filter(s => o.fulfilment === 'pickup'
+  ? !['out_for_delivery', 'delivered'].includes(s)
+  : !(o.status === 'ready' && ['delivered', 'completed'].includes(s)));
 
 const orderInput = z.object({
   customer_name: text(80, 1),
