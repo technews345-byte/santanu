@@ -1,0 +1,109 @@
+{
+  "expo": {
+    "name": "Spendly",
+    "slug": "santanu",
+    "scheme": [
+      "spendly",
+      "com.santanu.spendly"
+    ],
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.santanu.spendly",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Allow capturing receipt photos to attach to transactions.",
+        "NSPhotoLibraryUsageDescription": "Allow selecting receipt images to attach to transactions.",
+        "NSFaceIDUsageDescription": "Use Face ID to unlock Spendly."
+      }
+    },
+    "android": {
+      "package": "com.santanu.spendly",
+      "adaptiveIcon": {
+        "backgroundColor": "#FFFFFF",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "USE_BIOMETRIC",
+        "USE_FINGERPRINT"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow selecting receipt images to attach to transactions.",
+          "cameraPermission": "Allow capturing receipt photos to attach to transactions."
+        }
+      ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Use Face ID to unlock Spendly."
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 190,
+          "resizeMode": "contain",
+          "backgroundColor": "#0B0E14",
+          "dark": {
+            "image": "./assets/splash-icon.png",
+            "backgroundColor": "#0B0E14"
+          }
+        }
+      ],
+      "expo-system-ui",
+      "expo-sqlite",
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-6027969494449969~1371516248",
+          "iosAppId": "ca-app-pub-3940256099942544~1458002511"
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableMinifyInReleaseBuilds": true,
+            "useLegacyPackaging": true
+          }
+        }
+      ]
+    ],
+    "extra": {
+      "firebase": {
+        "apiKey": "AIzaSyAhKIn6G1bv4sBvSsGgAiUONPcRWx5NnZs",
+        "authDomain": "spendly-cdea9.firebaseapp.com",
+        "projectId": "spendly-cdea9",
+        "storageBucket": "spendly-cdea9.firebasestorage.app",
+        "messagingSenderId": "877074760062",
+        "appId": "1:877074760062:web:40be0ffda6a4384056f32f",
+        "measurementId": "G-B15CZ9850M",
+        "googleWebClientId": "877074760062-og0f8g02jpv16i0tbc12n7m594252j63.apps.googleusercontent.com",
+        "googleAndroidClientId": "877074760062-ljgqnfifds25ug2163ltte8jb3e2tb7s.apps.googleusercontent.com"
+      },
+      "ads": {
+        "androidRewardedUnitId": "ca-app-pub-6027969494449969/7438231149",
+        "iosRewardedUnitId": "ca-app-pub-3940256099942544/1712485313",
+        "androidAppOpenUnitId": "ca-app-pub-6027969494449969/2834797845",
+        "iosAppOpenUnitId": "ca-app-pub-3940256099942544/5575463023"
+      }
+    }
+  }
+}

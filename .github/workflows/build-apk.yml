@@ -1,0 +1,74 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - claude/expense-budget-app-vdww3s
+
+permissions:
+  contents: write
+
+# The release tag is shared, so an older run finishing late would publish a
+# stale APK over a newer one.
+concurrency:
+  group: build-apk
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Generate native Android project
+        run: npx expo prebuild --platform android --no-install
+
+      # The template's 512m metaspace is not enough to compile every Expo
+      # module in one daemon. Set this in Gradle's user-level config, which
+      # takes precedence over the generated project file — appending to that
+      # file corrupts its last property, since prebuild writes no trailing
+      # newline.
+      - name: Raise Gradle memory limits
+        run: |
+          mkdir -p ~/.gradle
+          echo "org.gradle.jvmargs=-Xmx6144m -XX:MaxMetaspaceSize=2048m" >> ~/.gradle/gradle.properties
+
+      - name: Build release APK
+        working-directory: android
+        timeout-minutes: 60
+        # One ABI only: every phone from the last decade is arm64, and building
+        # all four multiplies the native compile time.
+        run: ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a
+
+      - name: Upload APK as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: spendly-apk
+          path: android/app/build/outputs/apk/release/*.apk
+
+      - name: Publish APK to a release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete android-apk --yes || true
+          git push --delete origin android-apk || true
+          gh release create android-apk \
+            android/app/build/outputs/apk/release/app-release.apk \
+            --title "Spendly — Android APK" \
+            --notes "Install on Android: tap the .apk below, then allow installation from unknown sources. Built from ${GITHUB_SHA}." \
+            --prerelease \
+            --target "${GITHUB_SHA}"
