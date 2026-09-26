@@ -58,6 +58,7 @@
       <a href="#how">How it works</a>
       <a href="#story">Our story</a>
       <a href="#delivery">Delivery</a>
+      <a href="#track">Track order</a>
       <a href="#contact">Contact</a>
     </nav>
     <div class="header-actions">
@@ -232,6 +233,28 @@
           </table>
           <p class="fine">+₹10 for every additional 1.5 km.</p>
         </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="track" class="section section-tint">
+    <div class="wrap track-grid">
+      <div>
+        <p class="eyebrow">Track your order</p>
+        <h2>Where's my bowl?</h2>
+        <p class="lead">Enter your order number and the phone number you ordered with to see live status and your delivery partner's details.</p>
+        <form class="track-form" data-track-form novalidate>
+          <label class="field"><span>Order number</span><input name="order" id="track-order" inputmode="numeric" placeholder="e.g. 128" required></label>
+          <label class="field"><span>Phone number</span><input name="phone" id="track-phone" type="tel" inputmode="tel" placeholder="10-digit mobile" required></label>
+          <button class="btn btn-primary" type="submit">Track order</button>
+        </form>
+        <p class="fine" data-track-offline hidden>Online tracking is available on the live website. For an update now, message us on <a href="https://wa.me/918099026415" target="_blank" rel="noopener">WhatsApp</a>.</p>
+      </div>
+      <div class="track-card" data-track-result aria-live="polite">
+        <div class="track-empty">
+          <svg class="ic-xl"><use href="#i-scooter"/></svg>
+          <p>Your order status will appear here.</p>
+        </div>
       </div>
     </div>
   </section>

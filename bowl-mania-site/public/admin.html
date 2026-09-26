@@ -2,13 +2,13 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex">
-<title>Orders · Bowl Mania Admin</title>
+<title>Bowl Mania Admin</title>
 <link rel="icon" href="assets/logo.jpg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Fraunces:opsz,wght@9..144,700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="admin.css">
 </head>
 <body>
@@ -16,32 +16,170 @@
   <form class="login-card" id="loginForm">
     <img src="assets/logo.jpg" alt="Bowl Mania" width="72" height="72">
     <h1>Admin sign in</h1>
-    <p class="muted">Manage incoming Bowl Mania orders.</p>
-    <label><span>Password</span><input id="password" type="password" autocomplete="current-password" required></label>
-    <button class="btn" type="submit">Sign in</button>
+    <p class="muted">Manage orders, menu and customers.</p>
+    <label class="field"><span>Password</span><input id="password" type="password" autocomplete="current-password" required></label>
+    <button class="btn primary block" type="submit">Sign in</button>
     <p class="error" id="loginMsg" role="alert"></p>
   </form>
 </section>
 
-<div id="dashboard" hidden>
-  <header class="topbar">
-    <div class="brand"><img src="assets/logo.jpg" alt="" width="36" height="36"><b>Bowl Mania</b><span>Admin</span></div>
-    <div class="top-actions">
-      <span class="muted small" id="updated"></span>
-      <button class="btn ghost" id="refresh" type="button">Refresh</button>
-      <button class="btn ghost" id="logout" type="button">Log out</button>
+<p id="unavailable" class="unavailable" hidden>The admin data can't be loaded in this view. Open the page from the Bowl Mania link while signed in.</p>
+
+<div id="app" class="app" hidden>
+  <aside class="side">
+    <div class="brand"><img src="assets/logo.jpg" alt="" width="40" height="40"><div><b>Bowl Mania</b><span>Admin</span></div></div>
+    <nav class="nav" aria-label="Admin sections">
+      <button type="button" data-view="dashboard" aria-current="page"><svg viewBox="0 0 24 24"><path d="M4 4h7v7H4zM13 4h7v4h-7zM13 10h7v10h-7zM4 13h7v7H4z"/></svg>Dashboard</button>
+      <button type="button" data-view="orders"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6"/></svg>Orders<em class="badge" id="newBadge" hidden></em></button>
+      <button type="button" data-view="menu"><svg viewBox="0 0 24 24"><path d="M3 11h18a9 9 0 0 1-18 0zM8 7c0-2 2-2 2-4M13 7c0-2 2-2 2-4"/></svg>Menu</button>
+      <button type="button" data-view="riders"><svg viewBox="0 0 24 24"><circle cx="6" cy="17" r="2.5"/><circle cx="18" cy="17" r="2.5"/><path d="M8.5 17h7l2-7h-3M14 6h3l.5 4M3 12h6l2 5"/></svg>Delivery partners</button>
+      <button type="button" data-view="reports"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Reports</button>
+      <button type="button" data-view="customers"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.3-5.5 6.5-5.5s5.7 2 6.5 5.5M16 4.8a3.5 3.5 0 0 1 0 6.4M18 14.8c2 .7 3.2 2.5 3.5 5.2"/></svg>Customers</button>
+    </nav>
+    <div class="side-foot">
+      <a id="siteLink" href="/" target="_blank" rel="noopener">View website ↗</a>
+      <button type="button" id="logout" class="linkish">Log out</button>
     </div>
-  </header>
-  <main class="wrap">
-    <div class="stats" id="stats"></div>
-    <div class="toolbar">
-      <h1>Orders</h1>
-      <div class="tabs" id="tabs" role="tablist"></div>
-      <input class="search" id="search" type="search" placeholder="Search name, phone, #id">
-    </div>
-    <div id="orders" class="orders"></div>
+  </aside>
+
+  <main class="main">
+    <p id="previewNote" class="preview-note" hidden>Preview mode: changes are saved in this preview only. Your live website uses the admin at <b>yoursite/admin</b>. The example orders are samples.</p>
+    <header class="page-head">
+      <div><h1 id="viewTitle">Dashboard</h1><p class="muted small" id="updated"></p></div>
+      <div class="head-actions">
+        <button class="btn ghost" id="refresh" type="button">Refresh</button>
+        <button class="btn ghost" id="exportBtn" type="button" hidden>Export to Excel</button>
+        <button class="btn primary" id="addBowl" type="button" hidden>+ Add bowl</button>
+        <button class="btn primary" id="addRider" type="button" hidden>+ Add delivery partner</button>
+      </div>
+    </header>
+
+    <section id="view-dashboard" class="view">
+      <div class="tiles" id="tiles"></div>
+      <div class="dash-grid">
+        <div class="panel">
+          <div class="panel-head"><h2>Needs attention</h2><button class="linkish" data-goto="orders">All orders →</button></div>
+          <div id="attention"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h2>Top bowls</h2><span class="muted small">Last 30 days</span></div>
+          <div class="table-wrap"><table class="table" id="topBowls"></table></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h2>By location</h2><span class="muted small">Last 30 days</span></div>
+          <div class="table-wrap"><table class="table" id="byArea"></table></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-orders" class="view" hidden>
+      <div class="toolbar">
+        <div class="tabs" id="tabs" role="tablist" aria-label="Filter by status"></div>
+        <input class="search" id="orderSearch" type="search" placeholder="Search name, phone or order #">
+      </div>
+      <div id="orders" class="orders"></div>
+    </section>
+
+    <section id="view-menu" class="view" hidden>
+      <p class="muted small hint">Turn a bowl off to hide it from the website without deleting it. Price changes show on the website straight away.</p>
+      <div id="menuList" class="menu-list"></div>
+    </section>
+
+    <section id="view-riders" class="view" hidden>
+      <p class="muted small hint">Assign a delivery partner to an order from the Orders page. Customers see the partner's name and number on the website while their order is out for delivery.</p>
+      <div id="riderList" class="rider-list"></div>
+    </section>
+
+    <section id="view-reports" class="view" hidden>
+      <div class="toolbar">
+        <div class="tabs" id="rangeTabs" role="tablist" aria-label="Report period">
+          <button role="tab" data-range="day">Day</button><button role="tab" data-range="week">Week</button><button role="tab" data-range="month">Month</button><button role="tab" data-range="year">Year</button>
+        </div>
+        <div class="period-nav">
+          <button type="button" class="icon-btn" id="prevPeriod" aria-label="Previous period">‹</button>
+          <b id="periodLabel" class="num"></b>
+          <button type="button" class="icon-btn" id="nextPeriod" aria-label="Next period">›</button>
+        </div>
+      </div>
+      <div class="tiles tiles-6" id="repTiles"></div>
+      <div class="panel">
+        <div class="panel-head"><h2 id="chartTitle">Earnings</h2><span class="muted small" id="chartSub"></span></div>
+        <div class="chart" id="chart"></div>
+        <details class="table-toggle"><summary>Show as table</summary><div class="table-wrap"><table class="table" id="chartTable"></table></div></details>
+      </div>
+      <div class="rep-grid">
+        <div class="panel"><div class="panel-head"><h2>Bowls sold</h2></div><div class="table-wrap"><table class="table" id="repBowls"></table></div></div>
+        <div class="panel"><div class="panel-head"><h2>By location</h2></div><div class="table-wrap"><table class="table" id="repAreas"></table></div></div>
+        <div class="panel"><div class="panel-head"><h2>Delivery partners</h2></div><div class="table-wrap"><table class="table" id="repRiders"></table></div></div>
+      </div>
+    </section>
+
+    <section id="view-customers" class="view" hidden>
+      <div class="toolbar"><input class="search" id="custSearch" type="search" placeholder="Search name or phone"></div>
+      <div class="table-wrap panel flush"><table class="table" id="customers"></table></div>
+    </section>
   </main>
 </div>
+
+<div class="modal-backdrop" id="editor" hidden>
+  <form class="modal" id="itemForm" novalidate>
+    <div class="modal-head"><h2 id="editorTitle">Edit bowl</h2><button type="button" class="icon-btn" data-close aria-label="Close">×</button></div>
+    <div class="modal-body">
+      <label class="field"><span>Name</span><input id="f-name" name="name" maxlength="80" required></label>
+      <label class="field"><span>Ingredients / description</span><textarea id="f-desc" name="description" rows="2" maxlength="300"></textarea></label>
+      <fieldset class="field"><legend>Type</legend>
+        <div class="seg">
+          <label><input type="radio" name="diet" value="veg" id="f-diet-veg"><span><i class="diet veg"></i>Veg</span></label>
+          <label><input type="radio" name="diet" value="nonveg" id="f-diet-nonveg"><span><i class="diet nonveg"></i>Non-veg</span></label>
+          <label><input type="radio" name="diet" value="both" id="f-diet-both"><span>Both options</span></label>
+        </div>
+      </fieldset>
+      <fieldset class="field"><legend>Sizes &amp; prices</legend>
+        <div id="sizes" class="sizes"></div>
+        <button type="button" class="linkish" id="addSize">+ Add size</button>
+      </fieldset>
+      <fieldset class="field"><legend>Photo</legend>
+        <div class="photos" id="photos"></div>
+        <label class="field compact"><span>Or paste a photo link (https://…)</span><input id="f-image" name="image" maxlength="500"></label>
+      </fieldset>
+      <label class="check"><input type="checkbox" id="f-active" name="active"> Show on the website menu</label>
+      <p class="error" id="editorMsg" role="alert"></p>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn danger-ghost" id="deleteItem">Delete bowl</button>
+      <span class="spacer"></span>
+      <button type="button" class="btn ghost" data-close>Cancel</button>
+      <button type="submit" class="btn primary" id="saveItem">Save</button>
+    </div>
+  </form>
+</div>
+
+<div class="modal-backdrop" id="riderEditor" hidden>
+  <form class="modal small-modal" id="riderForm" novalidate>
+    <div class="modal-head"><h2 id="riderTitle">Delivery partner</h2><button type="button" class="icon-btn" data-close-rider aria-label="Close">×</button></div>
+    <div class="modal-body">
+      <label class="field"><span>Name</span><input id="r-name" maxlength="60" required></label>
+      <label class="field"><span>Phone (WhatsApp)</span><input id="r-phone" type="tel" inputmode="tel" placeholder="10-digit mobile" required></label>
+      <fieldset class="field"><legend>Delivers for</legend>
+        <div class="seg seg-2">
+          <label><input type="radio" name="rarea" value="sonari" id="r-area-sonari"><span>Sonari</span></label>
+          <label><input type="radio" name="rarea" value="nazira" id="r-area-nazira"><span>Nazira</span></label>
+        </div>
+      </fieldset>
+      <label class="check"><input type="checkbox" id="r-active"> On duty (can be assigned orders)</label>
+      <p class="error" id="riderMsg" role="alert"></p>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn danger-ghost" id="deleteRider">Remove</button>
+      <span class="spacer"></span>
+      <button type="button" class="btn ghost" data-close-rider>Cancel</button>
+      <button type="submit" class="btn primary" id="saveRider">Save</button>
+    </div>
+  </form>
+</div>
+
+<div class="chart-tip" id="chartTip" hidden></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script src="admin.js"></script>
 </body>
 </html>

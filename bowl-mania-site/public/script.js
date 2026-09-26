@@ -125,6 +125,7 @@ async function loadMenu() {
   } catch { /* static hosting — use the built-in menu */ }
   renderMenu();
   cart.render();
+  if (!apiAvailable) { $('[data-track-offline]').hidden = false; trackForm.hidden = true; }
 }
 
 /* ---------- Cart ---------- */
@@ -260,7 +261,10 @@ $('[data-place-order]').addEventListener('click', async e => {
     $('[data-cart-empty]').hidden = true; form.hidden = false;
     $$('.field', form).forEach(f => f.hidden = true); $('.seg', form).hidden = true; $('h3', form).hidden = true;
     msg.className = 'form-msg ok';
-    msg.innerHTML = `<b>Thank you! Order #${esc(data.orderId)} is confirmed.</b><br>Total ${rupee(data.total)}. We'll call you shortly to confirm delivery.`;
+    msg.innerHTML = `<b>Thank you! Your order number is #${esc(data.orderId)}.</b><br>Total ${rupee(data.total)}. We'll call you shortly to confirm. <a href="#track" data-close-cart>Track your order</a>`;
+    $('#track-order').value = data.orderId; $('#track-phone').value = body.phone;
+    try { localStorage.setItem('bm-last-order', JSON.stringify({ order: data.orderId, phone: body.phone })); } catch {}
+    $('[data-close-cart]', msg).addEventListener('click', () => { closeCart(); trackOrder(); });
     setTimeout(() => { $$('.field', form).forEach(f => f.hidden = false); $('.seg', form).hidden = false; $('h3', form).hidden = false; msg.className = 'form-msg'; msg.textContent = ''; cart.render(); }, 8000);
   } catch (err) {
     msg.className = 'form-msg err'; msg.textContent = err.message;
@@ -278,6 +282,44 @@ function toast(text) {
   t.classList.add('show'); clearTimeout(toastTimer);
   toastTimer = setTimeout(() => { t.classList.remove('show'); t.style.pointerEvents = 'none'; }, 2600);
 }
+
+/* ---------- Order tracking ---------- */
+const STEPS = [['new', 'Order placed'], ['confirmed', 'Confirmed'], ['preparing', 'Being prepared'], ['out_for_delivery', 'Out for delivery'], ['completed', 'Delivered']];
+const trackForm = $('[data-track-form]'), trackOut = $('[data-track-result]');
+let trackTimer;
+async function trackOrder() {
+  const fd = new FormData(trackForm);
+  const order = String(fd.get('order') || '').replace(/\D/g, ''), phone = String(fd.get('phone') || '');
+  if (!order || phone.replace(/\D/g, '').length < 10) { trackOut.innerHTML = '<p class="form-msg err">Enter your order number and 10-digit phone number.</p>'; return; }
+  clearTimeout(trackTimer);
+  try {
+    const r = await fetch(`/api/track?order=${encodeURIComponent(order)}&phone=${encodeURIComponent(phone)}`);
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Could not find that order.');
+    try { localStorage.setItem('bm-last-order', JSON.stringify({ order, phone })); } catch {}
+    renderTrack(d);
+    if (!['completed', 'cancelled'].includes(d.status)) trackTimer = setTimeout(trackOrder, 30000);
+  } catch (err) { trackOut.innerHTML = `<p class="form-msg err">${esc(err.message)}</p>`; }
+}
+function renderTrack(d) {
+  const at = s => { const t = new Date(/T/.test(s) ? s : String(s).replace(' ', 'T') + 'Z'); return isNaN(t) ? '' : t.toLocaleString('en-IN', { hour: 'numeric', minute: '2-digit', day: 'numeric', month: 'short' }); };
+  const seen = {}; (d.history || []).forEach(h => seen[h.status] = h.at);
+  if (!seen.new) seen.new = d.created_at;
+  const steps = d.area === 'pickup' ? STEPS.filter(s => s[0] !== 'out_for_delivery').map(s => s[0] === 'completed' ? ['completed', 'Picked up'] : s) : STEPS;
+  const idx = steps.findIndex(s => s[0] === d.status);
+  const label = d.status === 'cancelled' ? 'Cancelled' : (steps[idx] || steps[0])[1];
+  trackOut.innerHTML = `<div class="track-head"><h3>Order #${esc(d.id)}</h3><span class="track-status${d.status === 'cancelled' ? ' cancelled' : ''}">${esc(label)}</span></div>
+    <p class="track-items">${d.items.map(i => `${i.quantity} × ${esc(i.name)} (${esc(i.size)})`).join(', ')} · ${rupee(d.total)}</p>
+    ${d.status === 'cancelled' ? '<p>This order was cancelled. Message us on WhatsApp if you have questions.</p>' : `<ol class="timeline">${steps.map((s, i) => {
+      const cls = i < idx || d.status === 'completed' ? 'done' : i === idx ? 'current done' : '';
+      const rider = s[0] === 'out_for_delivery' && d.rider && d.status === 'out_for_delivery'
+        ? `<div class="rider-box"><svg class="ic"><use href="#i-scooter"/></svg><span><b>${esc(d.rider.name)}</b> is bringing your order</span><a href="tel:${esc(d.rider.phone)}">${esc(d.rider.phone)}</a></div>` : '';
+      return `<li class="${cls}"><span class="dot">${cls ? '✓' : ''}</span><div><b>${s[1]}</b>${rider}</div><time>${seen[s[0]] ? at(seen[s[0]]) : ''}</time></li>`;
+    }).join('')}</ol>`}
+    <p class="track-foot">Updates automatically every 30 seconds.</p>`;
+}
+trackForm.addEventListener('submit', e => { e.preventDefault(); trackOrder(); });
+try { const last = JSON.parse(localStorage.getItem('bm-last-order')); if (last) { $('#track-order').value = last.order; $('#track-phone').value = last.phone; } } catch {}
 
 $$('[data-year]').forEach(el => el.textContent = new Date().getFullYear());
 loadMenu();
