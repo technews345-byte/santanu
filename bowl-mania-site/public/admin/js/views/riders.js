@@ -16,8 +16,10 @@ function loadLeaflet() {
   return leaflet;
 }
 const tiles = L => L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, referrerPolicy: 'strict-origin-when-cross-origin', attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' });
-const riderIcon = (L, r) => L.divIcon({ className: '', iconSize: [38, 38], iconAnchor: [19, 19],
-  html: `<span class="rider-pin ${r.online ? (r.location?.stale ? 'stale' : r.current ? 'busy' : 'on') : 'off'}">${esc(initials(r.name))}</span>` });
+const riderIcon = (L, r) => L.divIcon({ className: '', iconSize: r.photo_url ? [44, 44] : [38, 38], iconAnchor: r.photo_url ? [22, 22] : [19, 19],
+  html: `<span class="rider-pin ${r.online ? (r.location?.stale ? 'stale' : r.current ? 'busy' : 'on') : 'off'}">${r.photo_url ? `<img src="${esc(r.photo_url)}" alt="">` : esc(initials(r.name))}</span>` });
+// Rider face, or initials when there is no photo.
+const face = (r, cls = 'avatar') => r.photo_url ? `<img class="${cls} photo" src="${esc(r.photo_url)}" alt="">` : `<span class="${cls}">${esc(initials(r.name))}</span>`;
 const kitchenIcon = L => L.divIcon({ className: '', iconSize: [30, 30], iconAnchor: [15, 15], html: '<span class="kitchen-pin">🍲</span>' });
 const age = s => (s == null ? 'never' : s < 60 ? `${s} seconds ago` : ago(new Date(Date.now() - s * 1000).toISOString()));
 const stateBadge = r => !r.online ? badge('off', 'Offline') : r.current ? badge('out_for_delivery', 'On delivery') : badge('ok', 'Online');
@@ -37,7 +39,7 @@ export async function render(view, ctx) {
   function draw() {
     const rows = visible();
     $('#list', view).innerHTML = rows.length ? rows.map(r => `<button class="rider-row ${selected === r.id ? 'sel' : ''}" data-id="${r.id}">
-        <span class="avatar">${esc(initials(r.name))}</span><span class="grow"><b>${esc(r.name)}</b>
+        ${face(r)}<span class="grow"><b>${esc(r.name)}</b>
           <span class="small muted">${r.current ? `${esc(r.current.order_number)} · ${esc(r.current.status_label)}` : r.online ? 'Waiting for an order' : 'Offline'}</span>
           <span class="tiny ${r.location?.stale && r.online ? 'warn-text' : 'muted'}">${r.location ? `GPS ${age(r.location.age_seconds)}${r.location.stale && r.online ? ' · stale' : ''}` : 'No GPS yet'}</span></span>
         ${stateBadge(r)}</button>`).join('')
@@ -104,7 +106,7 @@ async function profile(view, id) {
     try { r = await get(`/admin/riders/${id}`, range); } catch (e) { view.innerHTML = back + errorState(e, false); return; }
     const p = r.performance;
     view.innerHTML = `${back}
-      <div class="card card-pad order-hero"><div class="row" style="gap:14px">${r.photo_url ? `<img class="avatar lg photo" src="${esc(r.photo_url)}" alt="">` : `<span class="avatar lg">${esc(initials(r.name))}</span>`}
+      <div class="card card-pad order-hero"><div class="row" style="gap:14px">${face(r, 'avatar lg')}
         <div><h1>${esc(r.name)}</h1><p class="muted">${r.employee_id ? `Employee ${esc(r.employee_id)} · ` : ''}${esc(r.vehicle_type || 'Vehicle not set')}${r.vehicle_number ? ' · ' + esc(r.vehicle_number) : ''}${r.joining_date ? ` · joined ${fmtDate(r.joining_date)}` : ''}</p></div></div>
         <div class="row">${stateBadge(r)}${r.phone ? `<a class="btn btn-ghost btn-sm" href="tel:+91${esc(r.phone)}">${icon('phone')} Call</a>` : ''}${can('riders.manage') ? '<button class="btn btn-soft btn-sm" id="edit">Edit details</button><button class="btn btn-ghost btn-sm" id="photo">Photo</button>' : ''}${can('staff.manage') ? `<a class="btn btn-ghost btn-sm" href="#/staff?edit=${r.id}">Login & role</a>` : ''}</div></div>
       <h2 style="margin:20px 0 10px">Today</h2>
