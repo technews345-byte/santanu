@@ -12,13 +12,19 @@ function required(name, fallback) {
   return fallback;
 }
 
+// On Railway, keep the database and uploads on the attached volume and use the generated domain,
+// so a new deploy never loses data and links work without extra settings.
+const onRailway = !!env.RAILWAY_ENVIRONMENT_NAME || !!env.RAILWAY_ENVIRONMENT;
+export const DATA_DIR = env.RAILWAY_VOLUME_MOUNT_PATH || '';
+const defaultPublicUrl = env.RAILWAY_PUBLIC_DOMAIN ? `https://${env.RAILWAY_PUBLIC_DOMAIN}` : `http://localhost:${env.PORT || 3000}`;
+
 export const config = {
   isProd,
   port: Number(env.PORT || 3000),
-  publicUrl: (env.PUBLIC_URL || `http://localhost:${env.PORT || 3000}`).replace(/\/$/, ''),
-  dbFile: env.DATABASE_FILE || path.join(ROOT, 'data', 'bowl-mania.db'),
-  uploadsDir: env.UPLOADS_DIR || path.join(ROOT, 'uploads'),
-  trustProxy: env.TRUST_PROXY === '1',
+  publicUrl: (env.PUBLIC_URL || defaultPublicUrl).replace(/\/$/, ''),
+  dbFile: env.DATABASE_FILE || (DATA_DIR ? path.join(DATA_DIR, 'bowl-mania.db') : path.join(ROOT, 'data', 'bowl-mania.db')),
+  uploadsDir: env.UPLOADS_DIR || path.join(DATA_DIR || ROOT, 'uploads'),
+  trustProxy: env.TRUST_PROXY ? env.TRUST_PROXY === '1' : onRailway,
   jwtSecret: required('JWT_SECRET', 'dev-only-jwt-secret-change-me'),
   accessTtlMin: Number(env.ACCESS_TOKEN_MINUTES || 15),
   refreshTtlDays: Number(env.REFRESH_TOKEN_DAYS || 30),

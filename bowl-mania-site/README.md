@@ -122,6 +122,32 @@ Set `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` and `SMTP_FROM`. Without 
 
 ---
 
+## Deploy on Railway (easiest)
+
+The repository is ready for [Railway](https://railway.com): `railway.json` sets the start command and a health check, and the app detects Railway's domain and volume by itself.
+
+1. In Railway, click **New Project → Deploy from GitHub repo** and pick this repository.
+2. Open the new service's **Settings**:
+   - **Source → Root Directory**: `bowl-mania-site`
+   - **Config-as-code → Railway config file**: `/bowl-mania-site/railway.json` (if Railway does not pick it up by itself)
+   - **Networking → Generate Domain** (you get `something.up.railway.app`; you can add your own domain here later).
+3. **Attach a volume** (right-click the service → *Attach volume*, or the Volumes tab) with mount path `/data`. The database, uploaded photos and backups are stored there, so they survive redeploys. Without it, data is lost on every deploy.
+4. In **Variables**, add:
+
+   | Variable | Value |
+   |---|---|
+   | `NODE_ENV` | `production` |
+   | `JWT_SECRET` | a long random string, 48+ characters (e.g. from a password manager) |
+   | `ADMIN_EMAIL` | the owner's email for the first admin login |
+   | `ADMIN_PASSWORD` | a strong password (change it after first sign-in) |
+   | `AUTO_BACKUP_HOURS` | `24` |
+
+   Optional, when ready: the Razorpay, WhatsApp and SMTP variables from `.env.example`. `PUBLIC_URL` is only needed if you use your own domain.
+5. Deploy. When the health check at `/api/health` passes, open `https://<your-domain>/` for the website and `https://<your-domain>/admin` for the admin panel.
+6. Sign in, change the password in **Account**, and set each kitchen's exact location in **Delivery areas**.
+
+Run a single instance (the default); do not scale it to several replicas, because the database is a file on the volume. Download a backup from the volume now and then (Railway → volume → *Browse*, `backups/`).
+
 ## Deploying to production
 
 Any Linux server or VPS with Node.js 20+ works (for example a small DigitalOcean, AWS Lightsail or Hetzner instance).

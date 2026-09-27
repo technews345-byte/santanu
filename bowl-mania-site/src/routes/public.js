@@ -31,6 +31,9 @@ const publicArea = a => ({
   slots: db.prepare('SELECT label, days, start_time, end_time FROM delivery_slots WHERE area_id=? AND active=1 ORDER BY display_order, start_time').all(a.id)
 });
 
+// ---------- Health check (used by the host to know the app is up) ----------
+r.get('/health', (req, res) => { db.prepare('SELECT 1').get(); res.set('Cache-Control', 'no-store').json({ ok: true }); });
+
 // ---------- Site configuration ----------
 r.get('/public/config', (req, res) => {
   const rest = getSetting('restaurant'), b = getSetting('business');
