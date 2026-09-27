@@ -25,7 +25,7 @@ const stateBadge = r => !r.online ? badge('off', 'Offline') : r.current ? badge(
 export async function render(view, ctx) {
   if (ctx.params[0]) return profile(view, Number(ctx.params[0]));
   view.innerHTML = `<div class="page-head"><div><h1>Riders</h1><p>Live positions, current orders and availability. Updates arrive as riders move.</p></div>
-    <div class="actions"><div class="seg" role="group" aria-label="Show"><button type="button" data-f="all" aria-pressed="true">All</button><button type="button" data-f="online" aria-pressed="false">Online</button><button type="button" data-f="busy" aria-pressed="false">On delivery</button></div></div></div>
+    <div class="actions">${can('staff.manage') ? `<a class="btn btn-primary btn-sm" href="#/staff?new=1&role=delivery_staff">${icon('plus')} Add rider</a>` : ''}<div class="seg" role="group" aria-label="Show"><button type="button" data-f="all" aria-pressed="true">All</button><button type="button" data-f="online" aria-pressed="false">Online</button><button type="button" data-f="busy" aria-pressed="false">On delivery</button></div></div></div>
     <div class="live-grid"><div class="card map-card"><div id="map" role="application" aria-label="Live rider map"></div></div><div class="card rider-list" id="list"><span class="skel" style="height:240px"></span></div></div>`;
   let data, L, map, markers = new Map(), trail = null, selected = null, filter = 'all';
   try { L = await loadLeaflet(); } catch (e) { $('#map', view).innerHTML = `<p class="muted card-pad">${esc(e.message)}</p>`; }
@@ -106,7 +106,7 @@ async function profile(view, id) {
     view.innerHTML = `${back}
       <div class="card card-pad order-hero"><div class="row" style="gap:14px">${r.photo_url ? `<img class="avatar lg photo" src="${esc(r.photo_url)}" alt="">` : `<span class="avatar lg">${esc(initials(r.name))}</span>`}
         <div><h1>${esc(r.name)}</h1><p class="muted">${r.employee_id ? `Employee ${esc(r.employee_id)} · ` : ''}${esc(r.vehicle_type || 'Vehicle not set')}${r.vehicle_number ? ' · ' + esc(r.vehicle_number) : ''}${r.joining_date ? ` · joined ${fmtDate(r.joining_date)}` : ''}</p></div></div>
-        <div class="row">${stateBadge(r)}${r.phone ? `<a class="btn btn-ghost btn-sm" href="tel:+91${esc(r.phone)}">${icon('phone')} Call</a>` : ''}${can('riders.manage') ? '<button class="btn btn-soft btn-sm" id="edit">Edit details</button><button class="btn btn-ghost btn-sm" id="photo">Photo</button>' : ''}</div></div>
+        <div class="row">${stateBadge(r)}${r.phone ? `<a class="btn btn-ghost btn-sm" href="tel:+91${esc(r.phone)}">${icon('phone')} Call</a>` : ''}${can('riders.manage') ? '<button class="btn btn-soft btn-sm" id="edit">Edit details</button><button class="btn btn-ghost btn-sm" id="photo">Photo</button>' : ''}${can('staff.manage') ? `<a class="btn btn-ghost btn-sm" href="#/staff?edit=${r.id}">Login & role</a>` : ''}</div></div>
       <h2 style="margin:20px 0 10px">Today</h2>
       <div class="kpis"><div class="kpi"><span>Deliveries</span><b>${num(r.today.deliveries)}</b></div><div class="kpi"><span>Completed</span><b>${num(r.today.completed)}</b></div>
         <div class="kpi"><span>Pending</span><b>${num(r.today.pending)}</b></div><div class="kpi"><span>Distance</span><b>${r.today.distance_km} km</b></div></div>
