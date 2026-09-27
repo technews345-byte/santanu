@@ -116,6 +116,7 @@ r.get('/sync', ah(async (req, res) => {
   const state = R.riderState(req.admin.id);
   res.set('Cache-Control', 'no-store').json({
     online: !!state.online, tracking: !!state.online || R.hasActiveDelivery(req.admin.id), server_time: new Date().toISOString(),
+    active_order_id: R.riderDeliveries(req.admin.id).active[0]?.order_id ?? null,
     notifications: db.prepare('SELECT id, type, title, body, order_id, ticket_id, read_at, created_at FROM rider_notifications WHERE admin_id=? AND id>? ORDER BY id LIMIT 50').all(req.admin.id, q.after),
     unread: unread(req.admin.id)
   });

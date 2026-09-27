@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Bowl Mania Rider</string>
+    <string name="channel_deliveries">New deliveries</string>
+    <string name="channel_deliveries_desc">New delivery assignments that need your answer.</string>
+    <string name="channel_updates">Order and shift updates</string>
+    <string name="channel_updates_desc">Changes to your orders, shifts, attendance and support replies.</string>
+    <string name="channel_tracking">Location sharing</string>
+    <string name="channel_tracking_desc">Shown while your location is shared during work.</string>
+</resources>
