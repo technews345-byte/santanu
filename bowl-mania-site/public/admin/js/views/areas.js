@@ -33,6 +33,7 @@ export async function render(view, ctx) {
       fields: `<div class="grid-3"><label class="field"><span>Location name</span><input class="input" name="name" required maxlength="60" value="${esc(a?.name || '')}"></label>
         <label class="field"><span>Phone</span><input class="input" name="phone" maxlength="20" value="${esc(a?.phone || '')}"></label><label class="field"><span>WhatsApp (with 91)</span><input class="input" name="whatsapp" maxlength="20" value="${esc(a?.whatsapp || '')}"></label></div>
         <label class="field"><span>Kitchen address</span><input class="input" name="address" maxlength="300" value="${esc(a?.address || '')}"></label>
+        <label class="field"><span>Pickup instructions for riders <em>(optional)</em></span><input class="input" name="pickup_instructions" maxlength="300" value="${esc(a?.pickup_instructions || '')}" placeholder="e.g. Use the side door; ask for the counter staff"></label>
         <div class="grid-3"><label class="field"><span>Latitude</span><input class="input" name="lat" type="number" step="any" required value="${a?.lat ?? ''}"></label><label class="field"><span>Longitude</span><input class="input" name="lng" type="number" step="any" required value="${a?.lng ?? ''}"></label>
           <button class="btn btn-ghost btn-sm" type="button" id="here" style="align-self:end">${icon('pin')} Use my current location</button></div>
         <p class="tiny muted" style="margin-top:-8px">Tip: in Google Maps, long-press the kitchen and copy the coordinates. Distances are measured in a straight line from here.</p>

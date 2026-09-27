@@ -9,6 +9,7 @@ import { errorHandler, notFoundApi } from './middleware/errors.js';
 import authRoutes from './routes/auth.js';
 import publicRoutes, { webhooks } from './routes/public.js';
 import adminRoutes from './routes/admin/index.js';
+import riderRoutes from './routes/rider.js';
 
 export function createApp() {
   const app = express();
@@ -31,7 +32,9 @@ export function createApp() {
         'upgrade-insecure-requests': config.isProd ? [] : null
       }
     },
-    hsts: config.isProd
+    hsts: config.isProd,
+    // Send only the site origin to other sites: OpenStreetMap map tiles are refused without a Referer.
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' }
   }));
 
   // Request log (skips static assets).
@@ -46,6 +49,7 @@ export function createApp() {
   app.use(cookieParser());
   app.use('/api/auth', authRoutes);
   app.use('/api/admin', adminRoutes);
+  app.use('/api/rider', riderRoutes);                // Bowl Mania Rider Android app (bearer tokens)
   app.use('/api', publicRoutes);
   app.use('/api', notFoundApi);
 

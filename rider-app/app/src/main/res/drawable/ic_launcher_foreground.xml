@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <!-- A bowl with leaves -->
+    <path android:fillColor="#A7D266" android:pathData="M54,30 C49,34 47,40 49,45 C54,43 57,37 54,30 Z" />
+    <path android:fillColor="#A7D266" android:pathData="M60,33 C65,36 67,41 64,46 C59,44 58,38 60,33 Z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M30,50 L78,50 C78,64 67,74 54,74 C41,74 30,64 30,50 Z" />
+    <path android:fillColor="#F5B21B" android:pathData="M42,78 L66,78 L64,82 L44,82 Z" />
+</vector>

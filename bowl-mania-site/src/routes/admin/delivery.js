@@ -6,8 +6,8 @@ import { audit, diff } from '../../lib/audit.js';
 import { slugify } from '../../lib/ids.js';
 import { requirePerm, can } from '../../middleware/auth.js';
 import { localParts } from '../../lib/time.js';
-import { changeStatus, getOrder, STATUS_LABEL } from '../../services/orders.js';
 import { restaurantStatus, upcomingSlots, feeFor } from '../../services/delivery.js';
+import { overrideStep } from '../../services/riders.js';
 
 const r = Router();
 
@@ -15,7 +15,7 @@ const r = Router();
 const slotSchema = z.object({ id: z.coerce.number().int().positive().optional(), label: text(40, 1), days: z.string().regex(/^[0-6]{1,7}$/, 'Pick at least one day.').default('0123456'), start_time: hhmm, end_time: hhmm, active: bool.default(true) })
   .refine(s => s.start_time < s.end_time, { message: 'A slot must end after it starts.' });
 const areaSchema = z.object({
-  name: text(60, 1), address: text(300).optional().default(''), phone: text(20).optional().default(''), whatsapp: text(20).optional().default(''),
+  name: text(60, 1), address: text(300).optional().default(''), pickup_instructions: text(300).optional().default(''), phone: text(20).optional().default(''), whatsapp: text(20).optional().default(''),
   lat: z.coerce.number().min(-90).max(90), lng: z.coerce.number().min(-180).max(180),
   max_radius_km: z.coerce.number().min(0.5).max(100), base_distance_km: z.coerce.number().min(0.1).max(50), base_charge: z.coerce.number().int().min(0).max(10000),
   extra_distance_km: z.coerce.number().min(0.1).max(50), extra_charge: z.coerce.number().int().min(0).max(10000),
@@ -48,8 +48,8 @@ r.post('/delivery/areas', requirePerm('delivery.manage'), ah(async (req, res) =>
   const b = parse(areaSchema, req.body);
   let slug = slugify(b.name), i = 2; while (db.prepare('SELECT 1 FROM delivery_areas WHERE slug=?').get(slug)) slug = `${slugify(b.name)}-${i++}`;
   const id = db.transaction(() => {
-    const id = db.prepare(`INSERT INTO delivery_areas (name, slug, address, phone, whatsapp, lat, lng, max_radius_km, base_distance_km, base_charge, extra_distance_km, extra_charge, delivery_enabled, pickup_enabled, active, display_order)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, (SELECT COALESCE(MAX(display_order),-1)+1 FROM delivery_areas))`).run(b.name, slug, b.address, b.phone, b.whatsapp, b.lat, b.lng, b.max_radius_km, b.base_distance_km, b.base_charge, b.extra_distance_km, b.extra_charge, +b.delivery_enabled, +b.pickup_enabled, +b.active).lastInsertRowid;
+    const id = db.prepare(`INSERT INTO delivery_areas (name, slug, address, pickup_instructions, phone, whatsapp, lat, lng, max_radius_km, base_distance_km, base_charge, extra_distance_km, extra_charge, delivery_enabled, pickup_enabled, active, display_order)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, (SELECT COALESCE(MAX(display_order),-1)+1 FROM delivery_areas))`).run(b.name, slug, b.address, b.pickup_instructions, b.phone, b.whatsapp, b.lat, b.lng, b.max_radius_km, b.base_distance_km, b.base_charge, b.extra_distance_km, b.extra_charge, +b.delivery_enabled, +b.pickup_enabled, +b.active).lastInsertRowid;
     saveSlots(id, b.slots); return id;
   })();
   audit(req, 'create', 'delivery_area', id, `Added delivery area ${b.name}`, null, areaSnap(areaFull(id)));
@@ -59,8 +59,8 @@ r.patch('/delivery/areas/:id', requirePerm('delivery.manage'), ah(async (req, re
   const id = Number(req.params.id); const before = areaFull(id); if (!before) throw notFound('Delivery area not found.');
   const b = parse(areaSchema, req.body);
   db.transaction(() => {
-    db.prepare(`UPDATE delivery_areas SET name=?, address=?, phone=?, whatsapp=?, lat=?, lng=?, max_radius_km=?, base_distance_km=?, base_charge=?, extra_distance_km=?, extra_charge=?,
-      delivery_enabled=?, pickup_enabled=?, active=?, updated_at=CURRENT_TIMESTAMP WHERE id=?`).run(b.name, b.address, b.phone, b.whatsapp, b.lat, b.lng, b.max_radius_km, b.base_distance_km, b.base_charge, b.extra_distance_km, b.extra_charge, +b.delivery_enabled, +b.pickup_enabled, +b.active, id);
+    db.prepare(`UPDATE delivery_areas SET name=?, address=?, pickup_instructions=?, phone=?, whatsapp=?, lat=?, lng=?, max_radius_km=?, base_distance_km=?, base_charge=?, extra_distance_km=?, extra_charge=?,
+      delivery_enabled=?, pickup_enabled=?, active=?, updated_at=CURRENT_TIMESTAMP WHERE id=?`).run(b.name, b.address, b.pickup_instructions, b.phone, b.whatsapp, b.lat, b.lng, b.max_radius_km, b.base_distance_km, b.base_charge, b.extra_distance_km, b.extra_charge, +b.delivery_enabled, +b.pickup_enabled, +b.active, id);
     saveSlots(id, b.slots);
   })();
   const [o, n, keys] = diff(areaSnap(before), areaSnap(areaFull(id)));
@@ -103,9 +103,9 @@ r.delete('/delivery/special-hours/:id', requirePerm('delivery.manage'), ah(async
 r.get('/status', (req, res) => res.json(restaurantStatus()));
 
 // ---------- Delivery board ----------
-const BOARD = `SELECT o.id, o.order_number, o.customer_name, o.customer_phone, o.address, o.landmark, o.lat, o.lng, o.distance_km, o.delivery_fee, o.total,
+export const BOARD = `SELECT o.id, o.order_number, o.customer_name, o.customer_phone, o.address, o.landmark, o.lat, o.lng, o.distance_km, o.delivery_fee, o.total,
     o.payment_method, o.payment_status, o.status, o.slot_date, o.slot_label, o.slot_start, o.slot_end, o.estimated_at, a.name AS area_name,
-    d.status AS delivery_status, d.staff_id, s.name AS staff_name, s.phone AS staff_phone, d.assigned_at, d.picked_up_at, d.delivered_at,
+    d.status AS delivery_status, d.pickup_otp, d.staff_id, s.name AS staff_name, s.phone AS staff_phone, d.assigned_at, d.picked_up_at, d.delivered_at,
     (SELECT GROUP_CONCAT(quantity || '× ' || name || ' (' || size_label || ')', ', ') FROM order_items WHERE order_id=o.id) AS items_text
   FROM orders o LEFT JOIN delivery_areas a ON a.id=o.area_id LEFT JOIN delivery_assignments d ON d.order_id=o.id LEFT JOIN admins s ON s.id=d.staff_id`;
 r.get('/deliveries', requirePerm('delivery.view', 'delivery.assign'), (req, res) => {
@@ -117,26 +117,24 @@ r.get('/deliveries', requirePerm('delivery.view', 'delivery.assign'), (req, res)
 });
 export const deliveryStaff = () => db.prepare(`SELECT a.id, a.name, a.phone,
     (SELECT COUNT(*) FROM delivery_assignments d JOIN orders o ON o.id=d.order_id WHERE d.staff_id=a.id AND d.status<>'delivered' AND o.status NOT IN ('cancelled','refunded')) AS active_count
-  FROM admins a JOIN role_permissions rp ON rp.role_id=a.role_id JOIN permissions p ON p.id=rp.permission_id WHERE p.key='delivery.update' AND a.status='active' ORDER BY a.name`).all();
+  FROM admins a JOIN role_permissions rp ON rp.role_id=a.role_id JOIN permissions p ON p.id=rp.permission_id WHERE p.key='delivery.update' AND a.status='active'
+    AND NOT EXISTS (SELECT 1 FROM role_permissions x JOIN permissions px ON px.id=x.permission_id WHERE x.role_id=a.role_id AND px.key='delivery.assign') ORDER BY a.name`).all();
 r.get('/deliveries/staff', requirePerm('delivery.assign', 'delivery.view'), (req, res) => res.json(deliveryStaff()));
 
 // Delivery staff see and update only their own jobs.
 r.get('/deliveries/mine', requirePerm('delivery.update'), (req, res) =>
-  res.json(db.prepare(`${BOARD} WHERE d.staff_id=? AND (d.status<>'delivered' OR d.delivered_at >= datetime('now','-1 day')) AND o.status NOT IN ('cancelled','refunded') ORDER BY d.status='delivered', o.slot_date, o.slot_start`).all(req.admin.id)));
-r.patch('/deliveries/:orderId', requirePerm('delivery.update', 'delivery.assign'), ah(async (req, res) => {
+  // The pickup code is for the kitchen to give at handover, so riders never receive it.
+  res.json(db.prepare(`${BOARD} WHERE d.staff_id=? AND (d.status<>'delivered' OR d.delivered_at >= datetime('now','-1 day')) AND o.status NOT IN ('cancelled','refunded') ORDER BY d.status='delivered', o.slot_date, o.slot_start`).all(req.admin.id)
+    .map(({ pickup_otp, ...o }) => o)));
+r.patch('/deliveries/:orderId', requirePerm('delivery.assign'), ah(async (req, res) => {
   const b = parse(z.object({ status: z.enum(['picked_up', 'out_for_delivery', 'delivered']) }), req.body);
-  const o = getOrder(Number(req.params.orderId)); if (!o) throw notFound('Order not found.');
-  const d = db.prepare('SELECT * FROM delivery_assignments WHERE order_id=?').get(o.id);
-  if (!d) throw badRequest('Assign a delivery person first.');
-  if (d.staff_id !== req.admin.id && !can(req.admin, 'delivery.assign')) throw forbidden('This delivery is assigned to someone else.');
-  if (b.status === 'picked_up') {
-    if (!['ready', 'preparing'].includes(o.status)) throw badRequest(`The order is ${STATUS_LABEL[o.status]}, not ready for pickup.`);
-    db.prepare("UPDATE delivery_assignments SET status='picked_up', picked_up_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP WHERE id=?").run(d.id);
-  } else {
-    // out_for_delivery and delivered move the order itself, which triggers customer notifications.
-    changeStatus(o.id, b.status, { admin: req.admin, force: b.status === 'out_for_delivery' && ['ready', 'preparing'].includes(o.status) });
-  }
-  audit(req, 'delivery_update', 'order', o.order_number, `${o.order_number} delivery: ${b.status.replace(/_/g, ' ')}`, { delivery: d.status }, { delivery: b.status });
+  updateDelivery(req, Number(req.params.orderId), b.status);
   res.json({ ok: true });
 }));
+
+/** Managers can move a delivery forward from the web (recorded as a manager override). Riders use the app, which enforces OTP and proof. */
+export function updateDelivery(req, orderId, status) {
+  if (!can(req.admin, 'delivery.assign')) throw forbidden('Use the Bowl Mania Rider app to update your deliveries.');
+  overrideStep(orderId, status, req.admin, 'Updated from the admin panel');
+}
 export default r;

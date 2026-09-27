@@ -9,6 +9,11 @@ export const NAV = [
     { path: 'deliveries', label: 'Deliveries', icon: 'scooter', perm: ['delivery.view', 'delivery.assign'] },
     { path: 'my-deliveries', label: 'My deliveries', icon: 'scooter', perm: ['delivery.update'], hideIf: ['delivery.assign'] }
   ] },
+  { group: 'Riders', items: [
+    { path: 'riders', label: 'Live riders', icon: 'pin', perm: ['riders.view'] },
+    { path: 'attendance', label: 'Attendance & shifts', icon: 'clock', perm: ['attendance.view', 'riders.manage'] },
+    { path: 'support', label: 'Rider support', icon: 'chat', perm: ['support.manage'], badge: 'support' }
+  ] },
   { group: 'Menu', items: [
     { path: 'menu', label: 'Menu', icon: 'bowl', perm: ['menu.view', 'menu.manage', 'menu.availability'] },
     { path: 'categories', label: 'Categories', icon: 'list', perm: ['menu.manage'] },
@@ -46,10 +51,10 @@ const VIEWS = {
   inquiries: () => import('./views/inquiries.js'), payments: () => import('./views/payments.js'), coupons: () => import('./views/promotions.js'),
   offers: () => import('./views/promotions.js'), analytics: () => import('./views/analytics.js'), reports: () => import('./views/reports.js'),
   gallery: () => import('./views/gallery.js'), notifications: () => import('./views/notifications.js'), 'delivery-areas': () => import('./views/areas.js'),
-  staff: () => import('./views/staff.js'), settings: () => import('./views/settings.js'), audit: () => import('./views/audit.js'), account: () => import('./views/account.js')
+  staff: () => import('./views/staff.js'), riders: () => import('./views/riders.js'), attendance: () => import('./views/attendance.js'), support: () => import('./views/support.js'), settings: () => import('./views/settings.js'), audit: () => import('./views/audit.js'), account: () => import('./views/account.js')
 };
 
-export const state = { admin: null, config: null, counts: { orders: 0, inquiries: 0 }, unread: 0, status: null };
+export const state = { admin: null, config: null, counts: { orders: 0, inquiries: 0, support: 0 }, unread: 0, status: null };
 export const can = (...perms) => perms.some(p => state.admin?.permissions.includes(p));
 const allowed = item => can(...item.perm) && !(item.hideIf && can(...item.hideIf));
 const homePath = () => NAV.flatMap(g => g.items).find(allowed)?.path || 'account';
@@ -181,9 +186,17 @@ function connectLive() {
       }
       bus.dispatchEvent(new CustomEvent('order', { detail: o }));
     } else if (n.type === 'inquiry') { state.counts.inquiries++; renderNav(); }
+    else if (n.type === 'rider_emergency') {
+      chime(); state.counts.support++; renderNav();
+      toast(n.title, 'err', { action: 'Open', onAction: () => go(n.link.replace(/^#\//, '')), timeout: 30000 });
+      if ('Notification' in window && Notification.permission === 'granted') new Notification(n.title, { body: n.body, icon: '/assets/logo.jpg', requireInteraction: true });
+    } else if (n.type === 'rider_support') { state.counts.support++; renderNav(); }
+    else if (n.type === 'delivery_rejected') { chime(); toast(n.title, 'err', { action: 'Reassign', onAction: () => go(n.link.replace(/^#\//, '')), timeout: 15000 }); }
     bus.dispatchEvent(new CustomEvent('notification', { detail: n }));
   });
   es.addEventListener('order_updated', e => bus.dispatchEvent(new CustomEvent('order', { detail: JSON.parse(e.data) })));
+  for (const type of ['rider_location', 'rider_status', 'delivery_updated', 'attendance', 'rider_notification'])
+    es.addEventListener(type, e => bus.dispatchEvent(new CustomEvent('rider', { detail: { type, data: JSON.parse(e.data) } })));
   es.addEventListener('menu_changed', () => bus.dispatchEvent(new Event('menu')));
   es.addEventListener('status_changed', e => { state.status = JSON.parse(e.data); renderStatus(); });
   es.onerror = () => { /* EventSource reconnects by itself; the session refresh below keeps cookies valid */ };
@@ -192,6 +205,7 @@ async function refreshCounts() {
   try {
     if (can('orders.view')) { const r = await get('/admin/orders', { status: 'new', limit: 1 }); state.counts.orders = r.counts?.new || 0; }
     if (can('inquiries.manage')) { const r = await get('/admin/inquiries', { status: 'new', limit: 1 }); state.counts.inquiries = r.counts?.new || 0; }
+    if (can('support.manage')) { const r = await get('/admin/support', { status: 'open' }); state.counts.support = r.counts?.open || 0; }
     renderNav();
   } catch { /* non-critical */ }
 }
@@ -234,10 +248,16 @@ async function route() {
   try {
     const mod = await VIEWS[path]();
     if (token !== routeToken) return;
-    cleanup = await mod.render(view, { path, params: rest, query: Object.fromEntries(new URLSearchParams(qs)) }) || null;
+    const done = await mod.render(view, { path, params: rest, query: Object.fromEntries(new URLSearchParams(qs)) }) || null;
+    // The user may have moved to another page while this one was still loading: drop this one quietly.
+    if (token !== routeToken) { done?.(); return; }
+    cleanup = done;
     document.title = `${item?.label || path.replace(/-/g, ' ')} · Bowl Mania Admin`;
     view.focus({ preventScroll: true }); scrollTo(0, 0);
-  } catch (e) { console.error(e); view.innerHTML = `<div class="error-state"><span>${esc(e.message)}</span><button class="btn btn-ghost btn-sm" onclick="location.reload()">Reload</button></div>`; }
+  } catch (e) {
+    if (token !== routeToken) return; // an abandoned page failing after the user left it
+    console.error(e); view.innerHTML = `<div class="error-state"><span>${esc(e.message)}</span><button class="btn btn-ghost btn-sm" onclick="location.reload()">Reload</button></div>`;
+  }
 }
 
 async function startShell() {

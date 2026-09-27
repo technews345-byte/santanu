@@ -3,6 +3,7 @@ import { seed } from './src/db/seed.js';
 import { createApp } from './src/app.js';
 import { config } from './src/config.js';
 import { backupDatabase } from './src/lib/backup.js';
+import { cleanupRiderData } from './src/services/riders.js';
 import { log } from './src/lib/logger.js';
 
 if ((process.env.RAILWAY_ENVIRONMENT_NAME || process.env.RAILWAY_ENVIRONMENT) && !process.env.RAILWAY_VOLUME_MOUNT_PATH && !process.env.DATABASE_FILE)
@@ -20,6 +21,10 @@ if (every > 0) {
   setTimeout(run, 60_000).unref();
   setInterval(run, every * 3_600_000).unref();
 }
+
+// Daily clean-up of old rider GPS points and attendance selfies.
+const clean = () => cleanupRiderData().catch(e => log.error('rider data clean-up failed', { error: e.message }));
+setTimeout(clean, 5 * 60_000).unref(); setInterval(clean, 24 * 3_600_000).unref();
 
 process.on('unhandledRejection', e => log.error('unhandled rejection', { error: e?.message }));
 for (const sig of ['SIGINT', 'SIGTERM']) process.on(sig, () => { log.info('shutting down'); server.close(() => process.exit(0)); setTimeout(() => process.exit(0), 5000).unref(); });

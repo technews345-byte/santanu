@@ -40,6 +40,7 @@ function render(o) {
     <section class="t-card t-hero"><p class="eyebrow">${esc(o.restaurant)} · Order ${esc(o.order_number)}</p><h1>${esc(HEADLINE[o.status] || o.status_label)}</h1>
       ${!cancelled && o.estimated_at && !['delivered', 'completed'].includes(o.status) ? `<span class="eta">⏱ ${pickup ? 'Ready by' : 'Arriving by'} about ${time(o.estimated_at)}${o.slot ? ` · ${esc(o.slot.label)} ${fmt12(o.slot.start)}–${fmt12(o.slot.end)}` : ''}</span>` : ''}
       ${o.rider && o.status === 'out_for_delivery' ? `<p><b>${esc(o.rider.first_name)}</b> is bringing your order.</p>` : ''}
+      ${o.delivery_otp ? `<div class="t-otp"><span>Delivery code</span><b aria-label="Delivery code ${esc(o.delivery_otp.split('').join(' '))}">${esc(o.delivery_otp)}</b><small>Tell this code to the rider when your order arrives. Don't share it before.</small></div>` : ''}
       <p>${rupee(o.total)} · <span class="pill ${payCls}">${esc(payLabel)}</span></p></section>
     <section class="t-card"><ol class="timeline">${steps.map(([k, l], i) => { const idx = order.indexOf(k); const done = !cancelled && (seen[k] || idx <= at); const cur = !cancelled && idx === at;
         return `<li class="${done ? 'done' : ''} ${cur ? 'current' : ''}"><span class="dot">${done ? '✓' : ''}</span><div><b>${l}</b></div><time>${seen[k] ? time(seen[k]) : ''}</time></li>`; }).join('')}

@@ -1,0 +1,99 @@
+# Builds and tests the Bowl Mania Rider Android app and publishes installable APKs as build artifacts.
+# Optional repository secrets (Settings → Secrets and variables → Actions):
+#   MAPS_API_KEY                         Google Maps key (map + road routes). Without it the app shows approximate distances.
+#   FIREBASE_APP_ID, FIREBASE_API_KEY,   Firebase Cloud Messaging. Without them the app checks for new deliveries
+#   FIREBASE_PROJECT_ID, FIREBASE_SENDER_ID  every 30 seconds while online instead of receiving pushes.
+#   RIDER_KEYSTORE_BASE64, RIDER_KEYSTORE_PASSWORD, RIDER_KEY_ALIAS, RIDER_KEY_PASSWORD
+#                                        Release signing key. Without it the release APK is signed with a throwaway debug key.
+# Repository variable (not secret): RIDER_API_URL, the server address (defaults to the Railway deployment).
+name: Rider app
+
+on:
+  push:
+    paths: ['rider-app/**', '.github/workflows/rider-app.yml']
+  pull_request:
+    paths: ['rider-app/**', '.github/workflows/rider-app.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rider-app-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    defaults:
+      run:
+        working-directory: rider-app
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the app has no rider pay features
+        run: |
+          # The rider app must not contain any pay / earnings functionality (see project requirements).
+          if grep -rniE "earning|commission|incentive|bonus|payout|salary|payroll|delivery[ _-]?fee|\btips?\b|revenue|profit|income|wage" app/src/main; then
+            echo "::error::Rider pay related wording found in the rider app (listed above). Remove it before release."
+            exit 1
+          fi
+
+      - name: Check no secrets are committed
+        run: |
+          if grep -rnE "AIza[0-9A-Za-z_-]{35}|-----BEGIN (RSA |EC )?PRIVATE KEY|\"private_key\"" app/src; then
+            echo "::error::A key or credential appears to be committed in the app source."
+            exit 1
+          fi
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Prepare release signing key
+        env:
+          KEYSTORE_B64: ${{ secrets.RIDER_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/rider.jks"
+            echo "RIDER_KEYSTORE_FILE=$RUNNER_TEMP/rider.jks" >> "$GITHUB_ENV"
+          else
+            echo "::notice::No RIDER_KEYSTORE_BASE64 secret: the release APK is signed with a debug key (fine for testing, not for the Play Store)."
+          fi
+
+      - name: Unit tests and build
+        env:
+          RIDER_API_URL: ${{ vars.RIDER_API_URL }}
+          RIDER_VERSION_CODE: ${{ github.run_number }}
+          MAPS_API_KEY: ${{ secrets.MAPS_API_KEY }}
+          FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
+          FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          FIREBASE_SENDER_ID: ${{ secrets.FIREBASE_SENDER_ID }}
+          RIDER_KEYSTORE_PASSWORD: ${{ secrets.RIDER_KEYSTORE_PASSWORD }}
+          RIDER_KEY_ALIAS: ${{ secrets.RIDER_KEY_ALIAS }}
+          RIDER_KEY_PASSWORD: ${{ secrets.RIDER_KEY_PASSWORD }}
+        run: ./gradlew --no-daemon testDebugUnitTest assembleDebug assembleRelease
+
+      - name: Collect APKs
+        run: |
+          mkdir -p ../apk
+          cp app/build/outputs/apk/release/app-release.apk ../apk/BowlManiaRider-${{ github.run_number }}.apk
+          cp app/build/outputs/apk/debug/app-debug.apk ../apk/BowlManiaRider-${{ github.run_number }}-debug.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BowlManiaRider-apk-${{ github.run_number }}
+          path: apk/*.apk
+          retention-days: 30
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: test-reports
+          path: rider-app/app/build/reports/
+          retention-days: 7

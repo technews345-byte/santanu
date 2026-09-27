@@ -7,6 +7,7 @@ import { requirePerm } from '../../middleware/auth.js';
 import { getSetting, setSetting } from '../../services/settings.js';
 import { config, razorpayEnabled, whatsappConfigured } from '../../config.js';
 import { mailConfigured } from '../../services/mailer.js';
+import { pushConfigured } from '../../services/push.js';
 import { WA_EVENTS } from '../../services/whatsapp.js';
 import { restaurantStatus } from '../../services/delivery.js';
 import { emit } from '../../lib/events.js';
@@ -20,6 +21,9 @@ const SCHEMAS = {
     tax_percent: z.coerce.number().min(0).max(28), currency: z.literal('INR'), timezone: z.string().max(40).refine(tz => { try { new Intl.DateTimeFormat('en', { timeZone: tz }); return true; } catch { return false; } }, 'Unknown timezone.'),
     prep_minutes: z.coerce.number().int().min(0).max(240), delivery_minutes: z.coerce.number().int().min(0).max(240), order_cutoff_minutes: z.coerce.number().int().min(0).max(120) }),
   payments: z.object({ online_enabled: bool, cod_enabled: bool }).refine(p => p.online_enabled || p.cod_enabled, { message: 'Keep at least one payment method on.' }),
+  riders: z.object({ require_pickup_otp: bool, require_delivery_otp: bool, require_proof_photo: bool, require_signature: bool, require_shift_for_checkin: bool, checkout_selfie: bool,
+    late_grace_minutes: z.coerce.number().int().min(0).max(120), otp_max_attempts: z.coerce.number().int().min(3).max(10),
+    support_phone: z.union([z.literal(''), z.string().trim().regex(/^\+?\d{10,13}$/, 'Use a phone number with 10–13 digits.')]), stale_location_minutes: z.coerce.number().int().min(1).max(60) }),
   notifications: z.object({ whatsapp_enabled: bool, browser_sound: bool,
     templates: z.object(Object.fromEntries(WA_EVENTS.map(e => [e, z.object({ enabled: bool, template_name: z.string().trim().regex(/^[a-z0-9_]*$/, 'Template names use lowercase letters, numbers and _.').max(60), language: z.string().max(10), body: text(1000, 1) })]))) })
 };
@@ -30,7 +34,8 @@ r.get('/settings', requirePerm('settings.manage'), (req, res) => res.json({
     razorpay: { configured: razorpayEnabled(), key_id: config.razorpay.keyId ? config.razorpay.keyId.slice(0, 12) + '…' : '', mode: config.razorpay.keyId.startsWith('rzp_live') ? 'live' : config.razorpay.keyId ? 'test' : '',
       webhook_configured: !!config.razorpay.webhookSecret, webhook_url: `${config.publicUrl}/api/payments/webhook` },
     whatsapp: { configured: whatsappConfigured(), webhook_configured: !!(config.whatsapp.verifyToken && config.whatsapp.appSecret), webhook_url: `${config.publicUrl}/api/whatsapp/webhook` },
-    email: { configured: mailConfigured() }
+    email: { configured: mailConfigured() },
+    push: { configured: pushConfigured() }
   },
   events: WA_EVENTS, status: restaurantStatus()
 }));

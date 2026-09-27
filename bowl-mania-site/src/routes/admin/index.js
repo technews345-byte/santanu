@@ -13,6 +13,7 @@ import inventory from './inventory.js';
 import analytics from './analytics.js';
 import staff from './staff.js';
 import settings from './settings.js';
+import riders from './riders.js';
 
 const r = Router();
 r.use(requireAuth, csrf);
@@ -28,5 +29,5 @@ r.get('/events', (req, res) => {
   req.on('close', () => { off(); clearInterval(ping); });
 });
 
-r.use(orders, menu, customers, payments, delivery, promotions, engagement, media, inventory, analytics, staff, settings);
+r.use(orders, menu, customers, payments, delivery, promotions, engagement, media, inventory, analytics, staff, settings, riders);
 export default r;

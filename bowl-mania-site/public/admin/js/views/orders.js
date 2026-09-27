@@ -1,6 +1,7 @@
 import { get, post, patch, put } from '../api.js';
 import { $, $$, esc, icon, rupee, num, statusBadge, payBadge, badge, fmtDateTime, fmtTime, fmtDate, ago, toast, toastError, confirmDialog, formDialog, modal,
   emptyState, errorState, pager, debounce, copyText, waLink, STATUS, PAY, download } from '../ui.js';
+import { deliveryPanel } from './_delivery.js';
 import { can, go, bus, state } from '../app.js';
 import { imgSrc } from './_photo.js';
 
@@ -165,20 +166,7 @@ async function detail(view, id) {
       onSubmit: async v => { const ok = await confirmDialog({ title: 'Confirm refund', message: `Refund ${rupee(v.amount)} to ${esc(o.customer_name)}? This can't be undone.`, confirm: 'Refund now', danger: true });
         if (!ok) return false; await post(`/admin/orders/${o.id}/refund`, v); toast('Refund issued'); load(); } });
   }
-  async function assignBox() {
-    const box = $('#assignBox', view); const a = o.assignment;
-    const closed = ['delivered', 'completed', 'cancelled', 'refunded'].includes(o.status);
-    box.innerHTML = a ? `<div class="row"><span class="avatar">${esc(a.staff_name.split(' ').map(w => w[0]).join('').slice(0, 2))}</span><div><b>${esc(a.staff_name)}</b><span class="sub small muted" style="display:block">${badge(a.status, a.status.replace(/_/g, ' '))} · assigned ${ago(a.assigned_at)}</span></div></div>` : '<p class="muted small">No delivery person assigned yet.</p>';
-    if (!can('delivery.assign') || closed) return;
-    const staff = await get('/admin/deliveries/staff').catch(() => []);
-    box.insertAdjacentHTML('beforeend', staff.length ? `<div class="row"><select class="select" id="staffSel" aria-label="Delivery person" style="flex:1"><option value="">Choose delivery person</option>${staff.map(s => `<option value="${s.id}" ${a?.staff_id === s.id ? 'selected' : ''}>${esc(s.name)} · ${s.active_count} active</option>`).join('')}</select>
-      <button class="btn btn-primary btn-sm" id="assignBtn">${a ? 'Reassign' : 'Assign'}</button>${a ? '<button class="btn-link small" id="unassign">Remove</button>' : ''}</div>
-      ${a ? `<a class="btn btn-ghost btn-xs" href="${waLink(a.staff_phone, `Delivery ${o.order_number}\n${o.customer_name} · ${o.customer_phone}\n${o.address}${o.landmark ? ' (' + o.landmark + ')' : ''}\n${o.lat != null ? `https://www.google.com/maps?q=${o.lat},${o.lng}\n` : ''}${o.items.map(i => `${i.quantity} x ${i.name} (${i.size_label})`).join('\n')}\n${o.payment_status === 'paid' ? 'PAID ONLINE' : 'Collect ' + rupee(o.total)}`)}" target="_blank" rel="noopener">${icon('wa')} Send details to ${esc(a.staff_name.split(' ')[0])}</a>` : ''}`
-      : `<p class="small muted">Add staff with the Delivery Staff role in <a href="#/staff">Staff & roles</a> to assign deliveries.</p>`);
-    $('#assignBtn', view)?.addEventListener('click', async () => { const sid = $('#staffSel', view).value; if (!sid) return toast('Choose a delivery person first', 'err');
-      try { await put(`/admin/orders/${o.id}/assignment`, { staff_id: Number(sid) }); toast('Delivery person assigned'); load(); } catch (x) { toastError(x); } });
-    $('#unassign', view)?.addEventListener('click', async () => { try { await put(`/admin/orders/${o.id}/assignment`, { staff_id: null }); load(); } catch (x) { toastError(x); } });
-  }
+  async function assignBox() { await deliveryPanel(o, $('#assignBox', view), load); }
   await load();
   const onOrder = e => { if (e.detail?.id === id) load(); };
   bus.addEventListener('order', onOrder);
