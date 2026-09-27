@@ -90,3 +90,41 @@ Cookies: `bm_at` (access, 15 min), `bm_rt` (refresh, rotated, 30 days), `bm_csrf
 - `GET /admin/roles`, `PUT /admin/roles/:id/permissions {permissions}` [staff.manage; editing requires Super Admin]
 - `GET /admin/audit?entity&admin_id&q&page` [audit.view]
 - `GET /admin/settings` · `PATCH /admin/settings/restaurant|business|payments|notifications` [settings.manage]
+
+**Riders (admin)**
+- `GET /admin/riders` live list with status, last location and active delivery [riders.view or delivery.assign]
+- `GET /admin/riders/:id` profile, today's stats and performance · `GET /admin/riders/:id/track?date` location trail [riders.view]
+- `PATCH /admin/riders/:id {employee_id, vehicle_type, vehicle_number, joining_date}` · `POST /admin/riders/:id/photo` (multipart `photo`) [riders.manage]
+- `POST /admin/riders/:id/offline` set a rider offline [delivery.assign]
+- `GET/POST /admin/shifts`, `DELETE /admin/shifts/:id` [riders.manage]
+- `GET /admin/attendance?date` [attendance.view] · `GET /admin/leave`, `PATCH /admin/leave/:id {status: approved|rejected}` [riders.manage]
+- `GET /admin/support`, `GET /admin/support/:id`, `POST /admin/support/:id/messages`, `PATCH /admin/support/:id {status}` [support.manage]
+- `POST /admin/orders/:id/delivery/otp` regenerate codes · `POST /admin/orders/:id/delivery/override {step, reason}` manager override [delivery.assign]
+- `GET /admin/files/:kind/:month/:file` private proof photos, signatures, selfies and attachments (signed-in staff only)
+
+---
+
+## Rider app API (`/api/rider`)
+
+Used by the Android rider app. Sign in with a staff account whose role has `delivery.update` (and not `delivery.assign`).
+Send `Authorization: Bearer <token>` on every request. Tokens slide their expiry while used and are revoked on sign-out, password change or when the account is disabled; any `401` means "sign in again".
+State-changing delivery actions accept a `key` (idempotency key): repeating a request with the same key returns the same result without applying it twice.
+
+**The rider API never returns delivery fees, order totals, rider pay or any other earnings figure.** The only amount is `payment.collect_amount`, the cash a customer must pay on a cash-on-delivery order.
+
+- `POST /login {email, password}` → `{token, rider}` (rate limited) · `POST /logout {device_token?}` · `GET /me` · `GET /me/photo`
+- `POST /device {token, platform}` register for push · `GET /config` support phone, emergency number, delivery rules
+- `GET /home` online state, today's counts and distance, active delivery, new assignments, attendance, unread count
+- `GET /sync?after=<notification id>` light poll: online/tracking flags, active order id, new notifications
+- `POST /status {online}` (going offline with an active delivery → `409`)
+- `POST /location {points: [{latitude, longitude, accuracy, speed, heading, timestamp, orderId}]}` batches of up to 200; `409` when the rider is offline with no active delivery (the app stops tracking)
+- `GET /deliveries` → `{active, new, completed_today, cancelled_today}` · `GET /deliveries/history?status&from&to&page` · `GET /deliveries/:orderId`
+- `POST /deliveries/:orderId/accept {key, lat, lng}` · `POST /deliveries/:orderId/reject {reason}`
+- `POST /deliveries/:orderId/step {step, otp?, key, lat, lng}` where step is `start | arrive_restaurant | verify_pickup | start_delivery | arrive_customer | verify_delivery | collect_cash | deliver`. Each delivery's `next` array lists the steps allowed now. Wrong codes count down `otp_attempts_left`; after the limit set in Settings → Rider app the code locks (`423`) until a manager regenerates it.
+- `POST /deliveries/:orderId/proof` multipart `photo`, `signature`, `note`, `key`, `lat`, `lng`
+- `GET /performance?from&to` deliveries, completed, cancelled, rejected, on-time rate, average time, distance, rating
+- `GET /notifications?before` · `POST /notifications/read {ids?}` · `DELETE /notifications` (clears read ones)
+- `GET /attendance` · `POST /attendance/check-in` multipart `selfie`, `lat`, `lng`, `accuracy` · `POST /attendance/check-out` (selfie when required) · `POST /attendance/break/start|end` · `GET /attendance/history?from&to`
+- `GET /shifts?from&to` · `GET /leave` · `POST /leave {from_date, to_date, reason}` · `POST /leave/:id/cancel`
+- `GET /support/tickets` · `POST /support/tickets {category, message, order_id?, key}` (or multipart with `attachment`) · `GET /support/tickets/:id` · `POST /support/tickets/:id/messages {message}`
+- `POST /emergency {type: emergency|accident|safety, message?, order_id?, key, lat, lng}` creates an urgent ticket and alerts the admin panel immediately

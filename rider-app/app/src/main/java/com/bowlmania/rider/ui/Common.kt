@@ -145,7 +145,7 @@ object Intents {
     fun batterySettings(ctx: Context) = start(ctx, Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS), null)
 
     private fun start(ctx: Context, i: Intent, notFound: String?) {
-        try { ctx.startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (_: ActivityNotFoundException) { notFound?.let(Snack::show) ?: appSettings(ctx) }
+        try { ctx.startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (_: ActivityNotFoundException) { Snack.show(notFound ?: "This setting isn't available on your phone.") }
     }
 }
 
