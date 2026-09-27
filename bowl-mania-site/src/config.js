@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+import crypto from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -18,14 +20,29 @@ const onRailway = !!env.RAILWAY_ENVIRONMENT_NAME || !!env.RAILWAY_ENVIRONMENT;
 export const DATA_DIR = env.RAILWAY_VOLUME_MOUNT_PATH || '';
 const defaultPublicUrl = env.RAILWAY_PUBLIC_DOMAIN ? `https://${env.RAILWAY_PUBLIC_DOMAIN}` : `http://localhost:${env.PORT || 3000}`;
 
+// JWT_SECRET should be set in the environment. If it is missing in production, generate a strong one once
+// and keep it next to the database, so sign-ins survive restarts instead of the app refusing to start.
+function jwtSecret(dbFile) {
+  if (env.JWT_SECRET) return env.JWT_SECRET;
+  if (!isProd) return 'dev-only-jwt-secret-change-me';
+  const file = path.join(path.dirname(dbFile), '.jwt-secret');
+  try { return fs.readFileSync(file, 'utf8').trim(); } catch {}
+  const secret = crypto.randomBytes(48).toString('base64url');
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, secret, { mode: 0o600 });
+  console.warn(`JWT_SECRET is not set: generated one and saved it in ${file}. Set JWT_SECRET to manage it yourself.`);
+  return secret;
+}
+const dbFile = env.DATABASE_FILE || (DATA_DIR ? path.join(DATA_DIR, 'bowl-mania.db') : path.join(ROOT, 'data', 'bowl-mania.db'));
+
 export const config = {
   isProd,
   port: Number(env.PORT || 3000),
   publicUrl: (env.PUBLIC_URL || defaultPublicUrl).replace(/\/$/, ''),
-  dbFile: env.DATABASE_FILE || (DATA_DIR ? path.join(DATA_DIR, 'bowl-mania.db') : path.join(ROOT, 'data', 'bowl-mania.db')),
+  dbFile,
   uploadsDir: env.UPLOADS_DIR || path.join(DATA_DIR || ROOT, 'uploads'),
   trustProxy: env.TRUST_PROXY ? env.TRUST_PROXY === '1' : onRailway,
-  jwtSecret: required('JWT_SECRET', 'dev-only-jwt-secret-change-me'),
+  jwtSecret: jwtSecret(dbFile),
   accessTtlMin: Number(env.ACCESS_TOKEN_MINUTES || 15),
   refreshTtlDays: Number(env.REFRESH_TOKEN_DAYS || 30),
   seedAdmin: { email: env.ADMIN_EMAIL || '', password: env.ADMIN_PASSWORD || '', name: env.ADMIN_NAME || 'Owner' },
