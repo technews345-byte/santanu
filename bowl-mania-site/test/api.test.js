@@ -248,24 +248,108 @@ test('payment failure webhook marks the order failed', async () => {
   assert.equal((await guest.get(`/api/track/${r.data.tracking_token}`)).data.payment_status, 'failed');
 });
 
-test('delivery assignment and delivery staff flow; COD marked paid on delivery', async () => {
+// ---------- Rider app ----------
+const rapi = (method, url, body, tok) => {
+  const headers = tok ? { Authorization: `Bearer ${tok}` } : {};
+  let payload = body;
+  if (body && !(body instanceof FormData)) { headers['Content-Type'] = 'application/json'; payload = JSON.stringify(body); }
+  return fetch(BASE + url, { method, headers, body: payload }).then(async r => ({ status: r.status, data: (r.headers.get('content-type') || '').includes('json') ? await r.json() : null }));
+};
+const jpeg = async (w = 400, h = 300, color = '#7cb342') => (await import('sharp')).default({ create: { width: w, height: h, channels: 3, background: color } }).jpeg().toBuffer();
+const kitchenCode = async id => (await owner.get(`/api/admin/orders/${id}`)).data.assignment.pickup_otp;
+let riderTok, riderId;
+
+test('rider app: sign-in rules and profile', async () => {
   const roles = (await owner.get('/api/admin/staff')).data.roles;
   const s = await owner.post('/api/admin/staff', { name: 'Bikash Rider', email: 'rider@bowlmania.test', phone: '9876500001', role_id: roles.find(r => r.key === 'delivery_staff').id, password: 'RiderPass12' });
+  riderId = s.data.id;
+  assert.equal((await owner.patch(`/api/admin/riders/${riderId}`, { employee_id: 'BM-R01', vehicle_type: 'Scooter', vehicle_number: 'as06 ab 1234', joining_date: '2026-01-15' })).status, 200);
+  assert.equal((await rapi('POST', '/api/rider/login', { email: 'rider@bowlmania.test', password: 'wrong-pass1' })).status, 401);
+  assert.equal((await rapi('POST', '/api/rider/login', { email: 'kitchen@bowlmania.test', password: 'KitchenPass1' })).status, 403);
+  const login = await rapi('POST', '/api/rider/login', { email: 'rider@bowlmania.test', password: 'RiderPass12' });
+  assert.equal(login.status, 200); riderTok = login.data.token;
+  assert.equal(login.data.rider.employee_id, 'BM-R01'); assert.equal(login.data.rider.vehicle_number, 'AS06 AB 1234'); assert.equal(login.data.rider.company, 'Bowl Mania');
+  assert.equal((await rapi('GET', '/api/rider/me')).status, 401);
+  assert.equal((await rapi('GET', '/api/rider/me', null, 'x'.repeat(40))).status, 401);
+  // A rider cannot use the web admin to skip OTP and proof.
+  const web = client(); await web.post('/api/auth/login', { email: 'rider@bowlmania.test', password: 'RiderPass12' });
+  assert.equal((await web.get('/api/admin/orders')).status, 403);
+  assert.equal((await web.patch('/api/admin/deliveries/1', { status: 'delivered' })).status, 403);
+});
+
+test('rider app: online, GPS, full COD delivery with OTPs, proof and cash; no earnings anywhere', async () => {
+  assert.equal((await rapi('POST', '/api/rider/location', { points: [{ latitude: sonari.lat, longitude: sonari.lng, timestamp: new Date().toISOString() }] }, riderTok)).status, 409);
+  assert.equal((await rapi('POST', '/api/rider/status', { online: true }, riderTok)).data.online, true);
+  const t0 = Date.now() - 10 * 60_000;
+  const pts = [0, 1, 2, 3].map(i => ({ latitude: sonari.lat + i * 0.005, longitude: sonari.lng, accuracy: 8, speed: 5, heading: 0, timestamp: new Date(t0 + i * 60_000).toISOString() }));
+  assert.equal((await rapi('POST', '/api/rider/location', { points: pts }, riderTok)).data.accepted, 4);
+  assert.equal((await rapi('POST', '/api/rider/location', { points: pts }, riderTok)).data.accepted, 0);
+  const live = (await owner.get('/api/admin/riders')).data.rows.find(x => x.id === riderId);
+  assert.equal(live.online, true); assert.ok(live.location);
+
   const o = (await guest.post('/api/orders', orderBody({ phone: '9855555555' }))).data;
   const id = (await owner.get(`/api/admin/orders?q=${o.order_number}`)).data.rows[0].id;
-  for (const st of ['confirmed', 'preparing', 'ready']) assert.equal((await owner.patch(`/api/admin/orders/${id}/status`, { status: st })).status, 200);
-  assert.equal((await owner.put(`/api/admin/orders/${id}/assignment`, { staff_id: s.data.id })).status, 200);
-  const rider = client();
-  await rider.post('/api/auth/login', { email: 'rider@bowlmania.test', password: 'RiderPass12' });
-  const mine = (await rider.get('/api/admin/deliveries/mine')).data;
-  assert.equal(mine.length, 1); assert.equal(mine[0].order_number, o.order_number);
-  assert.equal((await rider.get('/api/admin/orders')).status, 403);
-  for (const st of ['picked_up', 'out_for_delivery']) assert.equal((await rider.patch(`/api/admin/deliveries/${id}`, { status: st })).status, 200);
-  const t = (await guest.get(`/api/track/${o.tracking_token}`)).data;
-  assert.equal(t.status, 'out_for_delivery'); assert.equal(t.rider.first_name, 'Bikash');
-  assert.equal((await rider.patch(`/api/admin/deliveries/${id}`, { status: 'delivered' })).status, 200);
-  const d = (await owner.get(`/api/admin/orders/${id}`)).data;
-  assert.equal(d.status, 'delivered'); assert.equal(d.payment_status, 'paid');
+  for (const st of ['confirmed', 'preparing']) assert.equal((await owner.patch(`/api/admin/orders/${id}/status`, { status: st })).status, 200);
+  assert.equal((await owner.put(`/api/admin/orders/${id}/assignment`, { staff_id: riderId })).status, 200);
+  const sync = (await rapi('GET', '/api/rider/sync?after=0', null, riderTok)).data;
+  assert.ok(sync.notifications.some(n => n.type === 'new_delivery' && n.order_id === id));
+
+  let d = (await rapi('GET', `/api/rider/deliveries/${id}`, null, riderTok)).data;
+  assert.equal(d.status, 'assigned'); assert.deepEqual(d.next, ['accept', 'reject']);
+  assert.equal(d.payment.collect_amount, o.total); assert.equal(d.payment.prepaid, false);
+  assert.equal(d.restaurant.name, 'Bowl Mania Sonari'); assert.equal(d.customer.phone, '9855555555');
+  const json = JSON.stringify(d).toLowerCase();
+  for (const word of ['delivery_fee', 'earning', 'commission', 'incentive', '"tip', 'payout', 'subtotal']) assert.ok(!json.includes(word), `rider view mentions ${word}`);
+
+  const step = (s, extra = {}) => rapi('POST', `/api/rider/deliveries/${id}/step`, { step: s, ...extra }, riderTok);
+  assert.equal((await step('start_delivery')).status, 409);
+  assert.equal((await rapi('POST', `/api/rider/deliveries/${id}/accept`, { key: 'accept-key-1' }, riderTok)).data.status, 'accepted');
+  assert.equal((await rapi('POST', `/api/rider/deliveries/${id}/accept`, { key: 'accept-key-1' }, riderTok)).status, 200);
+  assert.equal((await rapi('POST', `/api/rider/status`, { online: false }, riderTok)).status, 409);
+  assert.equal((await step('start')).data.status, 'to_restaurant');
+  assert.equal((await step('arrive_restaurant')).data.status, 'at_restaurant');
+  const code = await kitchenCode(id);
+  assert.match(code, /^\d{4}$/);
+  const wrong = code === '0000' ? '1111' : '0000';
+  const bad = await step('verify_pickup', { otp: wrong });
+  assert.equal(bad.status, 400); assert.match(bad.data.error, /Wrong code\. 4 tries left/);
+  assert.equal((await step('verify_pickup', { otp: code })).data.status, 'picked_up');
+  assert.equal((await owner.get(`/api/admin/orders/${id}`)).data.status, 'ready');
+  assert.equal((await step('start_delivery')).data.status, 'out_for_delivery');
+  const track = (await guest.get(`/api/track/${o.tracking_token}`)).data;
+  assert.equal(track.status, 'out_for_delivery'); assert.equal(track.rider.first_name, 'Bikash'); assert.match(track.delivery_otp, /^\d{4}$/);
+  assert.equal((await step('arrive_customer')).data.status, 'at_customer');
+  assert.deepEqual((await step('arrive_customer')).data.next, ['verify_delivery']);
+  assert.equal((await step('deliver')).status, 409);
+  d = (await step('verify_delivery', { otp: track.delivery_otp })).data;
+  assert.equal(d.status, 'otp_verified'); assert.deepEqual(d.next, ['collect_cash', 'proof']);
+  assert.equal((await step('deliver')).status, 409);
+  const fd = new FormData();
+  fd.append('photo', new Blob([await jpeg()], { type: 'image/jpeg' }), 'door.jpg');
+  fd.append('signature', new Blob([await (await import('sharp')).default({ create: { width: 600, height: 240, channels: 3, background: '#ffffff' } }).png().toBuffer()], { type: 'image/png' }), 'sign.png');
+  fd.append('note', 'Handed to customer at the gate'); fd.append('lat', String(sonari.lat)); fd.append('lng', String(sonari.lng));
+  d = (await rapi('POST', `/api/rider/deliveries/${id}/proof`, fd, riderTok)).data;
+  assert.equal(d.proof.photo, true); assert.equal(d.proof.signature, true); assert.deepEqual(d.next, ['collect_cash']);
+  d = (await step('collect_cash', { key: 'cash-key-1' })).data;
+  assert.equal(d.payment.cash_collected, true); assert.deepEqual(d.next, ['deliver']);
+  d = (await step('deliver', { key: 'deliver-key-1' })).data;
+  assert.equal(d.status, 'delivered');
+  assert.equal((await step('deliver', { key: 'deliver-key-1' })).status, 200);
+  const full = (await owner.get(`/api/admin/orders/${id}`)).data;
+  assert.equal(full.status, 'delivered'); assert.equal(full.payment_status, 'paid');
+  assert.ok(full.assignment.proof_photo_url); assert.ok(full.delivery_events.some(e => e.step === 'cash_collected'));
+  const img = await fetch(BASE + full.assignment.proof_photo_url, { headers: { Cookie: Object.entries(owner.jar).map(([k, v]) => `${k}=${v}`).join('; ') } });
+  assert.equal(img.status, 200); assert.equal(img.headers.get('content-type'), 'image/webp');
+  assert.equal((await fetch(BASE + full.assignment.proof_photo_url)).status, 401);
+  assert.equal((await fetch(BASE + '/uploads/' + full.assignment.proof_photo)).status, 404);
+
+  const home = (await rapi('GET', '/api/rider/home', null, riderTok)).data;
+  assert.equal(home.today.completed, 1); assert.ok(home.today.distance_km > 1); assert.equal(home.active, null);
+  const perf = (await rapi('GET', '/api/rider/performance', null, riderTok)).data;
+  assert.equal(perf.completed, 1);
+  const hist = (await rapi('GET', '/api/rider/deliveries/history?status=delivered', null, riderTok)).data;
+  assert.equal(hist.rows[0].order_number, o.order_number);
+  assert.equal((await rapi('POST', '/api/rider/status', { online: false }, riderTok)).data.online, false);
 
   const rv = await guest.post(`/api/track/${o.tracking_token}/review`, { rating: 5, comment: 'Fresh and tasty!' });
   assert.equal(rv.status, 201);
@@ -273,6 +357,91 @@ test('delivery assignment and delivery staff flow; COD marked paid on delivery',
   await owner.patch(`/api/admin/reviews/${reviews[0].id}`, { featured: true });
   const pub = (await guest.get('/api/reviews')).data;
   assert.equal(pub[0].comment, 'Fresh and tasty!'); assert.equal(pub[0].customer_name, 'Priya');
+  assert.equal((await rapi('GET', '/api/rider/performance', null, riderTok)).data.rating, 5);
+});
+
+test('rider app: reject, reassignment, cancellation, OTP lock-out and manager override', async () => {
+  const o = (await guest.post('/api/orders', orderBody({ phone: '9855555566' }))).data;
+  const id = (await owner.get(`/api/admin/orders?q=${o.order_number}`)).data.rows[0].id;
+  await owner.patch(`/api/admin/orders/${id}/status`, { status: 'confirmed' });
+  await owner.put(`/api/admin/orders/${id}/assignment`, { staff_id: riderId });
+  assert.equal((await rapi('POST', `/api/rider/deliveries/${id}/reject`, { reason: 'Tyre puncture' }, riderTok)).status, 200);
+  assert.equal((await rapi('POST', `/api/rider/deliveries/${id}/reject`, { reason: 'Tyre puncture' }, riderTok)).status, 200);
+  const det = (await owner.get(`/api/admin/orders/${id}`)).data;
+  assert.equal(det.assignment, null); assert.equal(det.rejections[0].reason, 'Tyre puncture');
+  assert.equal((await rapi('GET', `/api/rider/deliveries/${id}`, null, riderTok)).status, 404);
+  assert.equal((await rapi('GET', '/api/rider/deliveries/history?status=rejected', null, riderTok)).data.rows[0].status, 'rejected');
+
+  await owner.put(`/api/admin/orders/${id}/assignment`, { staff_id: riderId });
+  await rapi('POST', `/api/rider/deliveries/${id}/accept`, {}, riderTok);
+  assert.equal((await rapi('POST', `/api/rider/deliveries/${id}/reject`, {}, riderTok)).status, 409);
+  const step = (s, extra = {}) => rapi('POST', `/api/rider/deliveries/${id}/step`, { step: s, ...extra }, riderTok);
+  await step('arrive_restaurant');
+  assert.equal((await step('verify_pickup', { otp: await kitchenCode(id) })).status, 409); // kitchen hasn't started
+  await owner.patch(`/api/admin/orders/${id}/status`, { status: 'preparing' });
+  const code = await kitchenCode(id), wrong = code === '0000' ? '1111' : '0000';
+  for (let i = 0; i < 5; i++) await step('verify_pickup', { otp: wrong });
+  assert.equal((await step('verify_pickup', { otp: code })).status, 423);
+  await owner.post(`/api/admin/orders/${id}/delivery/otp`, { kind: 'pickup' });
+  assert.equal((await step('verify_pickup', { otp: await kitchenCode(id) })).data.status, 'picked_up');
+  assert.equal((await owner.post(`/api/admin/orders/${id}/delivery/override`, { step: 'out_for_delivery', reason: 'Rider on the way' })).status, 200);
+  assert.equal((await owner.post(`/api/admin/orders/${id}/delivery/override`, { step: 'delivered', reason: 'Customer lost code, verified by phone' })).status, 200);
+  assert.equal((await owner.get(`/api/admin/orders/${id}`)).data.status, 'delivered');
+
+  const c = (await guest.post('/api/orders', orderBody({ phone: '9855555577' }))).data;
+  const cid = (await owner.get(`/api/admin/orders?q=${c.order_number}`)).data.rows[0].id;
+  await owner.put(`/api/admin/orders/${cid}/assignment`, { staff_id: riderId });
+  await owner.patch(`/api/admin/orders/${cid}/status`, { status: 'cancelled' });
+  const n = (await rapi('GET', '/api/rider/notifications', null, riderTok)).data;
+  assert.ok(n.rows.some(x => x.type === 'order_cancelled' && x.order_id === cid));
+  assert.ok((await rapi('GET', '/api/rider/deliveries', null, riderTok)).data.cancelled_today.some(x => x.order_id === cid));
+  assert.equal((await rapi('POST', `/api/rider/deliveries/${cid}/accept`, {}, riderTok)).status, 409);
+  assert.equal((await rapi('POST', '/api/rider/notifications/read', {}, riderTok)).data.unread, 0);
+});
+
+test('rider app: attendance with selfie, breaks, shifts, leave', async () => {
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
+  const h = Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Kolkata', hour: '2-digit', hourCycle: 'h23' }).format(new Date()));
+  const start = `${String(Math.max(0, h - 1)).padStart(2, '0')}:00`, end = h >= 23 ? '23:59' : `${String(h + 1).padStart(2, '0')}:59`;
+  assert.equal((await owner.post('/api/admin/shifts', { rider_ids: [riderId], from: today, to: today, start_time: start, end_time: end })).data.created, 1);
+  let a = (await rapi('GET', '/api/rider/attendance', null, riderTok)).data;
+  assert.equal(a.state, 'not_checked_in'); assert.equal(a.shift.start_time, start);
+  const fd = () => { const f = new FormData(); f.append('lat', String(sonari.lat)); f.append('lng', String(sonari.lng)); f.append('accuracy', '12'); return f; };
+  assert.equal((await rapi('POST', '/api/rider/attendance/check-in', fd(), riderTok)).status, 400);
+  const f1 = fd(); f1.append('selfie', new Blob([await jpeg(480, 640, '#caa07a')], { type: 'image/jpeg' }), 'selfie.jpg');
+  a = (await rapi('POST', '/api/rider/attendance/check-in', f1, riderTok)).data;
+  assert.equal(a.state, 'working'); assert.ok(a.attendance.check_in_selfie);
+  const f2 = fd(); f2.append('selfie', new Blob([await jpeg(480, 640)], { type: 'image/jpeg' }), 'selfie.jpg');
+  assert.equal((await rapi('POST', '/api/rider/attendance/check-in', f2, riderTok)).status, 409);
+  assert.equal((await rapi('POST', '/api/rider/attendance/break/start', {}, riderTok)).data.state, 'on_break');
+  assert.equal((await rapi('POST', '/api/rider/attendance/break/end', {}, riderTok)).data.state, 'working');
+  const adm = (await owner.get('/api/admin/attendance')).data.rows.find(x => x.rider.id === riderId);
+  assert.equal(adm.state, 'working'); assert.ok(adm.attendance.check_in_selfie.startsWith('/api/admin/files/selfie/'));
+  assert.equal((await rapi('POST', '/api/rider/attendance/check-out', fd(), riderTok)).data.state, 'checked_out');
+  assert.equal((await rapi('GET', '/api/rider/attendance/history', null, riderTok)).data[0].date, today);
+  const tomorrow = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date(Date.now() + 86_400_000));
+  const lv = await rapi('POST', '/api/rider/leave', { from_date: tomorrow, to_date: tomorrow, reason: 'Family function' }, riderTok);
+  assert.equal(lv.status, 201);
+  assert.equal((await rapi('POST', '/api/rider/leave', { from_date: tomorrow, to_date: tomorrow, reason: 'Again' }, riderTok)).status, 409);
+  assert.equal((await owner.patch(`/api/admin/leave/${lv.data.id}`, { status: 'approved' })).status, 200);
+  assert.equal((await rapi('GET', '/api/rider/leave', null, riderTok)).data[0].status, 'approved');
+});
+
+test('rider app: support tickets, replies and emergency', async () => {
+  const t = await rapi('POST', '/api/rider/support/tickets', { category: 'vehicle', message: 'Brake problem on my scooter', key: 'ticket-key-01' }, riderTok);
+  assert.equal(t.status, 201); assert.equal(t.data.category_label, 'Vehicle issue');
+  assert.equal((await rapi('POST', '/api/rider/support/tickets', { category: 'vehicle', message: 'Brake problem on my scooter', key: 'ticket-key-01' }, riderTok)).data.id, t.data.id);
+  assert.equal((await owner.post(`/api/admin/support/${t.data.id}/messages`, { message: 'Use the spare scooter today.' })).status, 200);
+  const view = (await rapi('GET', `/api/rider/support/tickets/${t.data.id}`, null, riderTok)).data;
+  assert.equal(view.status, 'in_progress'); assert.equal(view.messages[1].body, 'Use the spare scooter today.');
+  const em = await rapi('POST', '/api/rider/emergency', { type: 'accident', message: 'Minor fall near the market', lat: sonari.lat, lng: sonari.lng, key: 'emergency-key-1' }, riderTok);
+  assert.equal(em.status, 201); assert.equal(em.data.emergency_number, '112');
+  const list = (await owner.get('/api/admin/support')).data.rows;
+  assert.equal(list[0].priority, 'urgent'); assert.equal(list[0].category, 'accident');
+  const notes = (await owner.get('/api/admin/notifications')).data.rows;
+  assert.ok(notes.some(n => n.type === 'rider_emergency' && /maps\.google\.com/.test(n.body)));
+  assert.equal((await rapi('POST', '/api/rider/logout', {}, riderTok)).status, 200);
+  assert.equal((await rapi('GET', '/api/rider/me', null, riderTok)).status, 401);
 });
 
 test('manual staff order uses the same pricing', async () => {

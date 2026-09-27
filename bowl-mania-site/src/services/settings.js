@@ -13,6 +13,11 @@ export const DEFAULTS = {
     prep_minutes: 20, delivery_minutes: 25, order_cutoff_minutes: 15
   },
   payments: { online_enabled: true, cod_enabled: true },
+  riders: {
+    require_pickup_otp: true, require_delivery_otp: true, require_proof_photo: true, require_signature: false,
+    require_shift_for_checkin: false, checkout_selfie: false, late_grace_minutes: 10, otp_max_attempts: 5,
+    support_phone: '', stale_location_minutes: 5
+  },
   notifications: {
     whatsapp_enabled: false, browser_sound: true,
     templates: {
@@ -21,7 +26,7 @@ export const DEFAULTS = {
       order_confirmed: { enabled: true, template_name: '', language: 'en', body: 'Hello {{customer_name}},\nYour Bowl Mania order {{order_id}} has been confirmed.\n\nAmount: ₹{{amount}}\n\nTrack your order:\n{{tracking_url}}\n\nThank you for choosing Bowl Mania ❤️' },
       preparing: { enabled: true, template_name: '', language: 'en', body: 'Your Bowl Mania order {{order_id}} is being prepared fresh right now 🥗' },
       ready: { enabled: true, template_name: '', language: 'en', body: 'Your Bowl Mania order {{order_id}} is ready{{pickup_note}}.' },
-      out_for_delivery: { enabled: true, template_name: '', language: 'en', body: 'Your Bowl Mania order {{order_id}} is on the way with {{rider_name}} ({{rider_phone}}). Track: {{tracking_url}}' },
+      out_for_delivery: { enabled: true, template_name: '', language: 'en', body: 'Your Bowl Mania order {{order_id}} is on the way with {{rider_name}} ({{rider_phone}}). Your delivery code is {{delivery_otp}}; share it with the rider at your door. Track: {{tracking_url}}' },
       delivered: { enabled: true, template_name: '', language: 'en', body: 'Your Bowl Mania order {{order_id}} has been delivered. Enjoy your bowl! Rate us: {{tracking_url}}' },
       cancelled: { enabled: true, template_name: '', language: 'en', body: 'Your Bowl Mania order {{order_id}} has been cancelled. If you paid online, the refund will be processed.' },
       refund_processed: { enabled: true, template_name: '', language: 'en', body: 'A refund of ₹{{refund_amount}} for Bowl Mania order {{order_id}} has been processed.' }

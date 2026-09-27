@@ -4,13 +4,14 @@ import { emit } from '../lib/events.js';
 import { notifyAdmins } from './notifications.js';
 import { sendOrderMessage } from './whatsapp.js';
 import { config } from '../config.js';
+import { notifyRider } from './riders.js';
 
 const vars = (o, extra = {}) => {
-  const rider = db.prepare('SELECT a.name, a.phone FROM delivery_assignments d JOIN admins a ON a.id=d.staff_id WHERE d.order_id=?').get(o.id);
+  const rider = db.prepare('SELECT a.name, a.phone, d.delivery_otp FROM delivery_assignments d JOIN admins a ON a.id=d.staff_id WHERE d.order_id=?').get(o.id);
   return {
     customer_name: o.customer_name.split(' ')[0], order_id: o.order_number, amount: o.total,
     tracking_url: `${config.publicUrl}/track/${o.tracking_token}`, status: o.status,
-    rider_name: rider?.name || 'our delivery partner', rider_phone: rider?.phone || '',
+    rider_name: rider?.name || 'our delivery partner', rider_phone: rider?.phone || '', delivery_otp: rider?.delivery_otp || '',
     pickup_note: o.fulfilment === 'pickup' ? ` for pickup at ${o.area_name || 'our kitchen'}` : '', ...extra
   };
 };
@@ -40,6 +41,9 @@ export const hooks = {
   statusChanged(o, from, to, admin) {
     emit('order_updated', { ...summary(o), from }, 'orders.view');
     if (to === 'cancelled') notifyAdmins({ type: 'order_cancelled', title: `Order ${o.order_number} cancelled`, body: `${admin ? 'By ' + admin.name : 'Automatically'} · ₹${o.total}`, link: `#/orders/${o.id}`, permission: 'orders.view' });
+    const asg = db.prepare("SELECT staff_id FROM delivery_assignments WHERE order_id=? AND status<>'delivered'").get(o.id);
+    if (asg && to === 'cancelled') notifyRider(asg.staff_id, { type: 'order_cancelled', title: `Order ${o.order_number} was cancelled`, body: 'Do not pick it up. If you already have it, return it to the kitchen.', order_id: o.id });
+    if (asg && to === 'ready') notifyRider(asg.staff_id, { type: 'order_ready', title: `Order ${o.order_number} is ready for pickup`, body: o.area_name ? `At ${o.area_name}` : '', order_id: o.id });
     const ev = STATUS_EVENT[to];
     if (ev) sendOrderMessage(ev, o, vars(o));
   }

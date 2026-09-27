@@ -32,14 +32,18 @@ export const PERMISSIONS = [
   ['reports.export', 'Reports', 'Download reports'],
   ['staff.manage', 'Admin', 'Manage staff accounts'],
   ['settings.manage', 'Admin', 'Change restaurant settings'],
-  ['audit.view', 'Admin', 'See the audit log']
+  ['audit.view', 'Admin', 'See the audit log'],
+  ['riders.view', 'Riders', 'See riders on the live map, their deliveries and performance'],
+  ['riders.manage', 'Riders', 'Edit rider details, shifts and leave'],
+  ['attendance.view', 'Riders', 'See attendance and selfies'],
+  ['support.manage', 'Riders', 'Answer rider support tickets and emergencies']
 ];
 const ALL = PERMISSIONS.map(p => p[0]);
 export const ROLES = [
   ['super_admin', 'Super Admin', 'Full access, including roles and other super admins', 100, ALL],
   ['admin', 'Admin', 'Full access to the restaurant', 80, ALL],
   ['manager', 'Manager', 'Runs daily operations', 60, ALL.filter(p => !['staff.manage', 'settings.manage', 'audit.view', 'payments.refund'].includes(p))],
-  ['order_manager', 'Order Manager', 'Handles incoming orders', 40, ['dashboard.view', 'orders.view', 'orders.update', 'orders.kitchen', 'orders.create', 'orders.cancel', 'menu.view', 'menu.availability', 'customers.view', 'payments.view', 'delivery.view', 'delivery.assign', 'inquiries.manage', 'notifications.view']],
+  ['order_manager', 'Order Manager', 'Handles incoming orders', 40, ['dashboard.view', 'orders.view', 'orders.update', 'orders.kitchen', 'orders.create', 'orders.cancel', 'menu.view', 'menu.availability', 'customers.view', 'payments.view', 'delivery.view', 'delivery.assign', 'inquiries.manage', 'notifications.view', 'riders.view', 'support.manage']],
   ['kitchen_staff', 'Kitchen Staff', 'Prepares orders', 20, ['orders.view', 'orders.kitchen', 'menu.view', 'menu.availability', 'inventory.manage', 'notifications.view']],
   ['delivery_staff', 'Delivery Staff', 'Delivers orders', 10, ['delivery.update']]
 ];
@@ -62,8 +66,13 @@ const AREAS = [
 
 export async function seed() {
   const addPerm = db.prepare('INSERT OR IGNORE INTO permissions (key, grp, description) VALUES (?,?,?)');
-  PERMISSIONS.forEach(p => addPerm.run(p[0], p[1], p[2]));
+  const added = PERMISSIONS.filter(p => addPerm.run(p[0], p[1], p[2]).changes).map(p => p[0]);
   const permId = Object.fromEntries(db.prepare('SELECT key, id FROM permissions').all().map(r => [r.key, r.id]));
+  // A permission introduced by a later release goes to the existing roles that include it by default.
+  for (const [key, , , , perms] of ROLES) {
+    const role = db.prepare('SELECT id FROM roles WHERE key=?').get(key);
+    if (role) added.filter(p => perms.includes(p)).forEach(p => db.prepare('INSERT OR IGNORE INTO role_permissions (role_id, permission_id) VALUES (?,?)').run(role.id, permId[p]));
+  }
   for (const [key, name, description, rank, perms] of ROLES) {
     const exists = db.prepare('SELECT id FROM roles WHERE key=?').get(key);
     if (exists) continue; // keep permission edits made in the admin

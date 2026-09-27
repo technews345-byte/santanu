@@ -41,6 +41,9 @@ export const config = {
   publicUrl: (env.PUBLIC_URL || defaultPublicUrl).replace(/\/$/, ''),
   dbFile,
   uploadsDir: env.UPLOADS_DIR || path.join(DATA_DIR || ROOT, 'uploads'),
+  // Delivery proof, selfies and rider photos: never served publicly, only through signed-in routes.
+  privateDir: env.PRIVATE_DIR || path.join(DATA_DIR || (env.UPLOADS_DIR ? path.dirname(env.UPLOADS_DIR) : ROOT), 'private'),
+  firebaseServiceAccount: env.FIREBASE_SERVICE_ACCOUNT || '',
   trustProxy: env.TRUST_PROXY ? env.TRUST_PROXY === '1' : onRailway,
   jwtSecret: jwtSecret(dbFile),
   accessTtlMin: Number(env.ACCESS_TOKEN_MINUTES || 15),

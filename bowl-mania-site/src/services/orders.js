@@ -168,7 +168,7 @@ export function changeStatus(orderId, to, { admin = null, note = '', force = fal
 /** Public, non-sensitive view for the tracking page. */
 export function trackingView(o) {
   const history = db.prepare('SELECT to_status, created_at FROM order_status_history WHERE order_id=? ORDER BY id').all(o.id);
-  const assignment = db.prepare(`SELECT d.status, a.name FROM delivery_assignments d JOIN admins a ON a.id=d.staff_id WHERE d.order_id=?`).get(o.id);
+  const assignment = db.prepare(`SELECT d.status, d.delivery_otp, a.name FROM delivery_assignments d JOIN admins a ON a.id=d.staff_id WHERE d.order_id=?`).get(o.id);
   const r = getSetting('restaurant');
   return {
     order_number: o.order_number, restaurant: r.name, status: o.status, status_label: STATUS_LABEL[o.status],
@@ -178,7 +178,9 @@ export function trackingView(o) {
     estimated_at: o.estimated_at, placed_at: o.placed_at, created_at: o.created_at,
     items: o.items.map(i => ({ name: i.name, size: i.size_label, quantity: i.quantity, line_total: i.line_total })),
     history: history.map(h => ({ status: h.to_status, at: h.created_at })),
-    rider: assignment && ['out_for_delivery', 'picked_up'].includes(assignment.status) && o.status === 'out_for_delivery' ? { first_name: assignment.name.split(' ')[0] } : null,
+    rider: assignment && o.status === 'out_for_delivery' ? { first_name: assignment.name.split(' ')[0] } : null,
+    // The customer tells the rider this code at the door; only the holder of the private tracking link sees it.
+    delivery_otp: assignment && o.status === 'out_for_delivery' && assignment.status !== 'delivered' ? assignment.delivery_otp : null,
     contact: { phone: db.prepare('SELECT phone FROM delivery_areas WHERE id=?').get(o.area_id)?.phone || r.phone },
     can_review: ['delivered', 'completed'].includes(o.status) && !db.prepare('SELECT 1 FROM reviews WHERE order_id=?').get(o.id)
   };

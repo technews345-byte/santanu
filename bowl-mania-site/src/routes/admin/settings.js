@@ -20,6 +20,9 @@ const SCHEMAS = {
     tax_percent: z.coerce.number().min(0).max(28), currency: z.literal('INR'), timezone: z.string().max(40).refine(tz => { try { new Intl.DateTimeFormat('en', { timeZone: tz }); return true; } catch { return false; } }, 'Unknown timezone.'),
     prep_minutes: z.coerce.number().int().min(0).max(240), delivery_minutes: z.coerce.number().int().min(0).max(240), order_cutoff_minutes: z.coerce.number().int().min(0).max(120) }),
   payments: z.object({ online_enabled: bool, cod_enabled: bool }).refine(p => p.online_enabled || p.cod_enabled, { message: 'Keep at least one payment method on.' }),
+  riders: z.object({ require_pickup_otp: bool, require_delivery_otp: bool, require_proof_photo: bool, require_signature: bool, require_shift_for_checkin: bool, checkout_selfie: bool,
+    late_grace_minutes: z.coerce.number().int().min(0).max(120), otp_max_attempts: z.coerce.number().int().min(3).max(10),
+    support_phone: z.union([z.literal(''), z.string().trim().regex(/^\+?\d{10,13}$/, 'Use a phone number with 10–13 digits.')]), stale_location_minutes: z.coerce.number().int().min(1).max(60) }),
   notifications: z.object({ whatsapp_enabled: bool, browser_sound: bool,
     templates: z.object(Object.fromEntries(WA_EVENTS.map(e => [e, z.object({ enabled: bool, template_name: z.string().trim().regex(/^[a-z0-9_]*$/, 'Template names use lowercase letters, numbers and _.').max(60), language: z.string().max(10), body: text(1000, 1) })]))) })
 };

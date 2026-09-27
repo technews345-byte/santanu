@@ -9,6 +9,7 @@ import { getOrder, changeStatus, createOrder, nextStatuses, STATUSES, STATUS_LAB
 import { priceCart } from '../../services/pricing.js';
 import { upcomingSlots } from '../../services/delivery.js';
 import { paging, likeEsc } from './helpers.js';
+import { assignDelivery, unassignDelivery, regenerateOtp, overrideStep } from '../../services/riders.js';
 
 const r = Router();
 
@@ -70,7 +71,9 @@ r.get('/orders/:id', requirePerm('orders.view'), ah(async (req, res) => {
     history: db.prepare('SELECT * FROM order_status_history WHERE order_id=? ORDER BY id').all(o.id),
     payments: db.prepare('SELECT * FROM payments WHERE order_id=? ORDER BY id').all(o.id),
     refunds: db.prepare('SELECT * FROM refunds WHERE order_id=? ORDER BY id').all(o.id),
-    assignment: db.prepare('SELECT d.*, a.name AS staff_name, a.phone AS staff_phone FROM delivery_assignments d JOIN admins a ON a.id=d.staff_id WHERE d.order_id=?').get(o.id) || null,
+    assignment: deliveryInfo(o.id),
+    delivery_events: db.prepare('SELECT e.step, e.note, e.lat, e.lng, e.created_at, a.name AS by_name FROM delivery_events e LEFT JOIN admins a ON a.id=e.staff_id WHERE e.order_id=? ORDER BY e.id').all(o.id),
+    rejections: db.prepare('SELECT r.reason, r.created_at, a.name AS staff_name FROM delivery_rejections r JOIN admins a ON a.id=r.staff_id WHERE r.order_id=? ORDER BY r.id').all(o.id),
     messages: db.prepare('SELECT id, event, status, error, created_at FROM notification_logs WHERE order_id=? ORDER BY id DESC').all(o.id)
   });
 }));
@@ -113,17 +116,39 @@ r.put('/orders/:id/assignment', requirePerm('delivery.assign'), ah(async (req, r
   if (['delivered', 'completed', 'cancelled', 'refunded'].includes(o.status)) throw badRequest('This order is already closed.');
   const prev = db.prepare('SELECT d.staff_id, a.name FROM delivery_assignments d JOIN admins a ON a.id=d.staff_id WHERE d.order_id=?').get(o.id);
   if (b.staff_id == null) {
-    db.prepare('DELETE FROM delivery_assignments WHERE order_id=?').run(o.id);
+    unassignDelivery(o);
     audit(req, 'unassign', 'order', o.order_number, `Removed ${prev?.name || 'delivery person'} from ${o.order_number}`);
     return res.json({ ok: true, assignment: null });
   }
   const staff = db.prepare(`SELECT a.id, a.name FROM admins a JOIN role_permissions rp ON rp.role_id=a.role_id JOIN permissions p ON p.id=rp.permission_id
     WHERE a.id=? AND a.status='active' AND p.key='delivery.update'`).get(b.staff_id);
   if (!staff) throw badRequest('Choose an active staff member who can make deliveries.');
-  db.prepare(`INSERT INTO delivery_assignments (order_id, staff_id) VALUES (?,?)
-    ON CONFLICT(order_id) DO UPDATE SET staff_id=excluded.staff_id, status='assigned', assigned_at=CURRENT_TIMESTAMP, picked_up_at=NULL, updated_at=CURRENT_TIMESTAMP`).run(o.id, staff.id);
+  if (prev?.staff_id === staff.id) return res.json({ ok: true, assignment: db.prepare('SELECT d.*, a.name AS staff_name, a.phone AS staff_phone FROM delivery_assignments d JOIN admins a ON a.id=d.staff_id WHERE d.order_id=?').get(o.id) });
+  assignDelivery(o, staff, req.admin);
   audit(req, 'assign', 'order', o.order_number, `Assigned ${o.order_number} to ${staff.name}`, prev ? { staff: prev.name } : null, { staff: staff.name });
   res.json({ ok: true, assignment: db.prepare('SELECT d.*, a.name AS staff_name, a.phone AS staff_phone FROM delivery_assignments d JOIN admins a ON a.id=d.staff_id WHERE d.order_id=?').get(o.id) });
+}));
+
+/** Assignment with OTPs and links to proof files (kitchen staff read the pickup code to the rider). */
+function deliveryInfo(orderId) {
+  const d = db.prepare('SELECT d.*, a.name AS staff_name, a.phone AS staff_phone FROM delivery_assignments d JOIN admins a ON a.id=d.staff_id WHERE d.order_id=?').get(orderId);
+  if (!d) return null;
+  const file = n => (n ? `/api/admin/files/${n}` : null);
+  return { ...d, proof_photo_url: file(d.proof_photo), proof_signature_url: file(d.proof_signature) };
+}
+r.post('/orders/:id/delivery/otp', requirePerm('delivery.assign'), ah(async (req, res) => {
+  const b = parse(z.object({ kind: z.enum(['pickup', 'delivery']) }), req.body);
+  const o = getOrder(Number(req.params.id)); if (!o) throw notFound('Order not found.');
+  regenerateOtp(o.id, b.kind);
+  audit(req, 'otp_reset', 'order', o.order_number, `New ${b.kind} code for ${o.order_number}`);
+  res.json(deliveryInfo(o.id));
+}));
+r.post('/orders/:id/delivery/override', requirePerm('delivery.assign'), ah(async (req, res) => {
+  const b = parse(z.object({ step: z.enum(['picked_up', 'out_for_delivery', 'delivered']), reason: text(200, 3) }), req.body);
+  const o = getOrder(Number(req.params.id)); if (!o) throw notFound('Order not found.');
+  overrideStep(o.id, b.step, req.admin, b.reason);
+  audit(req, 'delivery_override', 'order', o.order_number, `${o.order_number}: marked ${b.step.replace(/_/g, ' ')} by manager (${b.reason})`);
+  res.json(deliveryInfo(o.id));
 }));
 
 export const statusMeta = { STATUSES, STATUS_LABEL };
