@@ -124,7 +124,7 @@ State-changing delivery actions accept a `key` (idempotency key): repeating a re
 - `POST /deliveries/:orderId/proof` multipart `photo`, `signature`, `note`, `key`, `lat`, `lng`
 - `GET /performance?from&to` deliveries, completed, cancelled, rejected, on-time rate, average time, distance, rating
 - `GET /notifications?before` · `POST /notifications/read {ids?}` · `DELETE /notifications` (clears read ones)
-- `GET /attendance` · `POST /attendance/check-in` multipart `selfie`, `lat`, `lng`, `accuracy` · `POST /attendance/check-out` (selfie when required) · `POST /attendance/break/start|end` · `GET /attendance/history?from&to`
+- `GET /attendance` · `POST /attendance/check-in` multipart `selfie`, `lat`, `lng`, `accuracy` · `POST /attendance/check-out` (selfie when required; the rider can check in again the same day — the time in between is recorded as off duty) · `POST /attendance/break/start|end` · `GET /attendance/history?from&to`
 - `GET /shifts?from&to` · `GET /leave` · `POST /leave {from_date, to_date, reason}` · `POST /leave/:id/cancel`
 - `GET /support/tickets` · `POST /support/tickets {category, message, order_id?, key}` (or multipart with `attachment`) · `GET /support/tickets/:id` · `POST /support/tickets/:id/messages {message}`
 - `POST /emergency {type: emergency|accident|safety, message?, order_id?, key, lat, lng}` creates an urgent ticket and alerts the admin panel immediately

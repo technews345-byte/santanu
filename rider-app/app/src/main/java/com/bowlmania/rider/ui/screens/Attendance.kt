@@ -105,7 +105,11 @@ fun AttendanceScreen(nav: Nav) {
                                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary))
                             }
                             a.state == "on_break" -> BigButton("End break", onClick = vm::endBreak, loading = busy == "break", icon = Icons.Filled.PlayArrow)
-                            else -> Text("You've checked out for today.", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            else -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text("You've checked out. If you're working again today, check in again.", style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                BigButton("Check in again", onClick = ::startCheckIn, loading = busy == "checkin", icon = Icons.Filled.CameraFront)
+                            }
                         }
                     }
                     if (a.breaks.isNotEmpty()) item {
@@ -136,7 +140,7 @@ fun AttendanceScreen(nav: Nav) {
             }
         }
     }
-    if (confirmOut) ConfirmDialog("Check out?", "You'll go offline and stop receiving deliveries for today.", "Check out",
+    if (confirmOut) ConfirmDialog("Check out?", "You'll go offline and stop receiving deliveries. You can check in again later today if you need to.", "Check out",
         onConfirm = { confirmOut = false; if (st.data?.rules?.selfieOnCheckOut == true) camera = "out" else vm.checkOut(null) }, onDismiss = { confirmOut = false })
 }
 
@@ -166,12 +170,12 @@ private fun TodayCard(a: AttendanceToday) {
             val start = Times.parse(rec.checkInAt)
             val end = Times.parse(rec.checkOutAt) ?: now
             val breakSecs = a.breaks.sumOf { b -> Duration.between(Times.parse(b.startedAt) ?: now, Times.parse(b.endedAt) ?: now).seconds.coerceAtLeast(0) }
-            val worked = if (start != null) (Duration.between(start, end).seconds - breakSecs).coerceAtLeast(0) else 0L
+            val worked = if (start != null) (Duration.between(start, end).seconds - breakSecs - a.offSeconds).coerceAtLeast(0) else 0L
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Column(Modifier.weight(1f)) { Text(Times.duration(worked), style = Numeric); Text("Worked", style = MaterialTheme.typography.labelMedium) }
                 Column(Modifier.weight(1f)) { Text(Times.duration(breakSecs), style = Numeric); Text("Breaks", style = MaterialTheme.typography.labelMedium) }
             }
-            Text("In ${Times.clock(rec.checkInAt)}${rec.checkOutAt?.let { " · Out ${Times.clock(it)}" } ?: ""}${if (rec.status == "late") " · Late" else ""}",
+            Text("In ${Times.clock(rec.checkInAt)}${rec.checkOutAt?.let { " · Out ${Times.clock(it)}" } ?: ""}${if (rec.status == "late") " · Late" else ""}${if (a.sessions > 1) " · checked in ${a.sessions} times" else ""}",
                 style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
@@ -201,6 +205,7 @@ fun AttendanceHistoryScreen(nav: Nav) {
                         }
                         Text("In ${Times.clock(d.checkInAt)} · Out ${d.checkOutAt?.let(Times::clock) ?: "—"}")
                         Text(listOfNotNull(d.workedSeconds?.let { "Worked ${Times.duration(it)}" }, "Breaks ${Times.duration(d.breakSeconds)}",
+                            d.sessions.takeIf { it > 1 }?.let { "$it check-ins" },
                             d.shift?.let { "Shift ${Times.hhmm(it.startTime)}–${Times.hhmm(it.endTime)}" }).joinToString(" · "),
                             style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }

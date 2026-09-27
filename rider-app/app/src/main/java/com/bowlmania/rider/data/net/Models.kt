@@ -195,6 +195,10 @@ data class Deliveries(
     @SerialName("on_break") val onBreak: Boolean = false,
     @SerialName("break_started_at") val breakStartedAt: String? = null,
     @SerialName("break_seconds") val breakSeconds: Long = 0,
+    /** Time between a check-out and a later check-in on the same day (not work, not a break). */
+    @SerialName("off_seconds") val offSeconds: Long = 0,
+    /** How many times the rider checked in today. */
+    val sessions: Int = 0,
     val state: String = "not_checked_in",
     @SerialName("upcoming_shifts") val upcomingShifts: List<Shift> = emptyList(),
     val rules: AttendanceRules = AttendanceRules(),
@@ -207,6 +211,7 @@ data class Deliveries(
     val shift: ShiftTimes? = null,
     @SerialName("break_seconds") val breakSeconds: Long = 0,
     @SerialName("worked_seconds") val workedSeconds: Long? = null,
+    val sessions: Int = 1,
 )
 @Serializable data class LeaveRequest(@SerialName("from_date") val fromDate: String, @SerialName("to_date") val toDate: String, val reason: String)
 

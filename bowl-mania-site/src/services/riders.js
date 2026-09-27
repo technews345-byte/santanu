@@ -417,5 +417,9 @@ export async function cleanupRiderData() {
   for (const a of old) {
     for (const f of [a.check_in_selfie, a.check_out_selfie]) { const p = privatePath(f); if (p) await fs.rm(p, { force: true }); }
     db.prepare("UPDATE attendance SET check_in_selfie='', check_out_selfie='' WHERE id=?").run(a.id);
+    for (const g of db.prepare("SELECT id, selfie FROM attendance_breaks WHERE attendance_id=? AND selfie<>''").all(a.id)) {
+      const p = privatePath(g.selfie); if (p) await fs.rm(p, { force: true });
+      db.prepare("UPDATE attendance_breaks SET selfie='' WHERE id=?").run(g.id);
+    }
   }
 }

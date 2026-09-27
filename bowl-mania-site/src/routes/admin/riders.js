@@ -121,8 +121,11 @@ r.get('/attendance', requirePerm('attendance.view'), ah(async (req, res) => {
     const at = db.prepare('SELECT * FROM attendance WHERE admin_id=? AND date=?').get(a.id, date);
     const shift = db.prepare('SELECT * FROM shifts WHERE admin_id=? AND date=?').get(a.id, date);
     const leave = db.prepare("SELECT * FROM leave_requests WHERE admin_id=? AND status='approved' AND ? BETWEEN from_date AND to_date").get(a.id, date);
-    const breaks = at ? db.prepare('SELECT started_at, ended_at FROM attendance_breaks WHERE attendance_id=? ORDER BY id').all(at.id) : [];
-    return { rider: { id: a.id, name: a.name, employee_id: a.employee_id }, shift, leave: leave ? { reason: leave.reason } : null, breaks,
+    const breaks = at ? db.prepare("SELECT started_at, ended_at FROM attendance_breaks WHERE attendance_id=? AND kind='break' ORDER BY id").all(at.id) : [];
+    // Earlier check-outs of the day and the check-ins that followed them.
+    const gaps = at ? db.prepare("SELECT started_at AS checked_out_at, ended_at AS checked_in_at, selfie, lat, lng FROM attendance_breaks WHERE attendance_id=? AND kind='off' ORDER BY id").all(at.id)
+      .map(g => ({ ...g, selfie: fileUrl(g.selfie) })) : [];
+    return { rider: { id: a.id, name: a.name, employee_id: a.employee_id }, shift, leave: leave ? { reason: leave.reason } : null, breaks, gaps,
       attendance: at ? { ...at, check_in_selfie: fileUrl(at.check_in_selfie), check_out_selfie: fileUrl(at.check_out_selfie) } : null,
       state: leave ? 'on_leave' : !at ? (shift ? 'absent' : 'no_shift') : at.check_out_at ? 'checked_out' : breaks.some(x => !x.ended_at) ? 'on_break' : 'working' };
   });

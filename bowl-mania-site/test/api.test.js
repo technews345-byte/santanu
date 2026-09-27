@@ -435,7 +435,19 @@ test('rider app: attendance with selfie, breaks, shifts, leave', async () => {
   const adm = (await owner.get('/api/admin/attendance')).data.rows.find(x => x.rider.id === riderId);
   assert.equal(adm.state, 'working'); assert.ok(adm.attendance.check_in_selfie.startsWith('/api/admin/files/selfie/'));
   assert.equal((await rapi('POST', '/api/rider/attendance/check-out', fd(), riderTok)).data.state, 'checked_out');
-  assert.equal((await rapi('GET', '/api/rider/attendance/history', null, riderTok)).data[0].date, today);
+  // Checking in again on the same day: needs a selfie, reopens the day, and the gap is off duty (not a break).
+  assert.equal((await rapi('POST', '/api/rider/attendance/check-in', fd(), riderTok)).status, 400);
+  const f3 = fd(); f3.append('selfie', new Blob([await jpeg(480, 640, '#b98a66')], { type: 'image/jpeg' }), 'selfie.jpg');
+  const again = await rapi('POST', '/api/rider/attendance/check-in', f3, riderTok);
+  assert.equal(again.status, 200); assert.equal(again.data.state, 'working'); assert.equal(again.data.sessions, 2);
+  assert.equal(again.data.attendance.check_out_at, null); assert.equal(again.data.breaks.length, 1);
+  const f4 = fd(); f4.append('selfie', new Blob([await jpeg(480, 640)], { type: 'image/jpeg' }), 'selfie.jpg');
+  assert.equal((await rapi('POST', '/api/rider/attendance/check-in', f4, riderTok)).status, 409);
+  const adm2 = (await owner.get('/api/admin/attendance')).data.rows.find(x => x.rider.id === riderId);
+  assert.equal(adm2.state, 'working'); assert.equal(adm2.gaps.length, 1); assert.ok(adm2.gaps[0].selfie.startsWith('/api/admin/files/selfie/'));
+  assert.equal((await rapi('POST', '/api/rider/attendance/check-out', fd(), riderTok)).data.state, 'checked_out');
+  const hist = (await rapi('GET', '/api/rider/attendance/history', null, riderTok)).data[0];
+  assert.equal(hist.date, today); assert.equal(hist.sessions, 2); assert.ok(hist.worked_seconds >= 0);
   const tomorrow = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date(Date.now() + 86_400_000));
   const lv = await rapi('POST', '/api/rider/leave', { from_date: tomorrow, to_date: tomorrow, reason: 'Family function' }, riderTok);
   assert.equal(lv.status, 201);
