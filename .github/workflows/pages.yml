@@ -1,0 +1,41 @@
+# Publishes the Bowl Mania website (static version) to GitHub Pages.
+# Online ordering, payments and the admin panel need the Node.js server, so they are not included;
+# on Pages the website falls back to ordering on WhatsApp.
+name: Deploy website to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths: ['bowl-mania-site/public/**', '.github/workflows/pages.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build static site
+        run: |
+          mkdir -p _site
+          cp -r bowl-mania-site/public/. _site/
+          # Server-only pages: admin panel and order tracking need the API.
+          rm -rf _site/admin _site/track.html _site/track.js _site/track.css
+          touch _site/.nojekyll
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4
