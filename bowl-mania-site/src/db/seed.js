@@ -105,7 +105,10 @@ export async function seed() {
   if (!db.prepare('SELECT COUNT(*) c FROM admins').get().c) {
     const { email, password, name } = config.seedAdmin;
     if (email && password) {
-      if (!strongEnough(password)) throw new Error('ADMIN_PASSWORD must be at least 10 characters with letters and numbers.');
+      if (!strongEnough(password)) {
+        log.error('ADMIN_PASSWORD is too weak, so no admin account was created. Use at least 10 characters with letters and numbers, then redeploy.');
+        return;
+      }
       db.prepare('INSERT INTO admins (name, email, password_hash, role_id) VALUES (?,?,?,?)').run(name, email, await hashPassword(password), sa.id);
       log.info('created super admin', { email });
     } else {

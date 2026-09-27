@@ -137,9 +137,9 @@ The repository is ready for [Railway](https://railway.com): `railway.json` sets 
    | Variable | Value |
    |---|---|
    | `NODE_ENV` | `production` |
-   | `JWT_SECRET` | a long random string, 48+ characters (e.g. from a password manager) |
+   | `JWT_SECRET` | a long random string, 48+ characters (if you leave it out, the app generates one and keeps it on the volume) |
    | `ADMIN_EMAIL` | the owner's email for the first admin login |
-   | `ADMIN_PASSWORD` | a strong password (change it after first sign-in) |
+   | `ADMIN_PASSWORD` | at least 10 characters with letters and numbers (change it after first sign-in) |
    | `AUTO_BACKUP_HOURS` | `24` |
 
    Optional, when ready: the Razorpay, WhatsApp and SMTP variables from `.env.example`. `PUBLIC_URL` is only needed if you use your own domain.
