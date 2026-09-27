@@ -41,7 +41,7 @@ interface LocationDao {
     @Query("DELETE FROM location_queue") suspend fun clear()
 }
 
-@Database(entities = [CacheEntry::class, QueuedLocation::class], version = 1, exportSchema = true)
+@Database(entities = [CacheEntry::class, QueuedLocation::class], version = 1, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun cache(): CacheDao
     abstract fun locations(): LocationDao
