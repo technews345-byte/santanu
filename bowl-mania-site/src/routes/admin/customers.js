@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { db } from '../../db/index.js';
-import { ah, notFound } from '../../lib/errors.js';
+import { db, tx } from '../../db/index.js';
+import { ah, notFound, badRequest } from '../../lib/errors.js';
 import { parse, z, text, optEmail } from '../../lib/validate.js';
 import { audit, diff } from '../../lib/audit.js';
 import { requirePerm } from '../../middleware/auth.js';
@@ -51,5 +51,25 @@ r.patch('/customers/:id', requirePerm('customers.manage'), ah(async (req, res) =
   const [o, n, keys] = diff({ name: c.name, email: c.email, status: c.status, notes: c.notes }, b);
   if (keys.length) audit(req, 'update', 'customer', id, `Edited customer ${b.name}: ${keys.join(', ')}`, o, n);
   res.json({ ok: true });
+}));
+// Right to erasure: removes the person's contact details, addresses, reviews and messages, and anonymises
+// their orders. Order numbers, items and amounts stay because they are needed for accounts and tax records.
+r.post('/customers/:id/erase', requirePerm('customers.manage'), ah(async (req, res) => {
+  const id = Number(req.params.id); const c = db.prepare('SELECT * FROM customers WHERE id=?').get(id); if (!c) throw notFound('Customer not found.');
+  const b = parse(z.object({ confirm: z.string() }), req.body);
+  if (b.confirm.trim().toUpperCase() !== 'ERASE') throw badRequest('Type ERASE to confirm.');
+  const result = tx(() => {
+    const orderIds = db.prepare('SELECT id FROM orders WHERE customer_id=? OR customer_phone=?').all(id, c.phone).map(o => o.id);
+    const inList = orderIds.length ? `(${orderIds.join(',')})` : '(NULL)';
+    db.prepare(`UPDATE orders SET customer_id=NULL, customer_name='Deleted customer', customer_phone='', customer_email='', address='', landmark='', lat=NULL, lng=NULL, notes='', updated_at=CURRENT_TIMESTAMP WHERE id IN ${inList}`).run();
+    db.prepare(`UPDATE notification_logs SET recipient='', body='' WHERE order_id IN ${inList} OR recipient LIKE ?`).run('%' + c.phone);
+    db.prepare('DELETE FROM reviews WHERE customer_id=?').run(id);
+    db.prepare("DELETE FROM inquiries WHERE kind='message' AND (customer_id=? OR phone=?)").run(id, c.phone);
+    db.prepare("UPDATE inquiries SET status='resolved', reply=CASE WHEN reply='' THEN 'Personal data erased.' ELSE reply END, replied_at=COALESCE(replied_at, CURRENT_TIMESTAMP), admin_id=?, customer_id=NULL, updated_at=CURRENT_TIMESTAMP WHERE kind='deletion' AND (customer_id=? OR phone=?)").run(req.admin.id, id, c.phone);
+    db.prepare('DELETE FROM customers WHERE id=?').run(id);
+    return { orders: orderIds.length };
+  })();
+  audit(req, 'delete', 'customer', id, `Erased personal data of customer #${id} (${result.orders} order${result.orders === 1 ? '' : 's'} anonymised)`, null, null);
+  res.json({ ok: true, ...result });
 }));
 export default r;

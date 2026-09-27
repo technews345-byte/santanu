@@ -25,6 +25,7 @@ Errors always look like `{ "error": "Human-readable message", "details": [...] }
 | `POST /track/:token/review` `{rating, comment}` | One review per delivered order (held for approval) |
 | `GET /reviews` · `GET /offers` · `GET /gallery` | Approved reviews, live offers, active media |
 | `POST /contact` `{name, phone?, email?, message}` | Contact form → admin inquiries |
+| `POST /privacy/delete-request` `{name, phone, email?, details?}` | Personal-data deletion request → admin inquiries (kind `deletion`). Same reply whether or not the number has ordered |
 
 ## Staff authentication
 
@@ -70,12 +71,13 @@ Cookies: `bm_at` (access, 15 min), `bm_rt` (refresh, rotated, 30 days), `bm_csrf
 
 **Customers, payments, promotions**
 - `GET /admin/customers?q&status&segment&sort&dir&page` · `GET /admin/customers/:id` [customers.view] · `PATCH /admin/customers/:id` [customers.manage]
+- `POST /admin/customers/:id/erase {confirm: "ERASE"}`: erase a customer's personal data; their orders are kept but anonymised [customers.manage]
 - `GET /admin/payments?status&provider&q&from&to&page` · `GET /admin/payments/:id` [payments.view]
 - `GET/POST /admin/coupons`, `PATCH/DELETE /admin/coupons/:id` · `GET/POST /admin/offers`, `PATCH/DELETE /admin/offers/:id` [promotions.manage]
 
 **Engagement & content**
 - `GET /admin/reviews`, `PATCH/DELETE /admin/reviews/:id` [reviews.manage]
-- `GET /admin/inquiries`, `PATCH /admin/inquiries/:id {status, reply}` [inquiries.manage]
+- `GET /admin/inquiries?status&kind=message|deletion`, `PATCH /admin/inquiries/:id {status, reply}` [inquiries.manage]
 - `GET /admin/notifications`, `POST /admin/notifications/read {ids?}` [notifications.view or orders.view]
 - `GET /admin/notification-logs` [settings.manage or orders.update]
 - `GET /admin/media`, `POST /admin/media` (multipart `file`, `title`, `category`), `PATCH/DELETE /admin/media/:id` [media.manage]

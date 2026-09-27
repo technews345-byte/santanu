@@ -1,7 +1,7 @@
 import express, { Router } from 'express';
 import { db } from '../db/index.js';
 import { ah, badRequest, notFound } from '../lib/errors.js';
-import { parse, z, text, optPhone, optEmail } from '../lib/validate.js';
+import { parse, z, text, optPhone, optEmail, phone10 } from '../lib/validate.js';
 import { config, razorpayEnabled } from '../config.js';
 import { log } from '../lib/logger.js';
 import { rateLimit } from '../middleware/rateLimit.js';
@@ -125,6 +125,17 @@ r.post('/contact', formLimit, ah(async (req, res) => {
   if (!b.phone && !b.email) throw badRequest('Add a phone number or email so we can reply.');
   db.prepare('INSERT INTO inquiries (name, phone, email, message) VALUES (?,?,?,?)').run(b.name, b.phone, b.email, b.message);
   notifyAdmins({ type: 'inquiry', title: `New message from ${b.name}`, body: b.message.slice(0, 100), link: '#/inquiries', permission: 'inquiries.manage' });
+  res.status(201).json({ ok: true });
+}));
+
+// ---------- Personal data deletion request ----------
+// Always answers the same way, so the form cannot be used to find out whether a number has ordered before.
+r.post('/privacy/delete-request', formLimit, ah(async (req, res) => {
+  const b = parse(z.object({ name: text(80, 1), phone: phone10, email: optEmail, details: text(1000).optional().default(''), website: z.string().max(0).optional() }), req.body);
+  const customer = db.prepare('SELECT id FROM customers WHERE phone=?').get(b.phone);
+  const message = `Please delete my Bowl Mania account and personal data.${b.details ? `\n\n${b.details}` : ''}`;
+  db.prepare("INSERT INTO inquiries (name, phone, email, message, kind, customer_id) VALUES (?,?,?,?,'deletion',?)").run(b.name, b.phone, b.email, message, customer?.id ?? null);
+  notifyAdmins({ type: 'inquiry', title: `Data deletion request from ${b.name}`, body: `Mobile ${b.phone}. Verify the request, then erase the customer's data.`, link: '#/inquiries', permission: 'inquiries.manage' });
   res.status(201).json({ ok: true });
 }));
 

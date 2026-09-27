@@ -10,6 +10,7 @@ export const render = (body, vars) => String(body).replace(/\{\{\s*(\w+)\s*\}\}/
 
 /** Queues a WhatsApp message for an order event. Never throws: failures are logged and visible in the admin. */
 export function sendOrderMessage(event, order, vars) {
+  if (!/\d{10}$/.test(String(order.customer_phone))) return; // no number on file (e.g. the customer's data was erased)
   const s = getSetting('notifications');
   const tpl = s.templates?.[event];
   const to = '91' + String(order.customer_phone).replace(/\D/g, '').slice(-10);

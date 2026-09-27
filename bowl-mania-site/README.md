@@ -3,6 +3,7 @@
 *Fresh like a new morning.* The Bowl Mania customer website (Sonari & Nazira) and a full restaurant admin panel, backed by one Node.js server and one database. The database is the only source of truth for prices, availability, hours, delivery charges and order totals.
 
 - **Website** (`/`): live menu with sizes and sold-out state, offers, delivery/pickup checkout with location-based delivery charge, coupons, Razorpay or cash, order tracking, reviews and a contact form.
+- **Information pages**: Features, About Us, Support & FAQ, Contact, Privacy Policy, Terms of Service and Delete Account, linked from the footer of every page.
 - **Admin** (`/admin`): dashboard, orders, deliveries, menu, categories, inventory, customers, reviews, inquiries, payments, coupons, offers, analytics, reports (CSV/Excel), gallery & videos, notifications, delivery areas & hours, staff & roles, settings and audit log. It works on phones too.
 
 ---
@@ -52,6 +53,8 @@ src/
   routes/auth.js          staff sign-in, refresh, logout, forgot/reset password
   routes/admin/*.js       admin API (every route checks a permission)
 public/                   website (index.html, script.js, styles.css, track.html)
+                          + information pages (features, about, support, contact, privacy, terms,
+                            delete-account .html) sharing pages.css and pages.js
 public/admin/             admin single-page app (ES modules, no build step)
 test/api.test.js          end-to-end tests
 docs/API.md               API reference
@@ -104,6 +107,14 @@ Switch to live keys (`rzp_live_…`) once test payments work end to end.
 5. In **Admin → Settings → WhatsApp messages**, turn messages on and edit the texts.
 
 WhatsApp only lets businesses send free-form text to customers who messaged you in the last 24 hours. For other customers you need **approved message templates**: create them in WhatsApp Manager with body variables `{{1}}, {{2}}…` in the same order as the placeholders in your admin text, then enter the template name next to each message. Every send and its delivery status appears in the order's history and in **Settings → View message log**.
+
+## Legal pages and data deletion requests
+
+`privacy.html` and `terms.html` describe how this system actually handles data and orders (Razorpay, WhatsApp, delivery partners, no ad trackers). Before going live, read them with your own details in mind: add your registered business name and address, a contact email and the name of the person handling privacy requests, and confirm the cancellation and refund rules match how you work. Have them checked by a lawyer if you can.
+
+Customers ask to delete their data from **Delete Account**. The request appears in **Admin → Inquiries** marked *Data deletion request*, linked to the customer when the number has ordered before. Confirm with the customer on that number, then open their profile and choose **Erase data** (type `ERASE`). This deletes their profile, saved addresses, messages and reviews and anonymises their orders (name, phone, email, address and location removed); order numbers, items and amounts stay for your accounts. The request is marked resolved and the action is written to the audit log.
+
+On GitHub Pages (no server), the contact and deletion forms open WhatsApp with the message filled in instead.
 
 ## Password reset emails (optional)
 

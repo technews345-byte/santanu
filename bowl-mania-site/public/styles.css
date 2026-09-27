@@ -273,6 +273,9 @@ p{margin:0}
 .footer-grid{display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr;gap:40px;padding-bottom:48px}
 .footer-brand img{width:64px;height:64px;border-radius:50%;margin-bottom:16px}
 .footer-brand p{max-width:300px}
+.footer-grid.footer-links{grid-template-columns:1.5fr repeat(4,1fr)}
+.footer ul{list-style:none;padding:0;margin:0;display:grid;gap:8px}
+.footer-brand .footer-contact{margin-top:14px;display:grid;gap:4px}
 .footer h4{color:#fff;font-size:.8rem;letter-spacing:.14em;text-transform:uppercase;margin-bottom:12px}
 .footer a{text-decoration:none;color:#e4efe2}
 .footer a:hover{color:var(--sun)}
@@ -343,7 +346,7 @@ p{margin:0}
   .delivery-grid{grid-template-columns:1fr 1fr}
   .branch-fees{grid-column:1/-1}
   .story-grid{gap:48px}
-  .footer-grid{grid-template-columns:1fr 1fr}
+  .footer-grid,.footer-grid.footer-links{grid-template-columns:1fr 1fr}
   .footer-brand{grid-column:1/-1}
 }
 @media (max-width:860px){

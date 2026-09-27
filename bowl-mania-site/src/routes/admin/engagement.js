@@ -35,9 +35,12 @@ r.delete('/reviews/:id', requirePerm('reviews.manage'), ah(async (req, res) => {
 
 // ---------- Inquiries ----------
 r.get('/inquiries', requirePerm('inquiries.manage'), ah(async (req, res) => {
-  const f = parse(z.object({ status: z.enum(['', 'new', 'in_progress', 'resolved']).optional().default('') }), req.query);
+  const f = parse(z.object({ status: z.enum(['', 'new', 'in_progress', 'resolved']).optional().default(''), kind: z.enum(['', 'message', 'deletion']).optional().default('') }), req.query);
   const { page, limit, offset } = paging(req.query);
-  const where = f.status ? 'WHERE i.status=?' : '', p = f.status ? [f.status] : [];
+  const w = [], p = [];
+  if (f.status) { w.push('i.status=?'); p.push(f.status); }
+  if (f.kind) { w.push('i.kind=?'); p.push(f.kind); }
+  const where = w.length ? 'WHERE ' + w.join(' AND ') : '';
   res.json({
     rows: db.prepare(`SELECT i.*, a.name AS admin_name FROM inquiries i LEFT JOIN admins a ON a.id=i.admin_id ${where} ORDER BY i.status='resolved', i.id DESC LIMIT ? OFFSET ?`).all(...p, limit, offset),
     total: db.prepare(`SELECT COUNT(*) n FROM inquiries i ${where}`).get(...p).n, page, limit,

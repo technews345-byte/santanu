@@ -4,17 +4,20 @@ import { state, bus } from '../app.js';
 
 const LABEL = { new: 'New', in_progress: 'In progress', resolved: 'Resolved' };
 export async function render(view) {
-  const f = { status: '', page: 1 };
-  view.innerHTML = `<div class="page-head"><div><h1>Inquiries</h1><p>Messages sent from the website contact form.</p></div></div><div class="chips" id="chips" style="margin-bottom:14px"></div><div class="card" id="list"></div>`;
+  const f = { status: '', kind: '', page: 1 };
+  view.innerHTML = `<div class="page-head"><div><h1>Inquiries</h1><p>Messages and data deletion requests sent from the website.</p></div></div><div class="chips" id="chips" style="margin-bottom:14px"></div><div class="card" id="list"></div>`;
   async function load() {
     let r; try { r = await get('/admin/inquiries', f); } catch (e) { $('#list', view).innerHTML = errorState(e); $('[data-retry]', view).onclick = load; return; }
     state.counts.inquiries = r.counts.new || 0;
-    $('#chips', view).innerHTML = [['', 'All'], ...Object.entries(LABEL)].map(([k, l]) => `<button class="chip" data-s="${k}" aria-pressed="${f.status === k}">${l}${k ? ` <em>${r.counts[k] || 0}</em>` : ''}</button>`).join('');
+    $('#chips', view).innerHTML = [['', 'All'], ...Object.entries(LABEL)].map(([k, l]) => `<button class="chip" data-s="${k}" aria-pressed="${f.status === k}">${l}${k ? ` <em>${r.counts[k] || 0}</em>` : ''}</button>`).join('')
+      + `<button class="chip" data-k aria-pressed="${f.kind === 'deletion'}">${icon('shield')} Deletion requests</button>`;
     $$('[data-s]', view).forEach(b => b.onclick = () => { f.status = b.dataset.s; f.page = 1; load(); });
+    $('[data-k]', view).onclick = () => { f.kind = f.kind === 'deletion' ? '' : 'deletion'; f.page = 1; load(); };
     const el = $('#list', view);
     if (!r.rows.length) { el.innerHTML = emptyState('chat', 'No messages', 'Messages from the contact form on the website will appear here.'); return; }
-    el.innerHTML = r.rows.map(q => `<div class="review-card" data-id="${q.id}"><div class="row"><b>${esc(q.name)}</b><span class="muted small">${ago(q.created_at)}</span><span class="spacer"></span>${badge(q.status, LABEL[q.status])}</div>
-      <p class="small muted">${q.phone ? esc(q.phone) : ''}${q.phone && q.email ? ' · ' : ''}${q.email ? esc(q.email) : ''}</p><p>${esc(q.message)}</p>
+    el.innerHTML = r.rows.map(q => `<div class="review-card" data-id="${q.id}"><div class="row"><b>${esc(q.name)}</b>${q.kind === 'deletion' ? badge('err', 'Data deletion request') : ''}<span class="muted small">${ago(q.created_at)}</span><span class="spacer"></span>${badge(q.status, LABEL[q.status])}</div>
+      <p class="small muted">${q.phone ? esc(q.phone) : ''}${q.phone && q.email ? ' · ' : ''}${q.email ? esc(q.email) : ''}</p><p style="white-space:pre-line">${esc(q.message)}</p>
+      ${q.kind === 'deletion' && q.status !== 'resolved' ? `<p class="small muted">Confirm with the customer on ${esc(q.phone)} that the request is theirs, then ${q.customer_id ? `open <a href="#/customers/${q.customer_id}">their customer profile</a> and choose <b>Erase data</b>.` : 'check Customers for this number — no customer with it was found when the request arrived.'}</p>` : ''}
       ${q.reply ? `<p class="small" style="border-left:3px solid var(--lime);padding-left:10px"><b>Reply${q.admin_name ? ' by ' + esc(q.admin_name) : ''}:</b> ${esc(q.reply)} <span class="muted">${fmtDateTime(q.replied_at)}</span></p>` : ''}
       <div class="row"><button class="btn btn-soft btn-xs" data-reply>${icon('chat')} Reply</button>${q.status !== 'in_progress' && q.status !== 'resolved' ? '<button class="btn btn-ghost btn-xs" data-st="in_progress">Mark in progress</button>' : ''}${q.status !== 'resolved' ? '<button class="btn btn-ghost btn-xs" data-st="resolved">Mark resolved</button>' : '<button class="btn btn-ghost btn-xs" data-st="new">Reopen</button>'}</div></div>`).join('');
     el.append(pager(r, p => { f.page = p; load(); }));

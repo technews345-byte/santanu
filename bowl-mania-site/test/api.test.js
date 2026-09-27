@@ -312,6 +312,29 @@ test('contact form, inquiries, notifications and live events', async () => {
   assert.equal((await owner.get('/api/admin/notifications')).data.unread, 0);
 });
 
+test('data deletion request and erasing a customer', async () => {
+  const o = await guest.post('/api/orders', orderBody({ customer_name: 'Rahul Bora', phone: '9822233344', email: 'rahul@example.com' }));
+  assert.equal(o.status, 201);
+  assert.equal((await guest.post('/api/privacy/delete-request', { name: 'Rahul Bora', phone: '98222 33344' })).status, 201);
+  // A number that never ordered gets the same answer, so the form cannot reveal who is a customer.
+  assert.equal((await guest.post('/api/privacy/delete-request', { name: 'Someone', phone: '9700000001' })).status, 201);
+  assert.equal((await guest.post('/api/privacy/delete-request', { name: 'Bad', phone: '123' })).status, 400);
+  const req = (await owner.get('/api/admin/inquiries?kind=deletion')).data.rows.find(q => q.phone === '9822233344');
+  assert.ok(req.customer_id, 'request is linked to the customer');
+  assert.equal((await owner.post(`/api/admin/customers/${req.customer_id}/erase`, { confirm: 'nope' })).status, 400);
+  const erased = await owner.post(`/api/admin/customers/${req.customer_id}/erase`, { confirm: 'ERASE' });
+  assert.equal(erased.status, 200); assert.equal(erased.data.orders, 1);
+  assert.equal((await owner.get(`/api/admin/customers/${req.customer_id}`)).status, 404);
+  const order = (await owner.get(`/api/admin/orders?q=${o.data.order_number}`)).data.rows[0];
+  assert.equal(order.customer_name, 'Deleted customer'); assert.equal(order.customer_phone, '');
+  const full = (await owner.get(`/api/admin/orders/${order.id}`)).data;
+  assert.equal(full.address, ''); assert.equal(full.lat, null); assert.equal(full.total, o.data.total);
+  const done = (await owner.get('/api/admin/inquiries?kind=deletion')).data.rows.find(q => q.id === req.id);
+  assert.equal(done.status, 'resolved');
+  // Tracking and lookups no longer reveal anything about the person.
+  assert.equal((await guest.post('/api/track/lookup', { order_number: o.data.order_number, phone: '9822233344' })).status, 404);
+});
+
 test('media upload is optimised to WebP', async () => {
   const sharp = (await import('sharp')).default;
   const png = await sharp({ create: { width: 2400, height: 1600, channels: 3, background: '#7cb342' } }).png().toBuffer();

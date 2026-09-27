@@ -1,5 +1,5 @@
-import { get, patch } from '../api.js';
-import { $, $$, esc, icon, rupee, num, badge, statusBadge, payBadge, stars, fmtDate, fmtDateTime, ago, toast, formDialog, emptyState, errorState, pager, debounce, waLink, download, initials } from '../ui.js';
+import { get, patch, post } from '../api.js';
+import { $, $$, esc, icon, rupee, num, badge, statusBadge, payBadge, stars, fmtDate, fmtDateTime, ago, toast, formDialog, confirmDialog, emptyState, errorState, pager, debounce, waLink, download, initials } from '../ui.js';
 import { can, go } from '../app.js';
 
 const f = { q: '', segment: '', status: '', sort: 'last_order_at', dir: 'desc', page: 1 };
@@ -37,7 +37,7 @@ async function profile(view, id) {
   try { c = await get(`/admin/customers/${id}`); } catch (e) { view.innerHTML = `<a class="back" href="#/customers">${icon('back')} Customers</a>` + errorState(e, false); return; }
   view.innerHTML = `<a class="back" href="#/customers">${icon('back')} Customers</a>
     <div class="card card-pad order-hero"><div class="row" style="gap:14px"><span class="avatar lg">${esc(initials(c.name))}</span><div><h1>${esc(c.name)}</h1><p class="muted">${esc(c.phone)}${c.email ? ' · ' + esc(c.email) : ''} · customer since ${fmtDate(c.first_order_at || c.created_at)}</p></div></div>
-      <div class="row">${badge(c.status)}<a class="btn btn-ghost btn-sm" href="tel:+91${esc(c.phone)}">${icon('phone')} Call</a><a class="btn btn-ghost btn-sm" href="${waLink(c.phone)}" target="_blank" rel="noopener">${icon('wa')} WhatsApp</a>${can('customers.manage') ? '<button class="btn btn-soft btn-sm" id="editC">Edit</button>' : ''}</div></div>
+      <div class="row">${badge(c.status)}<a class="btn btn-ghost btn-sm" href="tel:+91${esc(c.phone)}">${icon('phone')} Call</a><a class="btn btn-ghost btn-sm" href="${waLink(c.phone)}" target="_blank" rel="noopener">${icon('wa')} WhatsApp</a>${can('customers.manage') ? '<button class="btn btn-soft btn-sm" id="editC">Edit</button><button class="btn btn-ghost btn-sm" id="eraseC" title="Delete this customer\'s personal data on request">Erase data</button>' : ''}</div></div>
     <div class="kpis" style="margin-top:16px"><div class="kpi"><span>Total spent</span><b>${rupee(c.total_spent)}</b></div><div class="kpi"><span>Orders</span><b>${num(c.orders_count)}</b><small>${num(c.cancelled_count)} cancelled</small></div><div class="kpi"><span>Average order</span><b>${rupee(c.orders_count ? c.total_spent / c.orders_count : 0)}</b><small>Last order ${c.last_order_at ? ago(c.last_order_at) : '—'}</small></div></div>
     <div class="cols-2" style="margin-top:18px"><div class="stack">
       <div class="card"><div class="card-head"><h2>Order history</h2></div>${c.orders.length ? `<div class="table-wrap"><table class="table cards"><thead><tr><th>Order</th><th>Date</th><th>Items</th><th>Status</th><th>Payment</th><th class="r">Total</th></tr></thead><tbody>
@@ -55,4 +55,12 @@ async function profile(view, id) {
       <label class="field"><span>Status</span><select class="select" name="status"><option value="active" ${c.status === 'active' ? 'selected' : ''}>Active</option><option value="blocked" ${c.status === 'blocked' ? 'selected' : ''}>Blocked — can't place website orders</option></select></label>
       <label class="field"><span>Private notes</span><textarea class="textarea" name="notes" maxlength="1000">${esc(c.notes)}</textarea></label>`,
     onSubmit: async v => { await patch(`/admin/customers/${c.id}`, v); toast('Customer updated'); profile(view, id); } }));
+  $('#eraseC', view)?.addEventListener('click', async () => {
+    const typed = await confirmDialog({ title: `Erase ${c.name}'s personal data?`, danger: true, confirm: 'Erase permanently',
+      message: 'This removes their name, phone, email, addresses, locations, messages and reviews, and anonymises their orders. Order numbers, items and amounts are kept for your accounts. <b>This cannot be undone.</b> Only do this after confirming the request came from this customer.',
+      input: { label: 'Type ERASE to confirm', placeholder: 'ERASE' } });
+    if (typed == null || typed === false) return;
+    try { const r = await post(`/admin/customers/${c.id}/erase`, { confirm: typed }); toast(`Personal data erased · ${r.orders} order${r.orders === 1 ? '' : 's'} anonymised`); go('customers'); }
+    catch (e) { toast(e.message, 'err'); }
+  });
 }
