@@ -10,7 +10,7 @@ export async function render(view, ctx) {
   async function load() {
     try { [data, roles] = await Promise.all([get('/admin/staff'), get('/admin/roles')]); } catch (e) { $('#list', view).innerHTML = errorState(e); $('[data-retry]', view).onclick = load; return; }
     $('#list', view).innerHTML = data.rows.length ? `<div class="table-wrap"><table class="table cards"><thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Role</th><th>Status</th><th>Last sign-in</th><th></th></tr></thead><tbody>
-      ${data.rows.map(s => `<tr data-id="${s.id}"><td class="primary"><div class="row" style="gap:10px;flex-wrap:nowrap"><span class="avatar">${esc(initials(s.name))}</span><b>${esc(s.name)}</b>${s.id === state.admin.id ? badge('plain', 'You', 'plain') : ''}</div></td>
+      ${data.rows.map(s => `<tr data-id="${s.id}"><td class="primary"><div class="row" style="gap:10px;flex-wrap:nowrap">${s.photo_url ? `<img class="avatar avatar-img" src="${esc(s.photo_url)}" alt="">` : `<span class="avatar">${esc(initials(s.name))}</span>`}<b>${esc(s.name)}</b>${s.id === state.admin.id ? badge('plain', 'You', 'plain') : ''}${riderRole(s.role_id) && !s.photo_url ? badge('pending', 'Photo missing') : ''}</div></td>
         <td data-label="Email">${esc(s.email)}</td><td data-label="Phone">${esc(s.phone || '—')}</td><td data-label="Role">${esc(s.role_name)}</td><td data-label="Status">${badge(s.status === 'active' ? 'ok' : 'disabled', s.status === 'active' ? 'Active' : 'Disabled')}</td>
         <td data-label="Last sign-in">${s.last_login_at ? ago(s.last_login_at) : 'Never'}</td><td class="r"><button class="btn btn-ghost btn-xs" data-edit>Edit</button></td></tr>`).join('')}</tbody></table></div>` : emptyState('users', 'No staff yet');
     $('#list', view).onclick = e => { const tr = e.target.closest('tr[data-id]'); if (tr && e.target.closest('[data-edit]')) edit(data.rows.find(s => s.id == tr.dataset.id)); };
@@ -21,6 +21,7 @@ export async function render(view, ctx) {
     $$('form[data-role]', view).forEach(f => f.onsubmit = async e => { e.preventDefault();
       try { await put(`/admin/roles/${f.dataset.role}/permissions`, { permissions: [...new FormData(f).getAll('p')] }); toast('Permissions saved'); load(); } catch (x) { toastError(x); } });
   }
+  const riderRole = id => !!data?.roles.find(r => r.id === Number(id))?.is_rider;
   function edit(s) {
     const m = formDialog({ title: s ? `Edit ${s.name}` : 'Add staff member', submit: s ? 'Save' : 'Create account', extraFooter: s && s.id !== state.admin.id ? '<button class="btn btn-danger-ghost" type="button" data-delete>Remove</button>' : '',
       fields: `<div class="grid-2"><label class="field"><span>Name</span><input class="input" name="name" required maxlength="80" value="${esc(s?.name || '')}"></label>
@@ -28,8 +29,33 @@ export async function render(view, ctx) {
         <label class="field"><span>Email (used to sign in)</span><input class="input" name="email" type="email" required value="${esc(s?.email || '')}"></label>
         <div class="grid-2"><label class="field"><span>Role</span><select class="select" name="role_id" data-type="number">${data.roles.filter(r => r.key !== 'super_admin' || state.admin.role === 'super_admin').map(r => `<option value="${r.id}" ${r.id === s?.role_id ? 'selected' : ''}>${esc(r.name)}</option>`).join('')}</select></label>
           <label class="field"><span>Status</span><select class="select" name="status"><option value="active" ${s?.status !== 'disabled' ? 'selected' : ''}>Active</option><option value="disabled" ${s?.status === 'disabled' ? 'selected' : ''}>Disabled — can't sign in</option></select></label></div>
+        <div class="field photo-field" data-photo><span>Profile photo <b class="req" data-req>(required for delivery staff)</b></span>
+          <div class="row" style="gap:14px;flex-wrap:nowrap">
+            <img class="photo-preview" data-preview alt="" ${s?.photo_url ? `src="${esc(s.photo_url)}"` : 'hidden'}><span class="photo-empty" data-empty ${s?.photo_url ? 'hidden' : ''}>${icon('image')}</span>
+            <div class="stack" style="gap:6px"><input class="input" name="photo_file" type="file" accept="image/jpeg,image/png,image/webp" capture="user">
+              <small>A clear, front-facing photo of their face. It is shown in the rider app and on the live map.</small></div></div></div>
         <label class="field"><span>${s ? 'New password (leave empty to keep)' : 'Password'}</span><input class="input" name="password" type="password" autocomplete="new-password" ${s ? '' : 'required'}><small>At least 10 characters with letters and numbers. Changing it signs them out everywhere.</small></label>`,
-      onSubmit: async v => { if (s) await patch(`/admin/staff/${s.id}`, v); else await post('/admin/staff', v); toast(s ? 'Staff member updated' : `${v.name} can now sign in`); load(); } });
+      onMount: form => {
+        const role = form.elements.role_id, file = form.elements.photo_file;
+        const sync = () => { $('[data-req]', form).hidden = !riderRole(role.value); };
+        role.addEventListener('change', sync); sync();
+        file.addEventListener('change', () => {
+          const f = file.files[0], img = $('[data-preview]', form);
+          if (!f) return;
+          if (img.src.startsWith('blob:')) URL.revokeObjectURL(img.src);
+          img.src = URL.createObjectURL(f); img.hidden = false; $('[data-empty]', form).hidden = true;
+        });
+      },
+      onSubmit: async (v, form) => {
+        const f = form.elements.photo_file.files[0];
+        delete v.photo_file;
+        if (riderRole(v.role_id) && !f && !s?.photo_url) throw new Error('Add a profile photo. It is required for delivery staff.');
+        if (f && f.size > 8 * 1024 * 1024) throw new Error('That photo is too large (max 8 MB).');
+        let body = v;
+        if (f) { body = new FormData(); Object.entries(v).forEach(([k, x]) => body.append(k, x ?? '')); body.append('photo', f); }
+        if (s) await patch(`/admin/staff/${s.id}`, body); else await post('/admin/staff', body);
+        toast(s ? 'Staff member updated' : `${v.name} can now sign in`); load();
+      } });
     $('[data-delete]', m.el)?.addEventListener('click', async () => {
       if (!(await confirmDialog({ title: `Remove ${s.name}?`, message: 'They will be signed out and lose access. Delivery staff with history are disabled instead of deleted.', confirm: 'Remove', danger: true }))) return;
       try { const r = await del(`/admin/staff/${s.id}`); m.close(); toast(r.disabled ? 'Account disabled (kept for delivery history)' : 'Removed'); load(); } catch (x) { toastError(x); } });

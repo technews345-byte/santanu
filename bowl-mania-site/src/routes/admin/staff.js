@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import multer from 'multer';
 import { db } from '../../db/index.js';
 import { ah, notFound, badRequest, forbidden } from '../../lib/errors.js';
 import { parse, z, text, email, optPhone } from '../../lib/validate.js';
@@ -7,27 +8,37 @@ import { requirePerm } from '../../middleware/auth.js';
 import { hashPassword, strongEnough, passwordRule } from '../../services/passwords.js';
 import { revokeAllSessions } from '../../services/auth.js';
 import { paging } from './helpers.js';
+import { savePrivateImage } from '../../services/riders.js';
 
 const r = Router();
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 8 * 1024 * 1024, files: 1 } });
+const hasPerm = (roleId, key) => !!db.prepare('SELECT 1 FROM role_permissions rp JOIN permissions p ON p.id=rp.permission_id WHERE rp.role_id=? AND p.key=?').get(roleId, key);
+// Delivery riders: make deliveries (delivery.update) without managing them (delivery.assign). They must have a profile photo.
+const isRiderRole = roleId => hasPerm(roleId, 'delivery.update') && !hasPerm(roleId, 'delivery.assign');
+const PHOTO_REQUIRED = 'A profile photo is required for delivery staff. Add a clear photo of their face.';
+const savePhoto = file => savePrivateImage(file, 'rider', { max: 600, quality: 80 });
 const roleOf = id => db.prepare('SELECT * FROM roles WHERE id=?').get(id);
 // Only a super admin can create, change or remove super admins, or edit role permissions.
 const guardRole = (req, role) => { if (role.key === 'super_admin' && req.admin.role !== 'super_admin') throw forbidden('Only a Super Admin can manage Super Admin accounts.'); };
 
 r.get('/staff', requirePerm('staff.manage'), (req, res) => res.json({
-  rows: db.prepare(`SELECT a.id, a.name, a.email, a.phone, a.status, a.last_login_at, a.created_at, a.role_id, r.key AS role, r.name AS role_name FROM admins a JOIN roles r ON r.id=a.role_id ORDER BY a.status, r.rank DESC, a.name`).all(),
-  roles: db.prepare('SELECT id, key, name, description, rank FROM roles ORDER BY rank DESC').all()
+  rows: db.prepare(`SELECT a.id, a.name, a.email, a.phone, a.status, a.last_login_at, a.created_at, a.role_id, a.photo, r.key AS role, r.name AS role_name FROM admins a JOIN roles r ON r.id=a.role_id ORDER BY a.status, r.rank DESC, a.name`).all()
+    .map(({ photo, ...a }) => ({ ...a, photo_url: photo ? `/api/admin/files/${photo}` : null })),
+  roles: db.prepare('SELECT id, key, name, description, rank FROM roles ORDER BY rank DESC').all().map(ro => ({ ...ro, is_rider: isRiderRole(ro.id) }))
 }));
 const staffSchema = z.object({ name: text(80, 1), email, phone: optPhone, role_id: z.coerce.number().int().positive(), status: z.enum(['active', 'disabled']).default('active'), password: z.string().max(200).optional().default('') });
-r.post('/staff', requirePerm('staff.manage'), ah(async (req, res) => {
+r.post('/staff', requirePerm('staff.manage'), upload.single('photo'), ah(async (req, res) => {
   const b = parse(staffSchema, req.body);
   const role = roleOf(b.role_id); if (!role) throw badRequest('Choose a role.'); guardRole(req, role);
   if (!strongEnough(b.password)) throw badRequest(passwordRule);
   if (db.prepare('SELECT 1 FROM admins WHERE email=?').get(b.email)) throw badRequest('A staff account with that email already exists.');
-  const id = db.prepare('INSERT INTO admins (name, email, phone, role_id, status, password_hash) VALUES (?,?,?,?,?,?)').run(b.name, b.email, b.phone, b.role_id, b.status, await hashPassword(b.password)).lastInsertRowid;
+  if (isRiderRole(role.id) && !req.file) throw badRequest(PHOTO_REQUIRED);
+  const photo = req.file ? await savePhoto(req.file) : '';
+  const id = db.prepare('INSERT INTO admins (name, email, phone, role_id, status, password_hash, photo) VALUES (?,?,?,?,?,?,?)').run(b.name, b.email, b.phone, b.role_id, b.status, await hashPassword(b.password), photo).lastInsertRowid;
   audit(req, 'create', 'staff', id, `Added ${b.name} as ${role.name}`, null, { name: b.name, email: b.email, role: role.name });
   res.status(201).json({ id });
 }));
-r.patch('/staff/:id', requirePerm('staff.manage'), ah(async (req, res) => {
+r.patch('/staff/:id', requirePerm('staff.manage'), upload.single('photo'), ah(async (req, res) => {
   const id = Number(req.params.id);
   const a = db.prepare('SELECT a.*, r.key AS role, r.name AS role_name FROM admins a JOIN roles r ON r.id=a.role_id WHERE a.id=?').get(id); if (!a) throw notFound('Staff member not found.');
   const b = parse(staffSchema, req.body);
@@ -38,11 +49,14 @@ r.patch('/staff/:id', requirePerm('staff.manage'), ah(async (req, res) => {
       db.prepare("SELECT COUNT(*) n FROM admins a JOIN roles r ON r.id=a.role_id WHERE r.key='super_admin' AND a.status='active'").get().n <= 1) throw badRequest('Keep at least one active Super Admin.');
   if (db.prepare('SELECT 1 FROM admins WHERE email=? AND id<>?').get(b.email, id)) throw badRequest('Another staff account uses that email.');
   if (b.password && !strongEnough(b.password)) throw badRequest(passwordRule);
+  if (isRiderRole(role.id) && !a.photo && !req.file) throw badRequest(PHOTO_REQUIRED);
+  if (req.file) db.prepare('UPDATE admins SET photo=? WHERE id=?').run(await savePhoto(req.file), id);
   db.prepare('UPDATE admins SET name=?, email=?, phone=?, role_id=?, status=?, updated_at=CURRENT_TIMESTAMP WHERE id=?').run(b.name, b.email, b.phone, b.role_id, b.status, id);
   if (b.password) db.prepare('UPDATE admins SET password_hash=? WHERE id=?').run(await hashPassword(b.password), id);
   if (b.password || b.status !== 'active' || b.role_id !== a.role_id) revokeAllSessions(id);
   const [o, n, keys] = diff({ name: a.name, email: a.email, phone: a.phone, role: a.role_name, status: a.status }, { name: b.name, email: b.email, phone: b.phone, role: role.name, status: b.status });
   if (b.password) keys.push('password');
+  if (req.file) keys.push('photo');
   if (keys.length) audit(req, 'update', 'staff', id, `Edited ${b.name}: ${keys.join(', ')}`, o, n);
   res.json({ ok: true });
 }));

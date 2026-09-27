@@ -508,3 +508,10 @@ tr.urgent-row td { background: var(--err-bg); }
   #map { height: 52vh; min-height: 300px; } .rider-list { max-height: none; min-height: 0; }
   .shift-day { grid-template-columns: 1fr; gap: 6px; }
 }
+
+/* Staff: profile photo */
+.avatar-img { object-fit: cover; padding: 0; }
+.photo-field .req { font-weight: 600; color: var(--muted); font-size: .8rem; }
+.photo-preview, .photo-empty { width: 72px; height: 72px; border-radius: 50%; flex: none; object-fit: cover; border: 2px solid var(--line); }
+.photo-empty { display: grid; place-items: center; background: var(--line-2); color: var(--muted); }
+.photo-empty svg { width: 26px; height: 26px; }
