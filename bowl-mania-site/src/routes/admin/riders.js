@@ -15,7 +15,9 @@ import * as R from '../../services/riders.js';
 const r = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 8 * 1024 * 1024, files: 1 } });
 const RIDERS = `SELECT a.id, a.name, a.email, a.phone, a.status, a.employee_id, a.vehicle_type, a.vehicle_number, a.joining_date, a.photo <> '' AS has_photo, a.last_login_at
-  FROM admins a JOIN role_permissions rp ON rp.role_id=a.role_id JOIN permissions p ON p.id=rp.permission_id WHERE p.key='delivery.update'`;
+  FROM admins a JOIN role_permissions rp ON rp.role_id=a.role_id JOIN permissions p ON p.id=rp.permission_id WHERE p.key='delivery.update'
+    AND NOT EXISTS (SELECT 1 FROM role_permissions x JOIN permissions px ON px.id=x.permission_id WHERE x.role_id=a.role_id AND px.key='delivery.assign')`;
+// Riders are staff who make deliveries but don't manage them (managers and owners also hold delivery.update).
 
 function liveRow(a) {
   const s = R.riderState(a.id);

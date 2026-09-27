@@ -7,6 +7,7 @@ import { requirePerm } from '../../middleware/auth.js';
 import { getSetting, setSetting } from '../../services/settings.js';
 import { config, razorpayEnabled, whatsappConfigured } from '../../config.js';
 import { mailConfigured } from '../../services/mailer.js';
+import { pushConfigured } from '../../services/push.js';
 import { WA_EVENTS } from '../../services/whatsapp.js';
 import { restaurantStatus } from '../../services/delivery.js';
 import { emit } from '../../lib/events.js';
@@ -33,7 +34,8 @@ r.get('/settings', requirePerm('settings.manage'), (req, res) => res.json({
     razorpay: { configured: razorpayEnabled(), key_id: config.razorpay.keyId ? config.razorpay.keyId.slice(0, 12) + '…' : '', mode: config.razorpay.keyId.startsWith('rzp_live') ? 'live' : config.razorpay.keyId ? 'test' : '',
       webhook_configured: !!config.razorpay.webhookSecret, webhook_url: `${config.publicUrl}/api/payments/webhook` },
     whatsapp: { configured: whatsappConfigured(), webhook_configured: !!(config.whatsapp.verifyToken && config.whatsapp.appSecret), webhook_url: `${config.publicUrl}/api/whatsapp/webhook` },
-    email: { configured: mailConfigured() }
+    email: { configured: mailConfigured() },
+    push: { configured: pushConfigured() }
   },
   events: WA_EVENTS, status: restaurantStatus()
 }));

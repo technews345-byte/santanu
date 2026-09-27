@@ -464,3 +464,47 @@ details.table-toggle summary { cursor: pointer; color: var(--green); font-weight
   .chips.scroll-x { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; margin-right: -16px; scrollbar-width: none; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+/* ---------- Riders: delivery panel, live map, attendance, support ---------- */
+.step-bar { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; }
+.step-bar span { height: 6px; border-radius: 3px; background: var(--line); transition: background .3s var(--ease); }
+.step-bar span.on { background: var(--green); }
+.otp-box { display: grid; gap: 2px; justify-items: start; padding: 12px 14px; border-radius: var(--r); background: var(--lime-soft); border: 1px dashed #bcd88f; }
+.otp { font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 1.9rem; letter-spacing: .35em; color: var(--forest); line-height: 1.1; }
+.otp.sm { font-size: 1.05rem; letter-spacing: .2em; }
+.proof { display: grid; gap: 8px; }
+.proof img { width: 132px; height: 100px; object-fit: cover; border-radius: var(--r-sm); border: 1px solid var(--line); background: #fff; }
+.proof img.sig { object-fit: contain; }
+ul.plain { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 4px; }
+details summary { cursor: pointer; color: var(--ink-2); font-weight: 600; }
+.warn-text { color: var(--warn); font-weight: 600; }
+.field.inline { display: inline-flex; align-items: center; gap: 8px; margin: 0; } .field.inline > span { margin: 0; }
+.field.inline .input { height: 36px; width: auto; }
+.live-grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start; }
+.map-card { overflow: hidden; padding: 0; }
+#map { height: calc(100vh - 230px); min-height: 420px; z-index: 0; }
+.rider-list { max-height: calc(100vh - 230px); min-height: 420px; overflow: auto; padding: 8px; display: grid; align-content: start; gap: 4px; }
+.rider-row { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; border: 1px solid transparent; background: none; border-radius: var(--r); padding: 10px; cursor: pointer; font: inherit; color: inherit; }
+.rider-row:hover { background: var(--beige-soft); } .rider-row.sel { border-color: var(--green); background: var(--lime-soft); }
+.rider-row .grow { flex: 1; min-width: 0; display: grid; gap: 1px; } .rider-row .grow > * { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rider-detail { border: 1px solid var(--line); border-radius: var(--r); padding: 12px; display: grid; gap: 6px; margin-bottom: 6px; background: var(--surface); }
+.rider-pin { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; color: #fff; font: 700 .78rem var(--f-body); border: 3px solid #fff; box-shadow: 0 4px 12px rgba(0,0,0,.3); background: var(--green); }
+.rider-pin.busy { background: #1f5f99; } .rider-pin.stale { background: var(--warn); } .rider-pin.off { background: #8a8f8b; }
+.kitchen-pin { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 8px; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.25); font-size: 16px; }
+.avatar.photo { object-fit: cover; padding: 0; }
+.selfie { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 2px solid var(--line); display: block; }
+.att-row { padding: 6px 0; border-bottom: 1px dashed var(--line); } .att-row:last-child { border-bottom: 0; }
+.shift-day { display: grid; grid-template-columns: 130px 1fr; gap: 10px; padding: 10px 0; border-bottom: 1px dashed var(--line); align-items: center; }
+.shift-day:last-child { border-bottom: 0; }
+.icon-btn.xs { width: 22px; height: 22px; border-radius: 6px; } .icon-btn.xs svg { width: 12px; height: 12px; }
+.check-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 6px; }
+tr.urgent-row td { background: var(--err-bg); }
+.urgent-hero { border: 2px solid var(--err); }
+.msg { max-width: 640px; padding: 10px 14px; border-radius: var(--r); background: var(--beige-soft); } .msg p { margin: 4px 0 0; white-space: pre-line; }
+.msg.mine { margin-left: auto; background: var(--lime-soft); }
+.msg .attach { margin-top: 8px; max-width: 240px; border-radius: var(--r-sm); }
+@media (max-width: 960px) {
+  .live-grid { grid-template-columns: 1fr; }
+  #map { height: 52vh; min-height: 300px; } .rider-list { max-height: none; min-height: 0; }
+  .shift-day { grid-template-columns: 1fr; gap: 6px; }
+}

@@ -31,3 +31,7 @@
 .field textarea, .field input { width: 100%; }
 @media (max-width: 640px) { .t-grid { grid-template-columns: 1fr; } .t-card { padding: 20px; } .track-main { padding-top: 20px; } }
 .t-lines .lbl { color: var(--muted); font-size: .88rem; }
+.t-otp { display: grid; gap: 2px; justify-items: start; background: rgba(255,255,255,.12); border: 1px dashed rgba(255,255,255,.4); border-radius: 16px; padding: 12px 16px; width: max-content; max-width: 100%; }
+.t-otp span { font-size: .78rem; letter-spacing: .12em; text-transform: uppercase; color: var(--leaf); font-weight: 700; }
+.t-otp b { font-family: ui-monospace, Menlo, monospace; font-size: 2rem; letter-spacing: .35em; color: #fff; line-height: 1.1; }
+.t-otp small { color: #d7e6d4; }
