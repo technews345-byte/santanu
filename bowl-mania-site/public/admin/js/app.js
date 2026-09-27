@@ -234,10 +234,16 @@ async function route() {
   try {
     const mod = await VIEWS[path]();
     if (token !== routeToken) return;
-    cleanup = await mod.render(view, { path, params: rest, query: Object.fromEntries(new URLSearchParams(qs)) }) || null;
+    const done = await mod.render(view, { path, params: rest, query: Object.fromEntries(new URLSearchParams(qs)) }) || null;
+    // The user may have moved to another page while this one was still loading: drop this one quietly.
+    if (token !== routeToken) { done?.(); return; }
+    cleanup = done;
     document.title = `${item?.label || path.replace(/-/g, ' ')} · Bowl Mania Admin`;
     view.focus({ preventScroll: true }); scrollTo(0, 0);
-  } catch (e) { console.error(e); view.innerHTML = `<div class="error-state"><span>${esc(e.message)}</span><button class="btn btn-ghost btn-sm" onclick="location.reload()">Reload</button></div>`; }
+  } catch (e) {
+    if (token !== routeToken) return; // an abandoned page failing after the user left it
+    console.error(e); view.innerHTML = `<div class="error-state"><span>${esc(e.message)}</span><button class="btn btn-ghost btn-sm" onclick="location.reload()">Reload</button></div>`;
+  }
 }
 
 async function startShell() {
