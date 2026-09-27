@@ -56,7 +56,10 @@ export function createApp() {
   fs.mkdirSync(config.uploadsDir, { recursive: true });
   app.use('/uploads', express.static(config.uploadsDir, { maxAge: '30d', immutable: true, index: false }));
   const pub = path.join(ROOT, 'public');
-  app.use(express.static(pub, { index: 'index.html', maxAge: config.isProd ? '1h' : 0 }));
+  // Pages, scripts and styles are revalidated on every load (cheap 304s via ETag) so updates show immediately;
+  // images and fonts may be cached for an hour.
+  app.use(express.static(pub, { index: 'index.html', maxAge: config.isProd ? '1h' : 0,
+    setHeaders: (res, file) => { if (/\.(html|js|mjs|css|webmanifest)$/.test(file)) res.setHeader('Cache-Control', 'no-cache'); } }));
   app.get(['/admin', '/admin/'], (req, res) => res.sendFile(path.join(pub, 'admin', 'index.html')));
   app.get('/track/:token', (req, res) => res.sendFile(path.join(pub, 'track.html')));
   app.get('/{*splat}', (req, res) => res.status(404).sendFile(path.join(pub, 'index.html')));
