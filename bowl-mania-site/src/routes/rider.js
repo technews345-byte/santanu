@@ -123,6 +123,8 @@ r.get('/sync', ah(async (req, res) => {
 }));
 r.post('/status', ah(async (req, res) => {
   const b = parse(z.object({ online: z.boolean() }), req.body);
+  if (b.online && !db.prepare("SELECT photo <> '' AS ok FROM admins WHERE id=?").get(req.admin.id)?.ok)
+    throw conflict('Your profile photo is missing. Ask your manager to add it in the admin panel before you go online.');
   const s = R.setOnline(req.admin, b.online);
   audit(req, 'rider_status', 'admin', req.admin.id, `${req.admin.name} went ${b.online ? 'online' : 'offline'}`);
   res.json({ online: !!s.online, online_since: s.online_since || null });

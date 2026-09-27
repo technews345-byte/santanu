@@ -16,8 +16,10 @@ function loadLeaflet() {
   return leaflet;
 }
 const tiles = L => L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, referrerPolicy: 'strict-origin-when-cross-origin', attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' });
-const riderIcon = (L, r) => L.divIcon({ className: '', iconSize: [38, 38], iconAnchor: [19, 19],
-  html: `<span class="rider-pin ${r.online ? (r.location?.stale ? 'stale' : r.current ? 'busy' : 'on') : 'off'}">${esc(initials(r.name))}</span>` });
+const riderIcon = (L, r) => L.divIcon({ className: '', iconSize: r.photo_url ? [44, 44] : [38, 38], iconAnchor: r.photo_url ? [22, 22] : [19, 19],
+  html: `<span class="rider-pin ${r.online ? (r.location?.stale ? 'stale' : r.current ? 'busy' : 'on') : 'off'}">${r.photo_url ? `<img src="${esc(r.photo_url)}" alt="">` : esc(initials(r.name))}</span>` });
+// Rider face, or initials when there is no photo.
+const face = (r, cls = 'avatar') => r.photo_url ? `<img class="${cls} photo" src="${esc(r.photo_url)}" alt="">` : `<span class="${cls}">${esc(initials(r.name))}</span>`;
 const kitchenIcon = L => L.divIcon({ className: '', iconSize: [30, 30], iconAnchor: [15, 15], html: '<span class="kitchen-pin">🍲</span>' });
 const age = s => (s == null ? 'never' : s < 60 ? `${s} seconds ago` : ago(new Date(Date.now() - s * 1000).toISOString()));
 const stateBadge = r => !r.online ? badge('off', 'Offline') : r.current ? badge('out_for_delivery', 'On delivery') : badge('ok', 'Online');
@@ -25,7 +27,7 @@ const stateBadge = r => !r.online ? badge('off', 'Offline') : r.current ? badge(
 export async function render(view, ctx) {
   if (ctx.params[0]) return profile(view, Number(ctx.params[0]));
   view.innerHTML = `<div class="page-head"><div><h1>Riders</h1><p>Live positions, current orders and availability. Updates arrive as riders move.</p></div>
-    <div class="actions"><div class="seg" role="group" aria-label="Show"><button type="button" data-f="all" aria-pressed="true">All</button><button type="button" data-f="online" aria-pressed="false">Online</button><button type="button" data-f="busy" aria-pressed="false">On delivery</button></div></div></div>
+    <div class="actions">${can('staff.manage') ? `<a class="btn btn-primary btn-sm" href="#/staff?new=1&role=delivery_staff">${icon('plus')} Add rider</a>` : ''}<div class="seg" role="group" aria-label="Show"><button type="button" data-f="all" aria-pressed="true">All</button><button type="button" data-f="online" aria-pressed="false">Online</button><button type="button" data-f="busy" aria-pressed="false">On delivery</button></div></div></div>
     <div class="live-grid"><div class="card map-card"><div id="map" role="application" aria-label="Live rider map"></div></div><div class="card rider-list" id="list"><span class="skel" style="height:240px"></span></div></div>`;
   let data, L, map, markers = new Map(), trail = null, selected = null, filter = 'all';
   try { L = await loadLeaflet(); } catch (e) { $('#map', view).innerHTML = `<p class="muted card-pad">${esc(e.message)}</p>`; }
@@ -37,7 +39,7 @@ export async function render(view, ctx) {
   function draw() {
     const rows = visible();
     $('#list', view).innerHTML = rows.length ? rows.map(r => `<button class="rider-row ${selected === r.id ? 'sel' : ''}" data-id="${r.id}">
-        <span class="avatar">${esc(initials(r.name))}</span><span class="grow"><b>${esc(r.name)}</b>
+        ${face(r)}<span class="grow"><b>${esc(r.name)}</b>
           <span class="small muted">${r.current ? `${esc(r.current.order_number)} · ${esc(r.current.status_label)}` : r.online ? 'Waiting for an order' : 'Offline'}</span>
           <span class="tiny ${r.location?.stale && r.online ? 'warn-text' : 'muted'}">${r.location ? `GPS ${age(r.location.age_seconds)}${r.location.stale && r.online ? ' · stale' : ''}` : 'No GPS yet'}</span></span>
         ${stateBadge(r)}</button>`).join('')
@@ -104,9 +106,9 @@ async function profile(view, id) {
     try { r = await get(`/admin/riders/${id}`, range); } catch (e) { view.innerHTML = back + errorState(e, false); return; }
     const p = r.performance;
     view.innerHTML = `${back}
-      <div class="card card-pad order-hero"><div class="row" style="gap:14px">${r.photo_url ? `<img class="avatar lg photo" src="${esc(r.photo_url)}" alt="">` : `<span class="avatar lg">${esc(initials(r.name))}</span>`}
+      <div class="card card-pad order-hero"><div class="row" style="gap:14px">${face(r, 'avatar lg')}
         <div><h1>${esc(r.name)}</h1><p class="muted">${r.employee_id ? `Employee ${esc(r.employee_id)} · ` : ''}${esc(r.vehicle_type || 'Vehicle not set')}${r.vehicle_number ? ' · ' + esc(r.vehicle_number) : ''}${r.joining_date ? ` · joined ${fmtDate(r.joining_date)}` : ''}</p></div></div>
-        <div class="row">${stateBadge(r)}${r.phone ? `<a class="btn btn-ghost btn-sm" href="tel:+91${esc(r.phone)}">${icon('phone')} Call</a>` : ''}${can('riders.manage') ? '<button class="btn btn-soft btn-sm" id="edit">Edit details</button><button class="btn btn-ghost btn-sm" id="photo">Photo</button>' : ''}</div></div>
+        <div class="row">${stateBadge(r)}${r.phone ? `<a class="btn btn-ghost btn-sm" href="tel:+91${esc(r.phone)}">${icon('phone')} Call</a>` : ''}${can('riders.manage') ? '<button class="btn btn-soft btn-sm" id="edit">Edit details</button><button class="btn btn-ghost btn-sm" id="photo">Photo</button>' : ''}${can('staff.manage') ? `<a class="btn btn-ghost btn-sm" href="#/staff?edit=${r.id}">Login & role</a>` : ''}</div></div>
       <h2 style="margin:20px 0 10px">Today</h2>
       <div class="kpis"><div class="kpi"><span>Deliveries</span><b>${num(r.today.deliveries)}</b></div><div class="kpi"><span>Completed</span><b>${num(r.today.completed)}</b></div>
         <div class="kpi"><span>Pending</span><b>${num(r.today.pending)}</b></div><div class="kpi"><span>Distance</span><b>${r.today.distance_km} km</b></div></div>

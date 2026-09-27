@@ -29,6 +29,7 @@ function liveRow(a) {
   const att = db.prepare('SELECT check_in_at, check_out_at FROM attendance WHERE admin_id=? AND date=?').get(a.id, localParts().date);
   return {
     ...a, online: !!s.online, online_since: s.online_since || null,
+    photo_url: a.has_photo ? fileUrl(db.prepare('SELECT photo FROM admins WHERE id=?').get(a.id).photo) : null,
     location: s.lat != null ? { lat: s.lat, lng: s.lng, accuracy: s.accuracy, speed: s.speed, heading: s.heading, at: s.location_at, age_seconds: age, stale: age == null || age > stale * 60 } : null,
     current: current ? { ...current, status_label: R.STEP_LABEL[current.status] } : null,
     active_count: db.prepare(`SELECT COUNT(*) n FROM delivery_assignments d JOIN orders o ON o.id=d.order_id WHERE d.staff_id=? AND d.status<>'delivered' AND o.status NOT IN ('cancelled','refunded','delivered','completed')`).get(a.id).n,
@@ -180,7 +181,7 @@ r.patch('/support/:id', requirePerm('support.manage'), ah(async (req, res) => {
 
 // ---------- Private files ----------
 const fileUrl = name => (name ? `/api/admin/files/${name}` : null);
-const FILE_PERMS = { proof: ['orders.view', 'delivery.view'], signature: ['orders.view', 'delivery.view'], selfie: ['attendance.view'], rider: ['riders.view', 'staff.manage'], support: ['support.manage'] };
+const FILE_PERMS = { proof: ['orders.view', 'delivery.view'], signature: ['orders.view', 'delivery.view'], selfie: ['attendance.view'], rider: ['riders.view', 'staff.manage', 'delivery.assign'], support: ['support.manage'] };
 r.get('/files/:kind/:month/:file', (req, res, next) => {
   const name = `${req.params.kind}/${req.params.month}/${req.params.file}`;
   const p = R.privatePath(name);

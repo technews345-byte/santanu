@@ -16,7 +16,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write   # publish the APK as a GitHub Release (main branch and manual runs only)
 
 concurrency:
   group: rider-app-${{ github.ref }}
@@ -90,6 +90,18 @@ jobs:
           name: BowlManiaRider-apk-${{ github.run_number }}
           path: apk/*.apk
           retention-days: 30
+
+      # A stable public download link: .../releases/latest/download/BowlManiaRider.apk
+      - name: Publish release
+        if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp ../apk/BowlManiaRider-${{ github.run_number }}.apk ../apk/BowlManiaRider.apk
+          tag="rider-v1.0.${{ github.run_number }}"
+          gh release create "$tag" ../apk/BowlManiaRider.apk --target "${{ github.sha }}" --latest \
+            --title "Bowl Mania Rider 1.0 (build ${{ github.run_number }})" \
+            --notes "Android app for Bowl Mania delivery staff. Download BowlManiaRider.apk on the phone, open it and allow installing from this source. Sign in with your Delivery Staff account."
 
       - uses: actions/upload-artifact@v4
         if: failure()

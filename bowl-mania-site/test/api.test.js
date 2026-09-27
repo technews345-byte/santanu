@@ -261,13 +261,30 @@ let riderTok, riderId;
 
 test('rider app: sign-in rules and profile', async () => {
   const roles = (await owner.get('/api/admin/staff')).data.roles;
-  const s = await owner.post('/api/admin/staff', { name: 'Bikash Rider', email: 'rider@bowlmania.test', phone: '9876500001', role_id: roles.find(r => r.key === 'delivery_staff').id, password: 'RiderPass12' });
+  const riderRole = roles.find(r => r.key === 'delivery_staff');
+  assert.equal(riderRole.is_rider, true); assert.equal(roles.find(r => r.key === 'owner')?.is_rider ?? false, false);
+  const fields = { name: 'Bikash Rider', email: 'rider@bowlmania.test', phone: '9876500001', role_id: riderRole.id, password: 'RiderPass12' };
+  // Delivery staff must have a profile photo.
+  const noPhoto = await owner.post('/api/admin/staff', fields);
+  assert.equal(noPhoto.status, 400); assert.match(noPhoto.data.error, /profile photo is required/);
+  const fd = new FormData(); Object.entries(fields).forEach(([k, v]) => fd.append(k, String(v)));
+  fd.append('photo', new Blob([await jpeg(500, 500, '#c59b6d')], { type: 'image/jpeg' }), 'face.jpg');
+  const s = await owner.post('/api/admin/staff', fd);
+  assert.equal(s.status, 201);
   riderId = s.data.id;
+  const listed = (await owner.get('/api/admin/staff')).data.rows.find(x => x.id === riderId);
+  assert.match(listed.photo_url, /^\/api\/admin\/files\/rider\//);
+  assert.equal((await owner.get(listed.photo_url)).status, 200);
+  // Other staff can't be switched to a delivery role without a photo.
+  const kitchenStaff = (await owner.get('/api/admin/staff')).data.rows.find(x => x.email === 'kitchen@bowlmania.test');
+  const switched = await owner.patch(`/api/admin/staff/${kitchenStaff.id}`, { name: kitchenStaff.name, email: kitchenStaff.email, phone: kitchenStaff.phone || '', role_id: riderRole.id, status: 'active' });
+  assert.equal(switched.status, 400);
   assert.equal((await owner.patch(`/api/admin/riders/${riderId}`, { employee_id: 'BM-R01', vehicle_type: 'Scooter', vehicle_number: 'as06 ab 1234', joining_date: '2026-01-15' })).status, 200);
   assert.equal((await rapi('POST', '/api/rider/login', { email: 'rider@bowlmania.test', password: 'wrong-pass1' })).status, 401);
   assert.equal((await rapi('POST', '/api/rider/login', { email: 'kitchen@bowlmania.test', password: 'KitchenPass1' })).status, 403);
   const login = await rapi('POST', '/api/rider/login', { email: 'rider@bowlmania.test', password: 'RiderPass12' });
   assert.equal(login.status, 200); riderTok = login.data.token;
+  assert.equal(login.data.rider.photo_url, '/api/rider/me/photo');
   assert.equal(login.data.rider.employee_id, 'BM-R01'); assert.equal(login.data.rider.vehicle_number, 'AS06 AB 1234'); assert.equal(login.data.rider.company, 'Bowl Mania');
   assert.equal((await rapi('GET', '/api/rider/me')).status, 401);
   assert.equal((await rapi('GET', '/api/rider/me', null, 'x'.repeat(40))).status, 401);
