@@ -32,7 +32,9 @@ export function createApp() {
         'upgrade-insecure-requests': config.isProd ? [] : null
       }
     },
-    hsts: config.isProd
+    hsts: config.isProd,
+    // Send only the site origin to other sites: OpenStreetMap map tiles are refused without a Referer.
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' }
   }));
 
   // Request log (skips static assets).

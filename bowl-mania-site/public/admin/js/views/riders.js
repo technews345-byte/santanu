@@ -15,7 +15,7 @@ function loadLeaflet() {
   });
   return leaflet;
 }
-const tiles = L => L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' });
+const tiles = L => L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, referrerPolicy: 'strict-origin-when-cross-origin', attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' });
 const riderIcon = (L, r) => L.divIcon({ className: '', iconSize: [38, 38], iconAnchor: [19, 19],
   html: `<span class="rider-pin ${r.online ? (r.location?.stale ? 'stale' : r.current ? 'busy' : 'on') : 'off'}">${esc(initials(r.name))}</span>` });
 const kitchenIcon = L => L.divIcon({ className: '', iconSize: [30, 30], iconAnchor: [15, 15], html: '<span class="kitchen-pin">🍲</span>' });
