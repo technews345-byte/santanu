@@ -169,7 +169,10 @@ function tickClock() {
 // ---------- Notifications & live updates ----------
 async function loadNotifications() {
   if (!can('notifications.view', 'orders.view')) { $('.bell-wrap').hidden = true; return; }
-  try { const r = await get('/admin/notifications', { limit: 15 }); state.unread = r.unread; state.notifications = r.rows; renderBell(); } catch { /* shown on next refresh */ }
+  try {
+    const r = await get('/admin/notifications', { limit: 15 }); state.unread = r.unread; state.notifications = r.rows; renderBell();
+    seenId = Math.max(seenId, ...r.rows.map(n => n.id)); // older ones were there before this visit: no alert
+  } catch { /* shown on next refresh */ }
 }
 const NOTIF_ICON = { new_order: 'orders', payment_received: 'card', payment_failed: 'card', order_cancelled: 'orders', low_stock: 'box', inquiry: 'chat', new_review: 'star' };
 function renderBell() {
@@ -192,38 +195,73 @@ function chime() {
     });
   } catch { /* audio blocked until the first click */ }
 }
-let es;
+let es, seenId = 0, reconnectTimer = null, reconnectDelay = 2000;
+const openLink = n => go((n.link || '#/notifications').replace(/^#\//, ''));
+const osNotify = (title, body, onClick, sticky) => {
+  if (!('Notification' in window) || Notification.permission !== 'granted' || devicePushOn() || !document.hidden) return;
+  const bn = new Notification(title, { body, icon: '/assets/logo.jpg', requireInteraction: !!sticky }); bn.onclick = () => { window.focus(); onClick(); };
+};
+/** Alerts for one notification. [live] = arrived on the live stream (else found by the 30-second check). */
+function alertFor(n, live) {
+  if (n.id && n.id <= seenId) return; // already alerted
+  if (n.id) seenId = n.id;
+  if (live) {
+    state.unread++; state.notifications = [{ ...n, read_at: null }, ...(state.notifications || [])].slice(0, 15); renderBell();
+  }
+  $('#bellBtn').classList.remove('ring'); void $('#bellBtn').offsetWidth; $('#bellBtn').classList.add('ring');
+  if (n.type === 'new_order') {
+    chime(); if (live) { state.counts.orders++; renderNav(); }
+    const o = n.order;
+    toast(o ? `NEW ORDER ${o.order_number} · ${o.customer_name} · ${rupee(o.total)} · ${o.fulfilment === 'pickup' ? 'Pickup' : 'Delivery'} · ${o.payment_status === 'paid' ? 'Paid' : 'Cash'}` : `${n.title} · ${n.body}`,
+      'order', { action: 'Open', onAction: () => (o ? go(`orders/${o.id}`) : openLink(n)), timeout: 12000 });
+    osNotify(n.title, o ? `${o.customer_name} · ${rupee(o.total)}\n${o.items.join(', ')}` : n.body, () => (o ? go(`orders/${o.id}`) : openLink(n)));
+    if (o) bus.dispatchEvent(new CustomEvent('order', { detail: o }));
+  } else if (n.type === 'inquiry') {
+    chime(); if (live) { state.counts.inquiries++; renderNav(); }
+    toast(`${n.title}: ${n.body}`, 'ok', { action: 'Open', onAction: () => openLink(n), timeout: 15000 });
+    osNotify(n.title, n.body, () => openLink(n));
+  } else if (n.type === 'rider_emergency') {
+    chime(); if (live) { state.counts.support++; renderNav(); }
+    toast(n.title, 'err', { action: 'Open', onAction: () => openLink(n), timeout: 30000 });
+    osNotify(n.title, n.body, () => openLink(n), true);
+  } else if (n.type === 'rider_support') { if (live) { state.counts.support++; renderNav(); } }
+  else if (n.type === 'delivery_rejected' || n.type === 'order_cancelled' || n.type === 'payment_failed') {
+    chime(); toast(n.title, 'err', { action: 'Open', onAction: () => openLink(n), timeout: 15000 });
+  }
+  bus.dispatchEvent(new CustomEvent('notification', { detail: n }));
+}
+/** Backup for the live stream: picks up anything missed (dropped connection, phone asleep, redeploy). */
+async function checkNotifications() {
+  if (!state.admin || !can('notifications.view', 'orders.view')) return;
+  try {
+    const r = await get('/admin/notifications', { limit: 15 });
+    r.rows.filter(n => n.id > seenId && !n.read_at).sort((a, b) => a.id - b.id).forEach(n => alertFor(n, false));
+    state.unread = r.unread; state.notifications = r.rows; renderBell();
+    refreshCounts();
+  } catch { /* offline: try again on the next check */ }
+}
+function scheduleReconnect() {
+  if (reconnectTimer || !state.admin) return;
+  reconnectTimer = setTimeout(async () => {
+    reconnectTimer = null;
+    try { await get('/admin/status'); } catch { /* refreshes an expired session; signs out if it can't */ }
+    if (state.admin) connectLive();
+    reconnectDelay = Math.min(reconnectDelay * 2, 30000);
+  }, reconnectDelay);
+}
 function connectLive() {
   es?.close();
   es = new EventSource('/api/admin/events');
-  es.addEventListener('notification', e => {
-    const n = JSON.parse(e.data);
-    state.unread++; state.notifications = [{ ...n, read_at: null }, ...(state.notifications || [])].slice(0, 15); renderBell();
-    $('#bellBtn').classList.remove('ring'); void $('#bellBtn').offsetWidth; $('#bellBtn').classList.add('ring');
-    if (n.type === 'new_order' && n.order) {
-      chime(); state.counts.orders++; renderNav();
-      const o = n.order;
-      toast(`NEW ORDER ${o.order_number} · ${o.customer_name} · ${rupee(o.total)} · ${o.fulfilment === 'pickup' ? 'Pickup' : 'Delivery'} · ${o.payment_status === 'paid' ? 'Paid' : 'Cash'}`, 'order', { action: 'Open', onAction: () => go(`orders/${o.id}`), timeout: 12000 });
-      if ('Notification' in window && Notification.permission === 'granted' && document.hidden && !devicePushOn()) {
-        const bn = new Notification(`New order ${o.order_number}`, { body: `${o.customer_name} · ${rupee(o.total)}\n${o.items.join(', ')}`, icon: '/assets/logo.jpg', tag: o.order_number });
-        bn.onclick = () => { window.focus(); go(`orders/${o.id}`); };
-      }
-      bus.dispatchEvent(new CustomEvent('order', { detail: o }));
-    } else if (n.type === 'inquiry') { state.counts.inquiries++; renderNav(); }
-    else if (n.type === 'rider_emergency') {
-      chime(); state.counts.support++; renderNav();
-      toast(n.title, 'err', { action: 'Open', onAction: () => go(n.link.replace(/^#\//, '')), timeout: 30000 });
-      if ('Notification' in window && Notification.permission === 'granted' && !devicePushOn()) new Notification(n.title, { body: n.body, icon: '/assets/logo.jpg', requireInteraction: true });
-    } else if (n.type === 'rider_support') { state.counts.support++; renderNav(); }
-    else if (n.type === 'delivery_rejected') { chime(); toast(n.title, 'err', { action: 'Reassign', onAction: () => go(n.link.replace(/^#\//, '')), timeout: 15000 }); }
-    bus.dispatchEvent(new CustomEvent('notification', { detail: n }));
-  });
+  es.addEventListener('hello', () => { reconnectDelay = 2000; checkNotifications(); });
+  es.addEventListener('notification', e => alertFor(JSON.parse(e.data), true));
   es.addEventListener('order_updated', e => bus.dispatchEvent(new CustomEvent('order', { detail: JSON.parse(e.data) })));
   for (const type of ['rider_location', 'rider_status', 'delivery_updated', 'attendance', 'rider_notification'])
     es.addEventListener(type, e => bus.dispatchEvent(new CustomEvent('rider', { detail: { type, data: JSON.parse(e.data) } })));
   es.addEventListener('menu_changed', () => bus.dispatchEvent(new Event('menu')));
   es.addEventListener('status_changed', e => { state.status = JSON.parse(e.data); renderStatus(); });
-  es.onerror = () => { /* EventSource reconnects by itself; the session refresh below keeps cookies valid */ };
+  // The browser retries network drops by itself, but gives up for good on an expired session (401):
+  // then refresh the session and reconnect.
+  es.onerror = () => { if (es.readyState === EventSource.CLOSED) scheduleReconnect(); };
 }
 async function refreshCounts() {
   try {
@@ -289,7 +327,10 @@ async function startShell() {
   renderProfile(); renderNav();
   state.status = await get('/admin/status').catch(() => null); renderStatus();
   tickClock(); setInterval(tickClock, 30_000);
-  loadNotifications(); refreshCounts(); connectLive();
+  // Backup check every 30 s (also keeps the session fresh) and whenever the tab becomes visible again.
+  setInterval(() => { checkNotifications(); if (!es || es.readyState === EventSource.CLOSED) scheduleReconnect(); }, 30_000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) { checkNotifications(); if (!es || es.readyState === EventSource.CLOSED) scheduleReconnect(); } });
+  await loadNotifications(); refreshCounts(); connectLive();
   if (pushSupported && Notification.permission === 'granted' && pushFlag.get()) enableDevicePush().catch(() => {}); // keep this device registered
   else if (pushSupported && Notification.permission === 'default' && can('orders.view')) {
     toast('Get a notification for every new order on this phone, even when the admin panel is closed.', 'ok', {
