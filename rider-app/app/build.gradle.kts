@@ -49,8 +49,9 @@ android {
             create("release") {
                 storeFile = file(ks)
                 storePassword = config("RIDER_KEYSTORE_PASSWORD")
-                keyAlias = config("RIDER_KEY_ALIAS")
-                keyPassword = config("RIDER_KEY_PASSWORD")
+                // Alias and key password default to "rider" and the keystore password, so only two secrets are needed.
+                keyAlias = config("RIDER_KEY_ALIAS", "rider")
+                keyPassword = config("RIDER_KEY_PASSWORD", config("RIDER_KEYSTORE_PASSWORD"))
             }
         }
     }
