@@ -15,6 +15,9 @@ import { BrandSplash } from './src/components/BrandSplash';
 import { useStore } from './src/store/useStore';
 import { useAuthStore } from './src/store/useAuthStore';
 import { initAds, preloadAppOpenAd, showAppOpenAd } from './src/services/ads';
+import { configureNotifications, rescheduleReminders } from './src/services/reminders';
+import { useReminderStore } from './src/store/useReminderStore';
+import { ToastHost } from './src/components/Toast';
 import { fontSizes, radius, spacing } from './src/theme/tokens';
 
 // Hold the native splash until the branded one is on screen, so the handoff
@@ -23,7 +26,8 @@ SplashScreen.preventAutoHideAsync().catch(() => {});
 
 function AppContent() {
   const { theme } = useTheme();
-  const { hydrated, hydrationError, hydrate, biometricLockEnabled } = useStore();
+  const { hydrated, hydrationError, hydrate, biometricLockEnabled, transactions, categories } = useStore();
+  const reminders = useReminderStore();
   const initAuth = useAuthStore((s) => s.init);
   const authReady = useAuthStore((s) => s.ready);
   const [unlocked, setUnlocked] = useState(false);
@@ -46,7 +50,21 @@ function AppContent() {
     // Started at once so the launch ad below has as little to wait for as
     // possible.
     preloadAppOpenAd();
+    useReminderStore.getState().load();
+    configureNotifications();
   }, []);
+
+  // Keep the fortnight of evening reminders in step with the settings and
+  // the data: a save today takes today's reminder away, and every launch
+  // rolls the schedule forward. Settled for a moment first, so a burst of
+  // edits reschedules once.
+  useEffect(() => {
+    if (!hydrated || !reminders.loaded) return;
+    const timer = setTimeout(() => {
+      rescheduleReminders(reminders, transactions, categories);
+    }, 1200);
+    return () => clearTimeout(timer);
+  }, [hydrated, reminders.loaded, reminders.enabled, reminders.hour, reminders.minute, reminders.language, transactions, categories]);
 
   // Paint the root view in the theme colour too: it is what shows in the frame
   // between the native splash going away and React drawing.
@@ -125,6 +143,7 @@ function AppContent() {
     <View style={[styles.flex, { backgroundColor: theme.bg }]}>
       <StatusBar style={theme.mode === 'dark' ? 'light' : 'dark'} />
       {content}
+      <ToastHost />
       {!splashDone && (
         <BrandSplash
           ready={hydrated && authReady && fontsReady}

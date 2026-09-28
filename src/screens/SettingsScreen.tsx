@@ -8,6 +8,7 @@ import { Screen } from '../components/Screen';
 import { Card } from '../components/Card';
 import { IconBadge } from '../components/IconBadge';
 import { Pill } from '../components/Pill';
+import { ReminderSettings } from '../components/ReminderSettings';
 import { useTheme } from '../theme/ThemeContext';
 import { ThemePreference } from '../theme/ThemeContext';
 import { fontSizes, radius, spacing } from '../theme/tokens';
@@ -143,6 +144,9 @@ export default function SettingsScreen() {
             thumbColor={theme.mode === 'dark' ? '#ECEFF6' : '#FFFFFF'} />
           </View>
         </Card>
+
+        <SectionLabel label="Notifications" />
+        <ReminderSettings />
 
         <SectionLabel label="Accounts" action={{ label: 'Add', onPress: () => navigation.navigate('AccountForm', {}) }} />
         <Card padded={false}>

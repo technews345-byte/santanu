@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme, DarkTheme, createNavigationContainerRef } from '@react-navigation/native';
 import { useTheme } from '../theme/ThemeContext';
 import { TabNavigator } from './TabNavigator';
 import TransactionEntryScreen from '../screens/TransactionEntryScreen';
@@ -13,11 +13,28 @@ import LoginScreen from '../screens/LoginScreen';
 import AccountScreen from '../screens/AccountScreen';
 import { RootStackParamList } from './types';
 import { useAuthStore } from '../store/useAuthStore';
+import { onReminderTapped } from '../services/reminders';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
+const navigationRef = createNavigationContainerRef<RootStackParamList>();
 
 export function RootNavigator() {
   const { theme } = useTheme();
+
+  // A tapped reminder opens straight onto a new expense — the thing it was
+  // asking for. If it arrives before navigation is ready (it opened the app)
+  // it waits for it; on the sign-in screen there is no form to open yet.
+  const pendingEntry = useRef(false);
+  const openEntry = () => {
+    const ready = navigationRef.isReady() && navigationRef.getRootState()?.routeNames.includes('TransactionEntry');
+    if (!ready) {
+      pendingEntry.current = true;
+      return;
+    }
+    pendingEntry.current = false;
+    navigationRef.navigate('TransactionEntry', { initialType: 'expense' });
+  };
+  useEffect(() => onReminderTapped(openEntry), []);
   const ready = useAuthStore((s) => s.ready);
   const user = useAuthStore((s) => s.user);
   const guestAcknowledged = useAuthStore((s) => s.guestAcknowledged);
@@ -40,7 +57,12 @@ export function RootNavigator() {
   };
 
   return (
-    <NavigationContainer theme={navTheme}>
+    <NavigationContainer
+      ref={navigationRef}
+      theme={navTheme}
+      onReady={() => pendingEntry.current && openEntry()}
+      onStateChange={() => pendingEntry.current && openEntry()}
+    >
       <Stack.Navigator
         screenOptions={{
           headerShown: false,
