@@ -22,6 +22,10 @@ import { evaluateExpression, formatExpressionDisplay, isOperator } from '../util
 import { DEFAULT_CURRENCY } from '../utils/finance';
 import { CategoryType, RecurrenceInterval, TransactionType } from '../types';
 import { format } from 'date-fns';
+import { showToast } from '../components/Toast';
+import { useReminderStore } from '../store/useReminderStore';
+import { ensurePermission, remindersSupported } from '../services/reminders';
+import { savedMessage } from '../utils/messages';
 
 const TYPE_CONFIG: Record<TransactionType, { label: string; title: string; color: (theme: any) => string }> = {
   expense: { label: 'Expense', title: 'Expense', color: (t) => t.expense },
@@ -37,6 +41,37 @@ const RECURRENCE_OPTIONS: { key: RecurrenceInterval; label: string }[] = [
   { key: 'monthly', label: 'Monthly' },
   { key: 'yearly', label: 'Yearly' },
 ];
+
+// Every third confirmation is phrased the other way, so it doesn't read canned.
+let savedCount = 0;
+
+/**
+ * After the first thing someone saves, one offer of the evening reminder —
+ * the moment it makes sense, rather than a permission prompt on first launch.
+ * Asked once; the answer is kept, and Settings can change it any time.
+ */
+function offerReminders() {
+  const reminders = useReminderStore.getState();
+  if (!remindersSupported || reminders.offered || reminders.enabled) return;
+  const time = format(new Date(2000, 0, 1, reminders.hour, reminders.minute), 'h:mm a');
+  setTimeout(() => {
+    Alert.alert(
+      'Want a daily reminder?',
+      `Spendly can nudge you at ${time} to note the day’s spending — only on days you haven’t added anything yet.`,
+      [
+        { text: 'Not now', style: 'cancel', onPress: () => useReminderStore.getState().update({ offered: true }) },
+        {
+          text: 'Remind me',
+          onPress: async () => {
+            const granted = await ensurePermission();
+            useReminderStore.getState().update({ offered: true, enabled: granted });
+            if (granted) showToast(`Reminder set for ${time} ⏰`);
+          },
+        },
+      ]
+    );
+  }, 900);
+}
 
 export default function TransactionEntryScreen() {
   const { theme } = useTheme();
@@ -162,6 +197,22 @@ export default function TransactionEntryScreen() {
       await addTransaction(payload);
     }
     navigation.goBack();
+
+    const reminders = useReminderStore.getState();
+    if (reminders.confirmations) {
+      const category = type === 'transfer' ? undefined : categories.find((c) => c.id === categoryId);
+      savedCount += 1;
+      showToast(
+        savedMessage({
+          type,
+          categoryName: category?.name,
+          categoryIcon: category?.icon,
+          edited: !!existing,
+          variant: savedCount % 3 === 0 ? 1 : 0,
+        })
+      );
+    }
+    if (!existing) offerReminders();
   };
 
   const handleDelete = () => {
