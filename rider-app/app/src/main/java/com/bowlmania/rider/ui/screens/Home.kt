@@ -223,7 +223,7 @@ private fun AttendanceStrip(h: Home, onOpen: () -> Unit) {
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text("Attendance", style = MaterialTheme.typography.titleMedium)
-                Text(a.shift?.let { "Shift ${Times.hhmm(it.startTime)} – ${Times.hhmm(it.endTime)}" } ?: "No shift scheduled today",
+                Text(if (a.state == "not_checked_in") "Check in with a selfie when you start work" else "Tap to see today's hours and breaks",
                     style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             StatusChip(label, color)

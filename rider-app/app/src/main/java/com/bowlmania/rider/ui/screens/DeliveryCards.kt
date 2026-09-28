@@ -80,7 +80,7 @@ fun PaymentBadge(p: Payment) {
     }
 }
 
-private val REJECT_REASONS = listOf("Too far away", "Vehicle problem", "Already on another delivery", "Ending my shift", "Health or safety reason", "Other")
+private val REJECT_REASONS = listOf("Too far away", "Vehicle problem", "Already on another delivery", "Finishing work for today", "Health or safety reason", "Other")
 
 @Composable
 fun RejectDialog(orderNumber: String, onReject: (String) -> Unit, onDismiss: () -> Unit) {

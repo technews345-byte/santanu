@@ -139,7 +139,7 @@ private fun notificationStyle(type: String, s: com.bowlmania.rider.ui.theme.Stat
     "order_cancelled", "order_reassigned" -> Icons.Filled.Cancel to s.danger
     "order_update" -> Icons.Filled.EditLocationAlt to s.warning
     "support", "support_reply" -> Icons.AutoMirrored.Filled.Chat to s.info
-    "shift", "attendance", "leave" -> Icons.Filled.EventAvailable to s.online
+    "attendance", "leave" -> Icons.Filled.EventAvailable to s.online
     "emergency" -> Icons.Filled.Warning to s.danger
     else -> Icons.Filled.Campaign to s.info
 }

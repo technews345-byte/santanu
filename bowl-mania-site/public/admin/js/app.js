@@ -11,7 +11,7 @@ export const NAV = [
   ] },
   { group: 'Riders', items: [
     { path: 'riders', label: 'Live riders', icon: 'pin', perm: ['riders.view'] },
-    { path: 'attendance', label: 'Attendance & shifts', icon: 'clock', perm: ['attendance.view', 'riders.manage'] },
+    { path: 'attendance', label: 'Attendance', icon: 'clock', perm: ['attendance.view', 'riders.manage'] },
     { path: 'support', label: 'Rider support', icon: 'chat', perm: ['support.manage'], badge: 'support' }
   ] },
   { group: 'Menu', items: [

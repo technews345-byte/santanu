@@ -1,14 +1,14 @@
-// Admin API for rider operations: live map, rider profiles and performance, shifts, attendance,
+// Admin API for rider operations: live map, rider profiles and performance, attendance,
 // leave, rider support tickets and private files (proof photos, signatures, selfies).
 import { Router } from 'express';
 import multer from 'multer';
 import fs from 'node:fs';
 import { db } from '../../db/index.js';
 import { ah, notFound, badRequest, forbidden } from '../../lib/errors.js';
-import { parse, z, text, ymd, hhmm } from '../../lib/validate.js';
+import { parse, z, text, ymd } from '../../lib/validate.js';
 import { audit } from '../../lib/audit.js';
 import { requirePerm, can } from '../../middleware/auth.js';
-import { localParts, addDays } from '../../lib/time.js';
+import { localParts } from '../../lib/time.js';
 import { getSetting } from '../../services/settings.js';
 import * as R from '../../services/riders.js';
 
@@ -51,7 +51,6 @@ r.get('/riders/:id', requirePerm('riders.view'), ah(async (req, res) => {
     history: R.deliveryHistory(a.id, { status: 'all', from: q.from, to: q.to, page: 1, limit: 50 }).rows,
     attendance: db.prepare('SELECT id, date, status, check_in_at, check_out_at, check_in_selfie, check_out_selfie FROM attendance WHERE admin_id=? ORDER BY date DESC LIMIT 14').all(a.id)
       .map(x => ({ ...x, check_in_selfie: fileUrl(x.check_in_selfie), check_out_selfie: fileUrl(x.check_out_selfie) })),
-    shifts: db.prepare('SELECT * FROM shifts WHERE admin_id=? AND date>=? ORDER BY date LIMIT 14').all(a.id, localParts().date),
     photo_url: a.has_photo ? fileUrl(db.prepare('SELECT photo FROM admins WHERE id=?').get(a.id).photo) : null
   });
 }));
@@ -82,36 +81,6 @@ r.post('/riders/:id/offline', requirePerm('delivery.assign'), ah(async (req, res
   res.json({ ok: true });
 }));
 
-// ---------- Shifts ----------
-r.get('/shifts', requirePerm('riders.manage', 'attendance.view'), ah(async (req, res) => {
-  const q = parse(z.object({ from: ymd.optional(), to: ymd.optional() }), req.query);
-  const from = q.from || localParts().date, to = q.to || addDays(from, 13);
-  res.json({ from, to, rows: db.prepare('SELECT s.*, a.name AS rider_name FROM shifts s JOIN admins a ON a.id=s.admin_id WHERE s.date BETWEEN ? AND ? ORDER BY s.date, s.start_time, a.name').all(from, to),
-    riders: db.prepare(`${RIDERS} AND a.status='active' ORDER BY a.name`).all().map(x => ({ id: x.id, name: x.name })) });
-}));
-r.post('/shifts', requirePerm('riders.manage'), ah(async (req, res) => {
-  const b = parse(z.object({ rider_ids: z.array(z.coerce.number().int().positive()).min(1).max(100), from: ymd, to: ymd, start_time: hhmm, end_time: hhmm,
-    days: z.array(z.coerce.number().int().min(0).max(6)).optional().default([0, 1, 2, 3, 4, 5, 6]), note: text(120).optional().default('') }), req.body);
-  if (b.end_time <= b.start_time) throw badRequest('The shift must end after it starts.');
-  if (b.to < b.from) throw badRequest('The end date is before the start date.');
-  const dates = []; for (let d = b.from; d <= b.to && dates.length < 62; d = addDays(d, 1)) if (b.days.includes(new Date(d + 'T12:00:00Z').getUTCDay())) dates.push(d);
-  const ok = new Set(db.prepare(RIDERS).all().map(x => x.id));
-  const up = db.prepare(`INSERT INTO shifts (admin_id, date, start_time, end_time, note, created_by) VALUES (?,?,?,?,?,?)
-    ON CONFLICT(admin_id, date) DO UPDATE SET start_time=excluded.start_time, end_time=excluded.end_time, note=excluded.note`);
-  let n = 0;
-  db.transaction(() => { for (const id of b.rider_ids) { if (!ok.has(id)) throw badRequest('Choose delivery staff only.'); for (const d of dates) { up.run(id, d, b.start_time, b.end_time, b.note, req.admin.id); n++; } } })();
-  for (const id of b.rider_ids) R.notifyRider(id, { type: 'shift', title: 'Your shifts were updated', body: `${b.start_time}–${b.end_time}, ${b.from}${b.to !== b.from ? ' to ' + b.to : ''}` });
-  audit(req, 'create', 'shift', null, `Scheduled ${n} shift${n === 1 ? '' : 's'} (${b.start_time}–${b.end_time})`);
-  res.status(201).json({ created: n });
-}));
-r.delete('/shifts/:id', requirePerm('riders.manage'), ah(async (req, res) => {
-  const s = db.prepare('SELECT s.*, a.name FROM shifts s JOIN admins a ON a.id=s.admin_id WHERE s.id=?').get(Number(req.params.id)); if (!s) throw notFound('Shift not found.');
-  db.prepare('DELETE FROM shifts WHERE id=?').run(s.id);
-  R.notifyRider(s.admin_id, { type: 'shift', title: `Shift on ${s.date} removed` });
-  audit(req, 'delete', 'shift', s.id, `Removed ${s.name}'s shift on ${s.date}`);
-  res.json({ ok: true });
-}));
-
 // ---------- Attendance and leave ----------
 r.get('/attendance', requirePerm('attendance.view'), ah(async (req, res) => {
   const q = parse(z.object({ date: ymd.optional(), rider_id: z.coerce.number().int().positive().optional() }), req.query);
@@ -119,15 +88,14 @@ r.get('/attendance', requirePerm('attendance.view'), ah(async (req, res) => {
   const riders = db.prepare(`${RIDERS} AND a.status='active' ${q.rider_id ? 'AND a.id=?' : ''} ORDER BY a.name`).all(...(q.rider_id ? [q.rider_id] : []));
   const rows = riders.map(a => {
     const at = db.prepare('SELECT * FROM attendance WHERE admin_id=? AND date=?').get(a.id, date);
-    const shift = db.prepare('SELECT * FROM shifts WHERE admin_id=? AND date=?').get(a.id, date);
     const leave = db.prepare("SELECT * FROM leave_requests WHERE admin_id=? AND status='approved' AND ? BETWEEN from_date AND to_date").get(a.id, date);
     const breaks = at ? db.prepare("SELECT started_at, ended_at FROM attendance_breaks WHERE attendance_id=? AND kind='break' ORDER BY id").all(at.id) : [];
     // Earlier check-outs of the day and the check-ins that followed them.
     const gaps = at ? db.prepare("SELECT started_at AS checked_out_at, ended_at AS checked_in_at, selfie, lat, lng FROM attendance_breaks WHERE attendance_id=? AND kind='off' ORDER BY id").all(at.id)
       .map(g => ({ ...g, selfie: fileUrl(g.selfie) })) : [];
-    return { rider: { id: a.id, name: a.name, employee_id: a.employee_id }, shift, leave: leave ? { reason: leave.reason } : null, breaks, gaps,
+    return { rider: { id: a.id, name: a.name, employee_id: a.employee_id }, leave: leave ? { reason: leave.reason } : null, breaks, gaps,
       attendance: at ? { ...at, check_in_selfie: fileUrl(at.check_in_selfie), check_out_selfie: fileUrl(at.check_out_selfie) } : null,
-      state: leave ? 'on_leave' : !at ? (shift ? 'absent' : 'no_shift') : at.check_out_at ? 'checked_out' : breaks.some(x => !x.ended_at) ? 'on_break' : 'working' };
+      state: leave ? 'on_leave' : !at ? 'not_checked_in' : at.check_out_at ? 'checked_out' : breaks.some(x => !x.ended_at) ? 'on_break' : 'working' };
   });
   res.json({ date, rows });
 }));

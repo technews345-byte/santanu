@@ -34,7 +34,7 @@ export const PERMISSIONS = [
   ['settings.manage', 'Admin', 'Change restaurant settings'],
   ['audit.view', 'Admin', 'See the audit log'],
   ['riders.view', 'Riders', 'See riders on the live map, their deliveries and performance'],
-  ['riders.manage', 'Riders', 'Edit rider details, shifts and leave'],
+  ['riders.manage', 'Riders', 'Edit rider details and approve leave'],
   ['attendance.view', 'Riders', 'See attendance and selfies'],
   ['support.manage', 'Riders', 'Answer rider support tickets and emergencies']
 ];

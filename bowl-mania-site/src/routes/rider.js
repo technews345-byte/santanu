@@ -39,7 +39,7 @@ function profile(a) {
   return {
     id: a.id, employee_id: row.employee_id, name: a.name, email: a.email, phone: a.phone || '', role: a.role_name,
     vehicle_type: row.vehicle_type, vehicle_number: row.vehicle_number, joining_date: row.joining_date || row.created_at.slice(0, 10),
-    company: getSetting('restaurant').name, photo_url: row.photo ? '/api/rider/me/photo' : null, shift_today: A.shiftFor(a.id, today)
+    company: getSetting('restaurant').name, photo_url: row.photo ? '/api/rider/me/photo' : null
   };
 }
 
@@ -107,7 +107,7 @@ r.get('/home', (req, res) => {
   res.set('Cache-Control', 'no-store').json({
     rider: { id: req.admin.id, name: req.admin.name }, online: !!state.online, online_since: state.online_since || null,
     today: R.todayStats(req.admin.id), active: list.active[0] || null, active_count: list.active.length, new_assignments: list.new,
-    attendance: { state: att.state, shift: att.shift, on_leave: !!att.on_leave }, unread_notifications: unread(req.admin.id)
+    attendance: { state: att.state, on_leave: !!att.on_leave }, unread_notifications: unread(req.admin.id)
   });
 });
 // Lightweight poll used by the app's background service: new notifications since an id, and whether tracking should run.
@@ -185,7 +185,7 @@ r.delete('/notifications', (req, res) => {
   res.json({ unread: unread(req.admin.id) });
 });
 
-// ---------- Attendance, shifts and leave ----------
+// ---------- Attendance and leave ----------
 r.get('/attendance', (req, res) => res.set('Cache-Control', 'no-store').json(A.attendanceToday(req.admin.id)));
 const selfieUpload = upload.single('selfie');
 r.post('/attendance/check-in', selfieUpload, ah(async (req, res) => {
@@ -201,11 +201,6 @@ r.post('/attendance/break/end', (req, res, next) => { try { res.json(A.endBreak(
 r.get('/attendance/history', ah(async (req, res) => {
   const q = parse(z.object({ from: ymd.optional(), to: ymd.optional() }), req.query);
   res.json(A.attendanceHistory(req.admin.id, q.from, q.to));
-}));
-r.get('/shifts', ah(async (req, res) => {
-  const q = parse(z.object({ from: ymd.optional(), to: ymd.optional() }), req.query);
-  const from = q.from || localParts().date;
-  res.json(db.prepare('SELECT id, date, start_time, end_time, note FROM shifts WHERE admin_id=? AND date>=? AND (? IS NULL OR date<=?) ORDER BY date LIMIT 60').all(req.admin.id, from, q.to ?? null, q.to ?? null));
 }));
 r.get('/leave', (req, res) => res.json(db.prepare('SELECT id, from_date, to_date, reason, status, decided_at, created_at FROM leave_requests WHERE admin_id=? ORDER BY id DESC LIMIT 50').all(req.admin.id)));
 r.post('/leave', ah(async (req, res) => {

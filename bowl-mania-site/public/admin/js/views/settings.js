@@ -45,10 +45,8 @@ export async function render(view) {
         <label class="check"><input type="checkbox" name="require_delivery_otp" ${s.riders.require_delivery_otp ? 'checked' : ''}> Rider must enter the customer's delivery code</label>
         <label class="check"><input type="checkbox" name="require_proof_photo" ${s.riders.require_proof_photo ? 'checked' : ''}> Delivery photo required</label>
         <label class="check"><input type="checkbox" name="require_signature" ${s.riders.require_signature ? 'checked' : ''}> Customer signature required</label>
-        <label class="check"><input type="checkbox" name="require_shift_for_checkin" ${s.riders.require_shift_for_checkin ? 'checked' : ''}> Check-in only on scheduled shift days</label>
         <label class="check"><input type="checkbox" name="checkout_selfie" ${s.riders.checkout_selfie ? 'checked' : ''}> Selfie also at check-out</label>
-        <div class="grid-2"><label class="field"><span>Late after (minutes)</span><input class="input" type="number" data-type="number" name="late_grace_minutes" min="0" max="120" value="${s.riders.late_grace_minutes}"></label>
-          <label class="field"><span>Wrong codes allowed</span><input class="input" type="number" data-type="number" name="otp_max_attempts" min="3" max="10" value="${s.riders.otp_max_attempts}"></label>
+        <div class="grid-2"><label class="field"><span>Wrong codes allowed</span><input class="input" type="number" data-type="number" name="otp_max_attempts" min="3" max="10" value="${s.riders.otp_max_attempts}"></label>
           <label class="field"><span>Location is stale after (minutes)</span><input class="input" type="number" data-type="number" name="stale_location_minutes" min="1" max="60" value="${s.riders.stale_location_minutes}"></label>
           <label class="field"><span>Rider support phone</span><input class="input" name="support_phone" inputmode="tel" value="${esc(s.riders.support_phone)}" placeholder="Defaults to the restaurant phone"></label></div>
         <div class="row small">${i.push?.configured ? badge('ok', 'Push notifications on') : badge('off', 'Push notifications off')}<span class="muted">${i.push?.configured ? 'Firebase is connected.' : 'Riders still get new orders through the app\'s background sync. Add FIREBASE_SERVICE_ACCOUNT for instant push.'}</span></div>${saveBtn}</form>

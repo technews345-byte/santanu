@@ -11,7 +11,7 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.Upsert
 
-/** Last server response per screen, so the rider still sees their orders and shift without signal. */
+/** Last server response per screen, so the rider still sees their orders and attendance without signal. */
 @Entity(tableName = "cache")
 data class CacheEntry(@PrimaryKey val key: String, val json: String, val updatedAt: Long)
 

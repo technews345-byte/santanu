@@ -15,7 +15,7 @@ export const DEFAULTS = {
   payments: { online_enabled: true, cod_enabled: true },
   riders: {
     require_pickup_otp: true, require_delivery_otp: true, require_proof_photo: true, require_signature: false,
-    require_shift_for_checkin: false, checkout_selfie: false, late_grace_minutes: 10, otp_max_attempts: 5,
+    checkout_selfie: false, otp_max_attempts: 5,
     support_phone: '', stale_location_minutes: 5
   },
   notifications: {

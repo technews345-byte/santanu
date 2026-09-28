@@ -88,7 +88,6 @@ fun ProfileScreen(nav: Nav, onSignedOut: () -> Unit) {
                     InfoRow(Icons.Filled.Email, "Email", p.email)
                     InfoRow(Icons.Filled.TwoWheeler, "Vehicle", listOf(p.vehicleType, p.vehicleNumber).filter { it.isNotBlank() }.joinToString(" · "))
                     InfoRow(Icons.Filled.Badge, "Joined", p.joiningDate?.let(Times::date).orEmpty())
-                    InfoRow(Icons.Filled.Schedule, "Today's shift", p.shiftToday?.let { "${Times.hhmm(it.startTime)} – ${Times.hhmm(it.endTime)}" } ?: "Not scheduled")
                     Text("To change these details, contact your manager.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }

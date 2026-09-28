@@ -416,18 +416,18 @@ test('rider app: reject, reassignment, cancellation, OTP lock-out and manager ov
   assert.equal((await rapi('POST', '/api/rider/notifications/read', {}, riderTok)).data.unread, 0);
 });
 
-test('rider app: attendance with selfie, breaks, shifts, leave', async () => {
+test('rider app: attendance with selfie, breaks, leave (no shift schedule)', async () => {
   const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
-  const h = Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Kolkata', hour: '2-digit', hourCycle: 'h23' }).format(new Date()));
-  const start = `${String(Math.max(0, h - 1)).padStart(2, '0')}:00`, end = h >= 23 ? '23:59' : `${String(h + 1).padStart(2, '0')}:59`;
-  assert.equal((await owner.post('/api/admin/shifts', { rider_ids: [riderId], from: today, to: today, start_time: start, end_time: end })).data.created, 1);
+  // Shift scheduling was removed: the endpoints are gone and check-in works any time.
+  assert.equal((await owner.get('/api/admin/shifts')).status, 404);
+  assert.equal((await rapi('GET', '/api/rider/shifts', null, riderTok)).status, 404);
   let a = (await rapi('GET', '/api/rider/attendance', null, riderTok)).data;
-  assert.equal(a.state, 'not_checked_in'); assert.equal(a.shift.start_time, start);
+  assert.equal(a.state, 'not_checked_in'); assert.equal(a.shift, undefined); assert.equal(a.upcoming_shifts, undefined);
   const fd = () => { const f = new FormData(); f.append('lat', String(sonari.lat)); f.append('lng', String(sonari.lng)); f.append('accuracy', '12'); return f; };
   assert.equal((await rapi('POST', '/api/rider/attendance/check-in', fd(), riderTok)).status, 400);
   const f1 = fd(); f1.append('selfie', new Blob([await jpeg(480, 640, '#caa07a')], { type: 'image/jpeg' }), 'selfie.jpg');
   a = (await rapi('POST', '/api/rider/attendance/check-in', f1, riderTok)).data;
-  assert.equal(a.state, 'working'); assert.ok(a.attendance.check_in_selfie);
+  assert.equal(a.state, 'working'); assert.ok(a.attendance.check_in_selfie); assert.equal(a.attendance.status, 'present');
   const f2 = fd(); f2.append('selfie', new Blob([await jpeg(480, 640)], { type: 'image/jpeg' }), 'selfie.jpg');
   assert.equal((await rapi('POST', '/api/rider/attendance/check-in', f2, riderTok)).status, 409);
   assert.equal((await rapi('POST', '/api/rider/attendance/break/start', {}, riderTok)).data.state, 'on_break');

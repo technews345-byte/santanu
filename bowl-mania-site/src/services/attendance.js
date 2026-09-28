@@ -1,15 +1,14 @@
-// Rider shifts, attendance (with selfie), breaks and leave. Times are stored in UTC; dates and shift
-// times are restaurant-local.
+// Rider attendance (check-in/out with selfie), breaks and leave. Times are stored in UTC; dates are
+// restaurant-local. There is no shift schedule: riders check in when they start and go online/offline freely.
 import { db } from '../db/index.js';
 import { badRequest, conflict } from '../lib/errors.js';
-import { localParts, localToDate, sqlNow, addDays } from '../lib/time.js';
+import { localParts, sqlNow, addDays } from '../lib/time.js';
 import { getSetting } from './settings.js';
 import { notifyAdmins } from './notifications.js';
 import { emit } from '../lib/events.js';
 import { savePrivateImage } from './riders.js';
 
 const today = () => localParts().date;
-export const shiftFor = (riderId, date) => db.prepare('SELECT * FROM shifts WHERE admin_id=? AND date=?').get(riderId, date) || null;
 export const onLeave = (riderId, date) => db.prepare("SELECT * FROM leave_requests WHERE admin_id=? AND status='approved' AND ? BETWEEN from_date AND to_date").get(riderId, date) || null;
 
 function breaksOf(attendanceId) {
@@ -26,48 +25,36 @@ export function attendanceToday(riderId) {
   const a = db.prepare('SELECT * FROM attendance WHERE admin_id=? AND date=?').get(riderId, date);
   const breaks = a ? breaksOf(a.id) : [];
   const open = breaks.find(b => !b.ended_at) || null;
-  const shift = shiftFor(riderId, date);
   return {
-    date, shift, on_leave: onLeave(riderId, date),
+    date, on_leave: onLeave(riderId, date),
     attendance: a ? publicAttendance(a) : null,
     breaks, on_break: !!open, break_started_at: open?.started_at || null,
     break_seconds: breaks.reduce((s, b) => s + secsBetween(b.started_at, b.ended_at), 0),
     off_seconds: a ? gapsOf(a.id).reduce((s, g) => s + secsBetween(g.started_at, g.ended_at), 0) : 0,
     sessions: a?.sessions ?? 0,
     state: !a ? 'not_checked_in' : a.check_out_at ? 'checked_out' : open ? 'on_break' : 'working',
-    upcoming_shifts: db.prepare('SELECT * FROM shifts WHERE admin_id=? AND date>? ORDER BY date LIMIT 14').all(riderId, date),
-    rules: { selfie_on_check_out: !!getSetting('riders').checkout_selfie, shift_required: !!getSetting('riders').require_shift_for_checkin }
+    rules: { selfie_on_check_out: !!getSetting('riders').checkout_selfie }
   };
 }
 const publicAttendance = a => ({ id: a.id, date: a.date, status: a.status, check_in_at: a.check_in_at, check_out_at: a.check_out_at, sessions: a.sessions ?? 1,
   check_in_selfie: !!a.check_in_selfie, check_out_selfie: !!a.check_out_selfie });
 
 export async function checkIn(rider, { selfie, lat, lng, accuracy }) {
-  const rules = getSetting('riders');
   const date = today();
   const existing = db.prepare('SELECT * FROM attendance WHERE admin_id=? AND date=?').get(rider.id, date);
   if (existing && !existing.check_out_at) throw conflict('You have already checked in today.');
   if (onLeave(rider.id, date)) throw conflict('You are on approved leave today.');
   if (existing) return checkInAgain(rider, existing, { selfie, lat, lng });
-  const shift = shiftFor(rider.id, date);
-  if (!shift && rules.require_shift_for_checkin) throw conflict('No shift is scheduled for you today.');
-  if (shift) {
-    const start = localToDate(date, shift.start_time).getTime(), end = localToDate(date, shift.end_time).getTime();
-    if (Date.now() < start - 60 * 60_000) throw conflict('Check-in opens 1 hour before your shift starts.');
-    if (Date.now() > end) throw conflict('Your shift for today has already ended.');
-  }
   if (!selfie) throw badRequest('Take a selfie to check in.');
   if (lat == null || lng == null) throw badRequest('Turn on location to check in.');
   const photo = await savePrivateImage(selfie, 'selfie', { max: 720, quality: 75 });
-  const late = shift && Date.now() > localToDate(date, shift.start_time).getTime() + rules.late_grace_minutes * 60_000;
   try {
-    db.prepare(`INSERT INTO attendance (admin_id, date, shift_id, status, check_in_at, check_in_lat, check_in_lng, check_in_accuracy, check_in_selfie) VALUES (?,?,?,?,?,?,?,?,?)`)
-      .run(rider.id, date, shift?.id ?? null, late ? 'late' : 'present', sqlNow(), lat, lng, accuracy ?? null, photo);
+    db.prepare(`INSERT INTO attendance (admin_id, date, status, check_in_at, check_in_lat, check_in_lng, check_in_accuracy, check_in_selfie) VALUES (?,?,'present',?,?,?,?,?)`)
+      .run(rider.id, date, sqlNow(), lat, lng, accuracy ?? null, photo);
   } catch (e) {
     if (/UNIQUE/.test(e.message)) throw conflict('You have already checked in today.'); // a double tap raced the first request
     throw e;
   }
-  if (late) notifyAdmins({ type: 'attendance', title: `${rider.name} checked in late`, body: `Shift started at ${shift.start_time}`, link: '#/attendance', permission: 'attendance.view' });
   emit('attendance', { admin_id: rider.id, event: 'check_in' }, 'attendance.view');
   return attendanceToday(rider.id);
 }
@@ -125,12 +112,11 @@ export function endBreak(rider) {
 
 export function attendanceHistory(riderId, from, to) {
   const f = from || addDays(today(), -30), t = to || today();
-  const rows = db.prepare(`SELECT a.*, s.start_time, s.end_time FROM attendance a LEFT JOIN shifts s ON s.id=a.shift_id
-    WHERE a.admin_id=? AND a.date BETWEEN ? AND ? ORDER BY a.date DESC`).all(riderId, f, t);
+  const rows = db.prepare('SELECT * FROM attendance WHERE admin_id=? AND date BETWEEN ? AND ? ORDER BY date DESC').all(riderId, f, t);
   return rows.map(a => {
     const brk = breaksOf(a.id).reduce((s, b) => s + secsBetween(b.started_at, b.ended_at), 0);
     const off = gapsOf(a.id).reduce((s, g) => s + secsBetween(g.started_at, g.ended_at), 0);
-    return { ...publicAttendance(a), shift: a.start_time ? { start_time: a.start_time, end_time: a.end_time } : null,
+    return { ...publicAttendance(a),
       break_seconds: brk, off_seconds: off,
       worked_seconds: a.check_out_at ? Math.max(0, secsBetween(a.check_in_at, a.check_out_at) - brk - off) : null };
   });

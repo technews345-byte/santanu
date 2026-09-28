@@ -88,8 +88,8 @@ A Super Admin can change any role's permissions in **Admin → Staff & roles**.
 The Android app in [`rider-app/`](../rider-app/README.md) is for delivery staff. It connects to this server's `/api/rider` API (see [docs/API.md](docs/API.md)).
 
 - **Riders** are staff accounts with the *Delivery Staff* role. Add them in **Admin → Staff & roles**, then set employee ID, vehicle and photo in **Admin → Riders**.
-- **Admin → Riders** shows a live map of online riders, their status, active delivery and today's route. **Attendance** shows check-ins with selfies, breaks, shifts and leave requests. **Support** shows rider tickets; emergency alerts pop up with a sound.
-- **Delivery rules** (pickup code, customer delivery code, proof photo, signature, check-out selfie, wrong-code limit, late grace minutes, support phone) are in **Settings → Rider app**.
+- **Admin → Riders** shows a live map of online riders, their status, active delivery and today's route. **Attendance** shows check-ins with selfies, breaks and leave requests (there is no shift schedule: riders check in and go online when they start work). **Support** shows rider tickets; emergency alerts pop up with a sound.
+- **Delivery rules** (pickup code, customer delivery code, proof photo, signature, check-out selfie, wrong-code limit, support phone) are in **Settings → Rider app**.
 - The customer's tracking page shows their 4-digit delivery code; the kitchen sees the pickup code on the order.
 - Push notifications are optional: set `FIREBASE_SERVICE_ACCOUNT`. Without it the app checks for new deliveries every 30 seconds while the rider is online.
 - The rider app never shows delivery fees, order totals or any pay figures — only the cash a customer must pay on cash-on-delivery orders.

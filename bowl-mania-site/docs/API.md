@@ -96,7 +96,6 @@ Cookies: `bm_at` (access, 15 min), `bm_rt` (refresh, rotated, 30 days), `bm_csrf
 - `GET /admin/riders/:id` profile, today's stats and performance · `GET /admin/riders/:id/track?date` location trail [riders.view]
 - `PATCH /admin/riders/:id {employee_id, vehicle_type, vehicle_number, joining_date}` · `POST /admin/riders/:id/photo` (multipart `photo`) [riders.manage]
 - `POST /admin/riders/:id/offline` set a rider offline [delivery.assign]
-- `GET/POST /admin/shifts`, `DELETE /admin/shifts/:id` [riders.manage]
 - `GET /admin/attendance?date` [attendance.view] · `GET /admin/leave`, `PATCH /admin/leave/:id {status: approved|rejected}` [riders.manage]
 - `GET /admin/support`, `GET /admin/support/:id`, `POST /admin/support/:id/messages`, `PATCH /admin/support/:id {status}` [support.manage]
 - `POST /admin/orders/:id/delivery/otp` regenerate codes · `POST /admin/orders/:id/delivery/override {step, reason}` manager override [delivery.assign]
@@ -125,6 +124,6 @@ State-changing delivery actions accept a `key` (idempotency key): repeating a re
 - `GET /performance?from&to` deliveries, completed, cancelled, rejected, on-time rate, average time, distance, rating
 - `GET /notifications?before` · `POST /notifications/read {ids?}` · `DELETE /notifications` (clears read ones)
 - `GET /attendance` · `POST /attendance/check-in` multipart `selfie`, `lat`, `lng`, `accuracy` · `POST /attendance/check-out` (selfie when required; the rider can check in again the same day — the time in between is recorded as off duty) · `POST /attendance/break/start|end` · `GET /attendance/history?from&to`
-- `GET /shifts?from&to` · `GET /leave` · `POST /leave {from_date, to_date, reason}` · `POST /leave/:id/cancel`
+- `GET /leave` · `POST /leave {from_date, to_date, reason}` · `POST /leave/:id/cancel`
 - `GET /support/tickets` · `POST /support/tickets {category, message, order_id?, key}` (or multipart with `attachment`) · `GET /support/tickets/:id` · `POST /support/tickets/:id/messages {message}`
 - `POST /emergency {type: emergency|accident|safety, message?, order_id?, key, lat, lng}` creates an urgent ticket and alerts the admin panel immediately

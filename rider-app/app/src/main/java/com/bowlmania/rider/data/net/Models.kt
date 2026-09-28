@@ -22,21 +22,11 @@ data class Profile(
     @SerialName("joining_date") val joiningDate: String? = null,
     val company: String = "",
     @SerialName("photo_url") val photoUrl: String? = null,
-    @SerialName("shift_today") val shiftToday: Shift? = null,
-)
-
-@Serializable
-data class Shift(
-    val id: Int = 0,
-    val date: String,
-    @SerialName("start_time") val startTime: String,
-    @SerialName("end_time") val endTime: String,
-    val note: String = "",
 )
 
 @Serializable data class TodayStats(val deliveries: Int = 0, val completed: Int = 0, val pending: Int = 0, @SerialName("distance_km") val distanceKm: Double = 0.0)
 @Serializable data class RiderRef(val id: Int, val name: String)
-@Serializable data class HomeAttendance(val state: String = "not_checked_in", val shift: Shift? = null, @SerialName("on_leave") val onLeave: Boolean = false)
+@Serializable data class HomeAttendance(val state: String = "not_checked_in", @SerialName("on_leave") val onLeave: Boolean = false)
 
 @Serializable
 data class Home(
@@ -185,10 +175,9 @@ data class Deliveries(
     val id: Int, @SerialName("from_date") val fromDate: String, @SerialName("to_date") val toDate: String,
     val reason: String = "", val status: String = "pending", @SerialName("created_at") val createdAt: String? = null,
 )
-@Serializable data class AttendanceRules(@SerialName("selfie_on_check_out") val selfieOnCheckOut: Boolean = false, @SerialName("shift_required") val shiftRequired: Boolean = false)
+@Serializable data class AttendanceRules(@SerialName("selfie_on_check_out") val selfieOnCheckOut: Boolean = false)
 @Serializable data class AttendanceToday(
     val date: String,
-    val shift: Shift? = null,
     @SerialName("on_leave") val onLeave: Leave? = null,
     val attendance: AttendanceRecord? = null,
     val breaks: List<Break> = emptyList(),
@@ -200,15 +189,12 @@ data class Deliveries(
     /** How many times the rider checked in today. */
     val sessions: Int = 0,
     val state: String = "not_checked_in",
-    @SerialName("upcoming_shifts") val upcomingShifts: List<Shift> = emptyList(),
     val rules: AttendanceRules = AttendanceRules(),
 )
-@Serializable data class ShiftTimes(@SerialName("start_time") val startTime: String, @SerialName("end_time") val endTime: String)
 @Serializable data class AttendanceDay(
     val id: Int, val date: String, val status: String,
     @SerialName("check_in_at") val checkInAt: String,
     @SerialName("check_out_at") val checkOutAt: String? = null,
-    val shift: ShiftTimes? = null,
     @SerialName("break_seconds") val breakSeconds: Long = 0,
     @SerialName("worked_seconds") val workedSeconds: Long? = null,
     val sessions: Int = 1,

@@ -47,7 +47,7 @@ class AttendanceVm(c: AppContainer) : LoadVm<AttendanceToday>(c) {
     fun checkOut(selfie: ByteArray?) = act("checkout", {
         val loc = Locations.current(c.app, 6_000)
         c.repository.checkOut(selfie, loc?.latitude, loc?.longitude)
-    }) { setData(it); Snack.show("Checked out. See you next shift!") }
+    }) { setData(it); Snack.show("Checked out. See you next time!") }
 
     fun startBreak() = act("break", { c.repository.startBreak() }) { setData(it); Snack.show("Break started") }
     fun endBreak() = act("break", { c.repository.endBreak() }) { setData(it); Snack.show("Welcome back") }
@@ -123,18 +123,6 @@ fun AttendanceScreen(nav: Nav) {
                             }
                         }
                     }
-                    item {
-                        SectionCard(title = "Upcoming shifts") {
-                            if (a.upcomingShifts.isEmpty()) Text("No upcoming shifts scheduled.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            a.upcomingShifts.take(7).forEach { s ->
-                                Row {
-                                    Text(Times.dayLabel(s.date), Modifier.weight(1f), fontWeight = FontWeight.SemiBold)
-                                    Text("${Times.hhmm(s.startTime)} – ${Times.hhmm(s.endTime)}")
-                                }
-                                if (s.note.isNotBlank()) Text(s.note, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                        }
-                    }
                     item { Spacer(Modifier.height(16.dp)) }
                 }
             }
@@ -160,7 +148,7 @@ private fun TodayCard(a: AttendanceToday) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(Times.dayLabel(a.date), style = MaterialTheme.typography.titleLarge)
-                Text(a.shift?.let { "Shift ${Times.hhmm(it.startTime)} – ${Times.hhmm(it.endTime)}" } ?: "No shift scheduled",
+                Text(if (a.attendance == null) "Check in when you start work" else "Today's attendance",
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             StatusChip(label, color)
@@ -205,8 +193,7 @@ fun AttendanceHistoryScreen(nav: Nav) {
                         }
                         Text("In ${Times.clock(d.checkInAt)} · Out ${d.checkOutAt?.let(Times::clock) ?: "—"}")
                         Text(listOfNotNull(d.workedSeconds?.let { "Worked ${Times.duration(it)}" }, "Breaks ${Times.duration(d.breakSeconds)}",
-                            d.sessions.takeIf { it > 1 }?.let { "$it check-ins" },
-                            d.shift?.let { "Shift ${Times.hhmm(it.startTime)}–${Times.hhmm(it.endTime)}" }).joinToString(" · "),
+                            d.sessions.takeIf { it > 1 }?.let { "$it check-ins" }).joinToString(" · "),
                             style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
