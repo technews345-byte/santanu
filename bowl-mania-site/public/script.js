@@ -16,7 +16,7 @@ async function api(path, body) {
   return d;
 }
 
-// Used only when the page is opened without the server (static preview): ordering then goes to WhatsApp.
+// Used only when the page is opened without the server (static preview): ordering then continues on the live website.
 const FALLBACK = { categories: [], items: [
   ['Morning Glow Bowl', 'Oats · Fresh Fruits · Nuts & Seeds', 'morning-glow', 'veg', [['250 ml', 99], ['500 ml', 149]], 'Breakfast pick'],
   ['Bean Vitality Bowl', 'Steamed Beans · Paneer · Fresh Veggies · Herbs & Dressing', 'bean-vitality', 'veg', [['250 ml', 99], ['500 ml', 149]]],
@@ -71,13 +71,13 @@ function renderConfig() {
   branches.innerHTML = areas.map(a => `<article class="branch"><header><svg class="ic"><use href="#i-pin"/></svg><h3>${esc(a.name)}</h3></header>
       <ul class="slots">${a.slots.map(s => `<li><svg class="ic"><use href="#i-clock"/></svg><span>${slotText(s)}${daysText(s.days)}</span><b>${fmt12(s.start_time)} – ${fmt12(s.end_time)}</b></li>`).join('')}</ul>
       ${sameRule ? '' : `<p class="fine">${rupee(a.fee_rule.base_charge)} up to ${a.fee_rule.base_distance_km} km, then +${rupee(a.fee_rule.extra_charge)} per ${a.fee_rule.extra_distance_km} km · up to ${a.max_radius_km} km</p>`}
-      <div class="branch-actions">${a.whatsapp ? `<a class="btn btn-primary btn-sm" href="https://wa.me/${esc(a.whatsapp)}" target="_blank" rel="noopener"><svg class="ic"><use href="#i-wa"/></svg> WhatsApp</a>` : ''}${a.phone ? `<a class="btn btn-outline btn-sm" href="tel:+91${esc(a.phone)}"><svg class="ic"><use href="#i-phone"/></svg> ${esc(a.phone)}</a>` : ''}</div></article>`).join('')
+      ${a.whatsapp || a.phone ? `<p class="fine">Help desk (questions only — orders are placed on this website)</p>` : ''}<div class="branch-actions">${a.whatsapp ? `<a class="btn btn-outline btn-sm" href="https://wa.me/${esc(a.whatsapp)}" target="_blank" rel="noopener"><svg class="ic"><use href="#i-wa"/></svg> Help on WhatsApp</a>` : ''}${a.phone ? `<a class="btn btn-outline btn-sm" href="tel:+91${esc(a.phone)}"><svg class="ic"><use href="#i-phone"/></svg> ${esc(a.phone)}</a>` : ''}</div></article>`).join('')
     + (sameRule && rule ? `<article class="branch branch-fees"><header><svg class="ic"><use href="#i-scooter"/></svg><h3>Delivery charge</h3></header>
       <table class="fees"><tbody>${rule.examples.slice(0, 3).map((x, i, arr) => `<tr><td>${i ? arr[i - 1].upto_km : 0} – ${x.upto_km} km</td><td>${rupee(x.fee)}</td></tr>`).join('')}</tbody></table>
       <p class="fine">+${rupee(rule.extra_charge)} for every additional ${rule.extra_distance_km} km · we deliver up to ${Math.max(...areas.map(a => a.max_radius_km))} km. Pickup is free.</p></article>` : '');
   $('[data-delivery-intro]').textContent = `${areas.length === 1 ? 'One location' : `${areas.length} locations`}, fresh delivery windows every day. Self pickup is always free.`;
   areas.slice(0, 2).forEach((a, i) => { const col = $(`[data-footer-area="${i}"]`); if (col) col.innerHTML = `<h4>${esc(a.name)}</h4><p>${a.phone ? `<a href="tel:+91${esc(a.phone)}">+91 ${esc(a.phone)}</a><br>` : ''}${a.slots.map(s => `${fmt12(s.start_time)}–${fmt12(s.end_time)}`).join(' · ')}</p>`; });
-  $('[data-contact-links]').innerHTML = areas.map(a => a.whatsapp ? `<a href="https://wa.me/${esc(a.whatsapp)}" target="_blank" rel="noopener"><svg class="ic"><use href="#i-wa"/></svg> WhatsApp ${esc(a.name)} · ${esc(a.phone)}</a>` : '').join('')
+  $('[data-contact-links]').innerHTML = areas.map(a => a.whatsapp ? `<a href="https://wa.me/${esc(a.whatsapp)}" target="_blank" rel="noopener"><svg class="ic"><use href="#i-wa"/></svg> Help desk ${esc(a.name)} · ${esc(a.phone)}</a>` : '').join('')
     + (restaurant.instagram ? `<a href="${esc(restaurant.instagram)}" target="_blank" rel="noopener"><svg class="ic"><use href="#i-ig"/></svg> Follow us on Instagram</a>` : '');
   $('[data-pickup-areas]').innerHTML = areas.filter(a => a.pickup_enabled).map(a => `<option value="${a.id}">${esc(a.name)}${a.address ? ' · ' + esc(a.address) : ''}</option>`).join('');
 }
@@ -329,14 +329,6 @@ async function openRazorpay(r) {
   rzp.open();
 }
 
-/* ---------- WhatsApp fallback (static preview only) ---------- */
-function orderText() {
-  const f = new FormData(form);
-  const lines = cart.lines.map(l => { const { item, size } = find(l.item_id, l.size_id); return `• ${l.quantity} × ${item.name} (${size.label}) — ${rupee(size.price * l.quantity)}`; });
-  return [`Hi Bowl Mania! I'd like to order:`, ...lines, '', `Name: ${f.get('customer_name') || ''}`, `Phone: ${f.get('phone') || ''}`,
-    fulfilment() === 'pickup' ? 'Self pickup' : `Address: ${f.get('address') || ''}${f.get('landmark') ? ' (' + f.get('landmark') + ')' : ''}`, f.get('notes') ? `Notes: ${f.get('notes')}` : ''].filter(Boolean).join('\n');
-}
-$('[data-wa-order]').addEventListener('click', e => { e.currentTarget.href = `https://wa.me/918099026415?text=${encodeURIComponent(orderText())}`; });
 
 /* ---------- Tracking lookup, reviews, offers, contact, gallery ---------- */
 $('[data-track-form]').addEventListener('submit', async e => {
@@ -368,7 +360,7 @@ async function loadExtras() {
 }
 $('[data-contact-form]').addEventListener('submit', async e => {
   e.preventDefault(); const f = e.target, out = $('[data-contact-msg]'), btn = $('button', f);
-  if (!LIVE) { out.className = 'form-msg err'; out.textContent = 'Please WhatsApp us — the message form works on the live website.'; return; }
+  if (!LIVE) { out.className = 'form-msg err'; out.textContent = 'Please use our help desk on WhatsApp — the message form works on the live website.'; return; }
   btn.disabled = true; out.className = 'form-msg'; out.textContent = 'Sending…';
   try { await api('/contact', Object.fromEntries(new FormData(f))); f.reset(); out.className = 'form-msg ok'; out.textContent = "Thank you! We've received your message and will reply soon."; }
   catch (x) { out.className = 'form-msg err'; out.textContent = x.message; } finally { btn.disabled = false; }
@@ -384,7 +376,7 @@ $$('[data-year]').forEach(el => { el.textContent = new Date().getFullYear(); });
     if (!cfg.status.accepting_orders) $('[data-place-order]').disabled = true;
     loadExtras();
   } catch {
-    LIVE = false; $('[data-wa-order]').hidden = false; $('[data-place-order]').hidden = true;
+    LIVE = false; $('[data-live-order]').hidden = false; $('[data-place-order]').hidden = true;
     $('[data-delivery-block] [data-locate]').hidden = true; $('.coupon-row').hidden = true; $('[data-coupon-msg]').hidden = true;
     $('[data-slots]').closest('.field').hidden = true; $('[data-pay-methods]').hidden = true;
     form.maplink.closest('.field').hidden = true; locStatus('');

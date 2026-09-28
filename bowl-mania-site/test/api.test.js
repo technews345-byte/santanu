@@ -48,7 +48,7 @@ function client() {
     const data = type.includes('json') ? await r.json() : type.includes('text') ? await r.text() : Buffer.from(await r.arrayBuffer());
     return { status: r.status, data, headers: r.headers };
   };
-  return { jar, get: (u, o) => call('GET', u, null, o), post: (u, b, o) => call('POST', u, b, o), patch: (u, b, o) => call('PATCH', u, b, o), put: (u, b, o) => call('PUT', u, b, o), del: (u, o) => call('DELETE', u, null, o) };
+  return { jar, get: (u, o) => call('GET', u, null, o), post: (u, b, o) => call('POST', u, b, o), patch: (u, b, o) => call('PATCH', u, b, o), put: (u, b, o) => call('PUT', u, b, o), del: (u, o) => call('DELETE', u, o?.json ?? null, o) };
 }
 const owner = client(), guest = client();
 let menu, sonari;
@@ -508,6 +508,29 @@ test('contact form, inquiries, notifications and live events', async () => {
   assert.ok(n.unread > 0);
   await owner.post('/api/admin/notifications/read', {});
   assert.equal((await owner.get('/api/admin/notifications')).data.unread, 0);
+});
+
+test('web push: customers follow their order, staff devices get order alerts', async () => {
+  const key = (await guest.get('/api/push/key')).data.key;
+  assert.match(key, /^[\w-]{80,}$/);
+  const { createECDH, randomBytes } = await import('node:crypto');
+  const ecdh = createECDH('prime256v1'); ecdh.generateKeys();
+  const sub = n => ({ endpoint: `https://push.invalid/send/${n}`, keys: { p256dh: ecdh.getPublicKey('base64url'), auth: randomBytes(16).toString('base64url') } });
+  const o = (await guest.post('/api/orders', orderBody({ phone: '9811111111' }))).data;
+  assert.equal((await guest.post(`/api/track/${o.tracking_token}/push`, sub('c1'))).status, 201);
+  assert.equal((await guest.post(`/api/track/${o.tracking_token}/push`, sub('c1'))).status, 201, 'subscribing twice is fine');
+  assert.equal((await guest.post(`/api/track/${o.tracking_token}/push`, { endpoint: 'http://insecure.example/x', keys: { p256dh: 'B'.repeat(87), auth: 'a'.repeat(22) } })).status, 400);
+  assert.equal((await guest.post(`/api/track/${'x'.repeat(30)}/push`, sub('c2'))).status, 404);
+  assert.equal((await guest.del(`/api/track/${o.tracking_token}/push`, { json: { endpoint: sub('c1').endpoint } })).status, 200);
+  // Staff devices: only for signed-in staff, with CSRF like every admin call.
+  assert.equal((await guest.post('/api/admin/push', sub('s1'))).status, 401);
+  assert.equal((await owner.post('/api/admin/push', sub('s1'))).status, 201);
+  assert.equal((await owner.post('/api/admin/push/test', {})).status, 200);
+  // A new order and a status change with subscriptions present must not break ordering even if delivery fails.
+  assert.equal((await guest.post(`/api/track/${o.tracking_token}/push`, sub('c3'))).status, 201);
+  const id = (await owner.get(`/api/admin/orders?q=${o.order_number}`)).data.rows[0].id;
+  assert.equal((await owner.patch(`/api/admin/orders/${id}/status`, { status: 'confirmed' })).status, 200);
+  assert.equal((await guest.post('/api/orders', orderBody({ phone: '9811111112' }))).status, 201);
 });
 
 test('data deletion request and erasing a customer', async () => {

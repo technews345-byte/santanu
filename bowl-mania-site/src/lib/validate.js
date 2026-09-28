@@ -1,6 +1,11 @@
 import { z } from 'zod';
 import { badRequest } from './errors.js';
 
+/** A browser PushSubscription (as produced by PushSubscription.toJSON()). */
+export const pushSubscription = () => z.object({
+  endpoint: z.string().url().max(1000).refine(u => u.startsWith('https://'), 'Invalid push endpoint.'),
+  keys: z.object({ p256dh: z.string().regex(/^[\w-]{20,200}$/), auth: z.string().regex(/^[\w-]{10,100}$/) })
+});
 export { z };
 /** Parses input against a zod schema; throws a 400 with a readable first message. */
 export function parse(schema, input) {

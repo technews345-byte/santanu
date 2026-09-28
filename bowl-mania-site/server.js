@@ -4,6 +4,7 @@ import { createApp } from './src/app.js';
 import { config } from './src/config.js';
 import { backupDatabase } from './src/lib/backup.js';
 import { cleanupRiderData } from './src/services/riders.js';
+import { cleanupOrderSubscriptions } from './src/services/webpush.js';
 import { log } from './src/lib/logger.js';
 
 if ((process.env.RAILWAY_ENVIRONMENT_NAME || process.env.RAILWAY_ENVIRONMENT) && !process.env.RAILWAY_VOLUME_MOUNT_PATH && !process.env.DATABASE_FILE)
@@ -23,7 +24,7 @@ if (every > 0) {
 }
 
 // Daily clean-up of old rider GPS points and attendance selfies.
-const clean = () => cleanupRiderData().catch(e => log.error('rider data clean-up failed', { error: e.message }));
+const clean = () => { cleanupRiderData().catch(e => log.error('rider data clean-up failed', { error: e.message })); try { cleanupOrderSubscriptions(); } catch {} };
 setTimeout(clean, 5 * 60_000).unref(); setInterval(clean, 24 * 3_600_000).unref();
 
 process.on('unhandledRejection', e => log.error('unhandled rejection', { error: e?.message }));

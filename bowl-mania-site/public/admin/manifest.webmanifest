@@ -1,0 +1,13 @@
+{
+  "name": "Bowl Mania Admin",
+  "short_name": "BM Admin",
+  "start_url": "/admin/",
+  "scope": "/admin/",
+  "display": "standalone",
+  "background_color": "#f8f6ec",
+  "theme_color": "#0B5D3B",
+  "icons": [
+    { "src": "/assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/assets/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

@@ -35,3 +35,8 @@
 .t-otp span { font-size: .78rem; letter-spacing: .12em; text-transform: uppercase; color: var(--leaf); font-weight: 700; }
 .t-otp b { font-family: ui-monospace, Menlo, monospace; font-size: 2rem; letter-spacing: .35em; color: #fff; line-height: 1.1; }
 .t-otp small { color: #d7e6d4; }
+.t-alerts { padding: 18px 22px; background: #fbfdf6; border-color: #d8e8c2; }
+.t-alert-row { display: grid; grid-template-columns: auto 1fr auto; gap: 14px; align-items: center; }
+.t-alert-row p { margin: 2px 0 0; color: var(--ink-2, #466157); font-size: .92rem; }
+.t-alert-ic { font-size: 1.6rem; }
+@media (max-width: 640px) { .t-alert-row { grid-template-columns: auto 1fr; } .t-alert-row .btn { grid-column: 1 / -1; width: 100%; } }

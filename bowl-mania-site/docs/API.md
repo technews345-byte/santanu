@@ -103,6 +103,13 @@ Cookies: `bm_at` (access, 15 min), `bm_rt` (refresh, rotated, 30 days), `bm_csrf
 
 ---
 
+**Push notifications**
+- `GET /api/push/key` — public VAPID key for `PushManager.subscribe`
+- `POST /api/track/:token/push {endpoint, keys}` · `DELETE /api/track/:token/push {endpoint}` — customer follows an open order
+- `POST /admin/push {endpoint, keys}` · `DELETE /admin/push {endpoint}` · `POST /admin/push/test` — alerts on the signed-in staff member's device
+
+---
+
 ## Rider app API (`/api/rider`)
 
 Used by the Android rider app. Sign in with a staff account whose role has `delivery.update` (and not `delivery.assign`).

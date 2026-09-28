@@ -33,6 +33,17 @@ function jwtSecret(dbFile) {
   console.warn(`JWT_SECRET is not set: generated one and saved it in ${file}. Set JWT_SECRET to manage it yourself.`);
   return secret;
 }
+// Web push (VAPID) keys: from the environment, or generated once and kept next to the database.
+function vapidKeys(dbFile, generate) {
+  if (env.VAPID_PUBLIC_KEY && env.VAPID_PRIVATE_KEY) return { publicKey: env.VAPID_PUBLIC_KEY, privateKey: env.VAPID_PRIVATE_KEY };
+  const file = path.join(path.dirname(dbFile), '.vapid-keys.json');
+  try { const k = JSON.parse(fs.readFileSync(file, 'utf8')); if (k.publicKey && k.privateKey) return k; } catch {}
+  const k = generate();
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, JSON.stringify(k), { mode: 0o600 });
+  return k;
+}
+export const loadVapidKeys = generate => vapidKeys(dbFile, generate);
 const dbFile = env.DATABASE_FILE || (DATA_DIR ? path.join(DATA_DIR, 'bowl-mania.db') : path.join(ROOT, 'data', 'bowl-mania.db'));
 
 export const config = {

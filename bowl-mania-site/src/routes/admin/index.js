@@ -1,6 +1,9 @@
 import { Router } from 'express';
 import { requireAuth, csrf, can } from '../../middleware/auth.js';
 import { subscribe } from '../../lib/events.js';
+import { ah } from '../../lib/errors.js';
+import { parse, z, pushSubscription } from '../../lib/validate.js';
+import { saveStaffSubscription, removeStaffSubscription, pushToAdmin } from '../../services/webpush.js';
 import orders from './orders.js';
 import menu from './menu.js';
 import customers from './customers.js';
@@ -28,6 +31,20 @@ r.get('/events', (req, res) => {
   const ping = setInterval(() => res.write(': ping\n\n'), 25_000);
   req.on('close', () => { off(); clearInterval(ping); });
 });
+
+// This device receives push alerts (new orders etc.) for the signed-in staff member.
+r.post('/push', ah(async (req, res) => {
+  saveStaffSubscription(req.admin.id, parse(pushSubscription(), req.body || {}), req.get('user-agent'));
+  res.status(201).json({ ok: true });
+}));
+r.delete('/push', ah(async (req, res) => {
+  removeStaffSubscription(req.admin.id, parse(z.object({ endpoint: z.string().max(1000) }), req.body || {}).endpoint);
+  res.json({ ok: true });
+}));
+r.post('/push/test', ah(async (req, res) => {
+  pushToAdmin(req.admin.id, { title: 'Order alerts are on ✅', body: 'New orders will appear here even when the admin panel is closed.', url: '/admin/#/orders', tag: 'admin-test', kind: 'admin' });
+  res.json({ ok: true });
+}));
 
 r.use(orders, menu, customers, payments, delivery, promotions, engagement, media, inventory, analytics, staff, settings, riders);
 export default r;

@@ -1,7 +1,7 @@
 import express, { Router } from 'express';
 import { db } from '../db/index.js';
 import { ah, badRequest, notFound } from '../lib/errors.js';
-import { parse, z, text, optPhone, optEmail, phone10 } from '../lib/validate.js';
+import { parse, z, text, optPhone, optEmail, phone10, pushSubscription } from '../lib/validate.js';
 import { config, razorpayEnabled } from '../config.js';
 import { log } from '../lib/logger.js';
 import { rateLimit } from '../middleware/rateLimit.js';
@@ -13,6 +13,7 @@ import { createOrder, orderByToken, trackingView } from '../services/orders.js';
 import { createPaymentOrder, verifyCheckout, markFailed, verifyWebhook, handleWebhook } from '../services/payments.js';
 import { verifyWebhookSignature, applyStatusUpdates } from '../services/whatsapp.js';
 import { notifyAdmins } from '../services/notifications.js';
+import { publicKey, saveOrderSubscription, removeOrderSubscription } from '../services/webpush.js';
 
 const r = Router();
 const orderLimit = rateLimit({ windowMs: 10 * 60_000, max: 20, message: 'Too many orders from this device. Please wait a few minutes.' });
@@ -103,6 +104,21 @@ r.get('/track/:token', trackLimit, ah(async (req, res) => {
   const { token } = parse(tokenParam, req.params);
   const o = orderByToken(token); if (!o) throw notFound('We could not find that order. Check your tracking link.');
   res.set('Cache-Control', 'no-store'); res.json(trackingView(o));
+}));
+// Order status on the customer's phone (web push). Only someone with the private tracking link can subscribe.
+r.get('/push/key', (req, res) => res.json({ key: publicKey() }));
+r.post('/track/:token/push', trackLimit, ah(async (req, res) => {
+  const { token } = parse(tokenParam, req.params);
+  const o = orderByToken(token); if (!o) throw notFound('We could not find that order.');
+  if (['delivered', 'completed', 'cancelled', 'refunded'].includes(o.status)) throw badRequest('This order is already finished.');
+  saveOrderSubscription(o.id, parse(pushSubscription(), req.body || {}));
+  res.status(201).json({ ok: true });
+}));
+r.delete('/track/:token/push', trackLimit, ah(async (req, res) => {
+  const { token } = parse(tokenParam, req.params);
+  const o = orderByToken(token); if (!o) throw notFound('We could not find that order.');
+  removeOrderSubscription(o.id, parse(z.object({ endpoint: z.string().max(1000) }), req.body || {}).endpoint);
+  res.json({ ok: true });
 }));
 // "Where's my order?" form: order number + the phone used to order → the private tracking link.
 r.post('/track/lookup', trackLimit, ah(async (req, res) => {

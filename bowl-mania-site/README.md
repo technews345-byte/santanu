@@ -83,6 +83,15 @@ A Super Admin can change any role's permissions in **Admin → Staff & roles**.
 
 ---
 
+## Orders and notifications
+
+- **Orders are placed only on the website** (delivery or pickup, online payment or cash). WhatsApp and phone numbers are shown as the **help desk** for questions, not for ordering.
+- **Staff alerts:** in the admin panel, tap *Turn on order alerts on this phone* (or the prompt after signing in). That phone then gets a notification for every new order, cancellations, failed payments, rejected deliveries and rider emergencies, even when the admin panel is closed. On iPhone, first add the admin panel to the Home Screen (Share → Add to Home Screen) and open it from there. While the admin panel is open, new orders also ring a chime.
+- **Customer updates:** the tracking page has a *Turn on* button; the customer's phone is then notified when the order is confirmed, prepared, out for delivery and delivered. The page also refreshes itself and chimes on every change. WhatsApp messages are sent too when WhatsApp Business is configured.
+- Push uses standard Web Push (VAPID). The keys are created automatically; no account or monthly fee is needed.
+
+---
+
 ## Delivery partner (rider) app
 
 The Android app in [`rider-app/`](../rider-app/README.md) is for delivery staff. It connects to this server's `/api/rider` API (see [docs/API.md](docs/API.md)).

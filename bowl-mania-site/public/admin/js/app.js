@@ -61,6 +61,30 @@ const homePath = () => NAV.flatMap(g => g.items).find(allowed)?.path || 'account
 export const go = path => { location.hash = '#/' + path; };
 export const bus = new EventTarget(); // 'order' | 'notification' | 'menu' | 'status' events for views
 
+// ---------- Order alerts on this device (web push: works even when the admin panel is closed) ----------
+export const pushSupported = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+const PUSH_KEY = 'bm-admin-push';
+const pushFlag = { get: () => { try { return localStorage.getItem(PUSH_KEY); } catch { return null; } }, set: v => { try { v ? localStorage.setItem(PUSH_KEY, v) : localStorage.removeItem(PUSH_KEY); } catch {} } };
+export const devicePushOn = () => pushSupported && Notification.permission === 'granted' && !!pushFlag.get();
+const b64 = s => { const p = '='.repeat((4 - s.length % 4) % 4); const r = atob((s + p).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from([...r].map(c => c.charCodeAt(0))); };
+/** Subscribes this browser to push alerts for the signed-in staff member. Throws a readable error. */
+export async function enableDevicePush({ test = false } = {}) {
+  if (!pushSupported) throw new Error('This browser can\'t receive alerts. On iPhone, add the admin panel to the Home Screen first (Share → Add to Home Screen) and open it from there.');
+  if (await Notification.requestPermission() !== 'granted') throw new Error('Notifications are blocked. Allow them for this site in your browser settings, then try again.');
+  const reg = await navigator.serviceWorker.register('/sw.js');
+  await navigator.serviceWorker.ready;
+  const { key } = await (await fetch('/api/push/key')).json();
+  const sub = (await reg.pushManager.getSubscription()) || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64(key) });
+  await post('/admin/push', sub.toJSON());
+  pushFlag.set(sub.endpoint);
+  if (test) await post('/admin/push/test', {});
+}
+export async function disableDevicePush() {
+  const endpoint = pushFlag.get();
+  pushFlag.set(null);
+  if (endpoint) await api('/admin/push', { method: 'DELETE', body: { endpoint } }).catch(() => {});
+}
+
 // ---------- Auth screens ----------
 function authLayout(inner) {
   $('#shell').hidden = true; $('#auth').hidden = false;
@@ -180,7 +204,7 @@ function connectLive() {
       chime(); state.counts.orders++; renderNav();
       const o = n.order;
       toast(`NEW ORDER ${o.order_number} · ${o.customer_name} · ${rupee(o.total)} · ${o.fulfilment === 'pickup' ? 'Pickup' : 'Delivery'} · ${o.payment_status === 'paid' ? 'Paid' : 'Cash'}`, 'order', { action: 'Open', onAction: () => go(`orders/${o.id}`), timeout: 12000 });
-      if ('Notification' in window && Notification.permission === 'granted' && document.hidden) {
+      if ('Notification' in window && Notification.permission === 'granted' && document.hidden && !devicePushOn()) {
         const bn = new Notification(`New order ${o.order_number}`, { body: `${o.customer_name} · ${rupee(o.total)}\n${o.items.join(', ')}`, icon: '/assets/logo.jpg', tag: o.order_number });
         bn.onclick = () => { window.focus(); go(`orders/${o.id}`); };
       }
@@ -189,7 +213,7 @@ function connectLive() {
     else if (n.type === 'rider_emergency') {
       chime(); state.counts.support++; renderNav();
       toast(n.title, 'err', { action: 'Open', onAction: () => go(n.link.replace(/^#\//, '')), timeout: 30000 });
-      if ('Notification' in window && Notification.permission === 'granted') new Notification(n.title, { body: n.body, icon: '/assets/logo.jpg', requireInteraction: true });
+      if ('Notification' in window && Notification.permission === 'granted' && !devicePushOn()) new Notification(n.title, { body: n.body, icon: '/assets/logo.jpg', requireInteraction: true });
     } else if (n.type === 'rider_support') { state.counts.support++; renderNav(); }
     else if (n.type === 'delivery_rejected') { chime(); toast(n.title, 'err', { action: 'Reassign', onAction: () => go(n.link.replace(/^#\//, '')), timeout: 15000 }); }
     bus.dispatchEvent(new CustomEvent('notification', { detail: n }));
@@ -266,8 +290,11 @@ async function startShell() {
   state.status = await get('/admin/status').catch(() => null); renderStatus();
   tickClock(); setInterval(tickClock, 30_000);
   loadNotifications(); refreshCounts(); connectLive();
-  if ('Notification' in window && Notification.permission === 'default' && can('orders.view')) {
-    toast('Allow browser notifications to hear about new orders in other tabs.', 'ok', { action: 'Allow', onAction: () => Notification.requestPermission(), timeout: 9000 });
+  if (pushSupported && Notification.permission === 'granted' && pushFlag.get()) enableDevicePush().catch(() => {}); // keep this device registered
+  else if (pushSupported && Notification.permission === 'default' && can('orders.view')) {
+    toast('Get a notification for every new order on this phone, even when the admin panel is closed.', 'ok', {
+      action: 'Turn on', timeout: 15000,
+      onAction: () => enableDevicePush({ test: true }).then(() => toast('Order alerts are on for this device')).catch(e => toast(e.message, 'err')) });
   }
   if (!location.hash || /^#\/(login|forgot|reset)/.test(location.hash)) go(homePath()); else route();
 }
@@ -285,7 +312,7 @@ document.addEventListener('click', e => {
 $('#openSidebar').onclick = openSidebar;
 $('#bellBtn').onclick = e => { e.stopPropagation(); const p = $('#bellPanel'); p.hidden = !p.hidden; $('#bellBtn').setAttribute('aria-expanded', String(!p.hidden)); };
 $('#bellPanel').addEventListener('click', async e => { if (e.target.closest('[data-readall]')) { await post('/admin/notifications/read', {}); loadNotifications(); } });
-$('#logoutBtn').onclick = async () => { await post('/auth/logout').catch(() => {}); state.admin = null; es?.close(); history.replaceState(null, '', '#/login'); showLogin('You have been signed out.'); };
+$('#logoutBtn').onclick = async () => { await disableDevicePush(); await post('/auth/logout').catch(() => {}); state.admin = null; es?.close(); history.replaceState(null, '', '#/login'); showLogin('You have been signed out.'); };
 $('#quickNewOrder').onclick = () => go('orders/new');
 window.addEventListener('hashchange', route);
 setupSearch();
