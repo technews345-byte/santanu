@@ -57,13 +57,21 @@ jobs:
 
       - name: Prepare release signing key
         env:
-          KEYSTORE_B64: ${{ secrets.RIDER_KEYSTORE_BASE64 }}
+          # Accepted from repository secrets (preferred) or, if they were saved there instead, repository variables.
+          KEYSTORE_B64: ${{ secrets.RIDER_KEYSTORE_BASE64 || vars.RIDER_KEYSTORE_BASE64 }}
+          KEYSTORE_PW: ${{ secrets.RIDER_KEYSTORE_PASSWORD || vars.RIDER_KEYSTORE_PASSWORD }}
         run: |
-          if [ -n "$KEYSTORE_B64" ]; then
-            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/rider.jks"
+          # Report only whether each value was found, never the value itself.
+          echo "RIDER_KEYSTORE_BASE64: $([ -n "$KEYSTORE_B64" ] && echo found || echo MISSING) · RIDER_KEYSTORE_PASSWORD: $([ -n "$KEYSTORE_PW" ] && echo found || echo MISSING)"
+          if [ -n "$KEYSTORE_B64" ] && [ -n "$KEYSTORE_PW" ]; then
+            echo "::add-mask::$KEYSTORE_PW"
+            echo "RIDER_KEYSTORE_PASSWORD=$KEYSTORE_PW" >> "$GITHUB_ENV"
+            # Tolerate spaces or line breaks added when pasting.
+            printf %s "$KEYSTORE_B64" | tr -d ' \r\n' | base64 -d > "$RUNNER_TEMP/rider.jks" || { echo "::error::RIDER_KEYSTORE_BASE64 is not valid base64. Paste the whole long line again."; exit 1; }
             echo "RIDER_KEYSTORE_FILE=$RUNNER_TEMP/rider.jks" >> "$GITHUB_ENV"
+            echo "SIGNED_WITH_RELEASE_KEY=1" >> "$GITHUB_ENV"
           else
-            echo "::notice::No RIDER_KEYSTORE_BASE64 secret: the release APK is signed with a debug key (fine for testing, not for the Play Store)."
+            echo "::warning::Signing key not found (see the line above): the release APK is signed with a debug key (fine for testing, not for the Play Store)."
           fi
 
       - name: Unit tests and build
@@ -75,7 +83,6 @@ jobs:
           FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
           FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
           FIREBASE_SENDER_ID: ${{ secrets.FIREBASE_SENDER_ID }}
-          RIDER_KEYSTORE_PASSWORD: ${{ secrets.RIDER_KEYSTORE_PASSWORD }}
           RIDER_KEY_ALIAS: ${{ secrets.RIDER_KEY_ALIAS }}
           RIDER_KEY_PASSWORD: ${{ secrets.RIDER_KEY_PASSWORD }}
         run: ./gradlew --no-daemon testDebugUnitTest assembleDebug assembleRelease
@@ -94,7 +101,8 @@ jobs:
 
       # A stable public download link: .../releases/latest/download/BowlManiaRider.apk
       - name: Publish release
-        if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+        # Only apps signed with the permanent key are published, so updates always install over the old app.
+        if: env.SIGNED_WITH_RELEASE_KEY == '1' && (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main'))
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
