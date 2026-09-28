@@ -4,6 +4,7 @@ import { addDays, format, isSameDay, parseISO, subDays } from 'date-fns';
 import { Category, Transaction } from '../types';
 import { ReminderSettings } from '../store/useReminderStore';
 import { reminderFor, reminderPool, SpendingFocus } from '../utils/messages';
+import { holdAppOpenAds } from './ads';
 
 /**
  * The evening reminder, scheduled on the phone itself: no server, no account,
@@ -13,10 +14,16 @@ import { reminderFor, reminderPool, SpendingFocus } from '../utils/messages';
  * reminder, so each day can say something different and a day that already
  * has an entry can simply have its reminder taken away. Reopening the app, or
  * saving anything, rolls the fortnight forward.
+ *
+ * On by default. The phone still has to allow notifications: Spendly asks
+ * once, shortly after it first opens, and Settings shows when they are off.
  */
 
 const PREFIX = 'spendly-reminder-';
-const CHANNEL = 'reminders';
+// Android fixes a channel's importance when it is first created, so raising
+// it means a new channel; the old, quieter one is removed.
+const CHANNEL = 'daily-reminders';
+const OLD_CHANNELS = ['reminders'];
 const DAYS_AHEAD = 14;
 /** Tapping a reminder opens the expense form. */
 export const ADD_EXPENSE_ACTION = 'add-expense';
@@ -31,20 +38,36 @@ export async function configureNotifications(): Promise<void> {
   if (!remindersSupported || configured) return;
   configured = true;
   Notifications.setNotificationHandler({
+    // With sound off, Android drops the pop-up banner as well, so a reminder
+    // arriving while the app was open showed nowhere but the shade.
     handleNotification: async () => ({
       shouldShowBanner: true,
       shouldShowList: true,
-      shouldPlaySound: false,
+      shouldPlaySound: true,
       shouldSetBadge: false,
     }),
   });
   if (Platform.OS === 'android') {
+    // High importance: the reminder drops down over whatever is on screen,
+    // with the phone's notification sound — a reminder nobody notices
+    // reminds no one.
     await Notifications.setNotificationChannelAsync(CHANNEL, {
       name: 'Daily reminders',
-      description: 'A nudge in the evening to note the day’s spending',
-      importance: Notifications.AndroidImportance.DEFAULT,
+      description: 'A nudge to note the day’s spending',
+      importance: Notifications.AndroidImportance.HIGH,
+      sound: 'default',
+      enableVibrate: true,
+      vibrationPattern: [0, 180, 120, 180],
+      lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
     }).catch(() => {});
+    for (const old of OLD_CHANNELS) await Notifications.deleteNotificationChannelAsync(old).catch(() => {});
   }
+}
+
+/** Whether notifications are allowed now, without asking. */
+export async function notificationsAllowed(): Promise<boolean> {
+  if (!remindersSupported) return false;
+  return (await Notifications.getPermissionsAsync()).granted;
 }
 
 /** Whether notifications may be shown, asking once if the answer isn't known. */
@@ -54,8 +77,15 @@ export async function ensurePermission(): Promise<boolean> {
   const current = await Notifications.getPermissionsAsync();
   if (current.granted) return true;
   if (!current.canAskAgain) return false;
-  const asked = await Notifications.requestPermissionsAsync();
-  return asked.granted;
+  // Android's permission dialog briefly sends the app to the background;
+  // coming back from it must not count as reopening the app and bring an ad.
+  const release = holdAppOpenAds();
+  try {
+    const asked = await Notifications.requestPermissionsAsync();
+    return asked.granted;
+  } finally {
+    setTimeout(release, 2000);
+  }
 }
 
 /** Which kinds of spending this person actually does, from the last weeks. */
@@ -97,12 +127,19 @@ async function reschedule(
   transactions: Transaction[],
   categories: Category[]
 ): Promise<void> {
-  const scheduled = await Notifications.getAllScheduledNotificationsAsync();
-  await Promise.all(
-    scheduled
-      .filter((n) => n.identifier.startsWith(PREFIX))
-      .map((n) => Notifications.cancelScheduledNotificationAsync(n.identifier))
-  );
+  try {
+    const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+    await Promise.all(
+      scheduled
+        .filter((n) => n.identifier.startsWith(PREFIX))
+        .map((n) => Notifications.cancelScheduledNotificationAsync(n.identifier))
+    );
+  } catch {
+    // A schedule that can't be read (left by an older version) is cleared
+    // outright rather than blocking every future one. Spendly schedules
+    // nothing else.
+    await Notifications.cancelAllScheduledNotificationsAsync().catch(() => {});
+  }
   if (!settings.enabled) return;
   const permission = await Notifications.getPermissionsAsync();
   if (!permission.granted) return;
@@ -131,7 +168,10 @@ async function reschedule(
   }
 }
 
-/** A reminder in a few seconds, to see what one looks like. */
+/**
+ * A sample reminder, shown at once. Shown rather than scheduled: a scheduled
+ * one goes through Android's alarm queue, which may hold it back for minutes.
+ */
 export async function sendTestReminder(language: ReminderSettings['language']): Promise<boolean> {
   if (!(await ensurePermission())) return false;
   const pool = reminderPool(language, { groceries: true, shopping: true });
@@ -141,7 +181,7 @@ export async function sendTestReminder(language: ReminderSettings['language']): 
       body: pool[Math.floor(Math.random() * pool.length)],
       data: { action: ADD_EXPENSE_ACTION },
     },
-    trigger: { type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: 3, channelId: CHANNEL },
+    trigger: Platform.OS === 'android' ? { channelId: CHANNEL } : null,
   });
   return true;
 }

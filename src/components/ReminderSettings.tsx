@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Alert, Linking, Platform, Pressable, StyleSheet, Switch, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Alert, AppState, Linking, Platform, Pressable, StyleSheet, Switch, View } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { format } from 'date-fns';
@@ -7,7 +7,7 @@ import { Text } from '../theme/type';
 import { useTheme } from '../theme/ThemeContext';
 import { fontSizes, spacing } from '../theme/tokens';
 import { useReminderStore } from '../store/useReminderStore';
-import { ensurePermission, remindersSupported, sendTestReminder } from '../services/reminders';
+import { ensurePermission, notificationsAllowed, remindersSupported, sendTestReminder } from '../services/reminders';
 import { ReminderLanguage } from '../utils/messages';
 import { Card } from './Card';
 import { Pill } from './Pill';
@@ -24,6 +24,18 @@ export function ReminderSettings() {
   const { theme } = useTheme();
   const settings = useReminderStore();
   const [picking, setPicking] = useState(false);
+  // Whether the phone allows Spendly's notifications — checked again whenever
+  // the app comes back, since that is where it gets changed.
+  const [allowed, setAllowed] = useState<boolean | null>(null);
+  useEffect(() => {
+    if (!remindersSupported) return;
+    const check = () => notificationsAllowed().then(setAllowed).catch(() => {});
+    check();
+    const sub = AppState.addEventListener('change', (state) => state === 'active' && check());
+    return () => sub.remove();
+  }, []);
+  const on = settings.enabled && allowed !== false;
+  const blocked = settings.enabled && allowed === false;
   const time = format(new Date(2000, 0, 1, settings.hour, settings.minute), 'h:mm a');
   const switchColors = {
     trackColor: { true: theme.tint, false: theme.mode === 'dark' ? 'rgba(190, 205, 240, 0.24)' : 'rgba(100, 116, 139, 0.32)' },
@@ -36,6 +48,7 @@ export function ReminderSettings() {
       return;
     }
     const granted = await ensurePermission();
+    setAllowed(granted);
     if (!granted) {
       Alert.alert(
         'Notifications are off',
@@ -51,10 +64,29 @@ export function ReminderSettings() {
     showToast(`Reminder set for ${time} ⏰`);
   };
 
+  // Many phones (Vivo, Oppo, Xiaomi and others) stop an app's scheduled
+  // reminders unless it is allowed to run in the background.
+  const openBatterySettings = () => {
+    Alert.alert(
+      'Let reminders through',
+      'Some phones stop reminders from apps that aren’t allowed to run in the background. In the next screen, find Spendly and choose “Don’t optimise” (or allow background activity / auto-start).',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Open settings',
+          onPress: () =>
+            Linking.sendIntent('android.settings.IGNORE_BATTERY_OPTIMIZATION_SETTINGS').catch(() =>
+              Linking.openSettings().catch(() => {})
+            ),
+        },
+      ]
+    );
+  };
+
   const sendTest = async () => {
     const sent = await sendTestReminder(settings.language);
-    if (sent) showToast('A sample reminder is on its way 📬');
-    else Alert.alert('Notifications are off', 'Allow notifications for Spendly in your phone’s settings first.');
+    // The reminder itself drops down at once; a toast on top would cover it.
+    if (!sent) Alert.alert('Notifications are off', 'Allow notifications for Spendly in your phone’s settings first.');
   };
 
   return (
@@ -68,10 +100,23 @@ export function ReminderSettings() {
                 Every day at {time}, only if you haven’t added anything yet
               </Text>
             </View>
-            <Switch value={settings.enabled} onValueChange={toggleReminder} {...switchColors} />
+            <Switch value={on} onValueChange={toggleReminder} {...switchColors} />
           </View>
 
-          {settings.enabled && (
+          {blocked && (
+            <Pressable
+              style={[styles.notice, { backgroundColor: theme.tintMuted }]}
+              onPress={() => toggleReminder(true)}
+              accessibilityRole="button"
+            >
+              <Ionicons name="notifications-off-outline" size={18} color={theme.warning} />
+              <Text style={[styles.noticeText, { color: theme.text }]}>
+                Notifications are blocked for Spendly. Tap to allow them.
+              </Text>
+            </Pressable>
+          )}
+
+          {on && (
             <>
               <View style={[styles.divider, { backgroundColor: theme.borderSubtle }]} />
               <Pressable style={styles.row} onPress={() => setPicking(true)} accessibilityRole="button">
@@ -106,6 +151,14 @@ export function ReminderSettings() {
                 <Ionicons name="notifications-outline" size={18} color={theme.tint} />
                 <Text style={[styles.testLabel, { color: theme.tint }]}>Send a test reminder</Text>
               </Pressable>
+              {Platform.OS === 'android' && (
+                <Pressable style={styles.testRow} onPress={openBatterySettings} accessibilityRole="button">
+                  <Ionicons name="battery-charging-outline" size={18} color={theme.textSecondary} />
+                  <Text style={[styles.helpLabel, { color: theme.textSecondary }]}>
+                    Reminders not arriving? Let Spendly run in the background
+                  </Text>
+                </Pressable>
+              )}
             </>
           )}
           <View style={[styles.divider, { backgroundColor: theme.borderSubtle }]} />
@@ -152,4 +205,7 @@ const styles = StyleSheet.create({
   sample: { fontSize: fontSizes.sm, marginTop: spacing.xs, fontStyle: 'italic' },
   testRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: spacing.sm },
   testLabel: { fontSize: fontSizes.sm, fontWeight: '700' },
+  helpLabel: { flex: 1, fontSize: fontSizes.sm, fontWeight: '600' },
+  notice: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, padding: spacing.sm, borderRadius: 14, marginTop: spacing.sm },
+  noticeText: { flex: 1, fontSize: fontSizes.sm, fontWeight: '600' },
 });

@@ -2,7 +2,9 @@ import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ReminderLanguage } from '../utils/messages';
 
-const KEY = 'settings:reminders';
+// v2: reminders became on by default, and earlier installs had them off only
+// because that was the old default.
+const KEY = 'settings:reminders:v2';
 
 export interface ReminderSettings {
   /** The evening nudge to note the day's spending. */
@@ -12,12 +14,12 @@ export interface ReminderSettings {
   language: ReminderLanguage;
   /** A short line when something is saved: "Grocery expense added 🛒". */
   confirmations: boolean;
-  /** Whether the one-time offer to turn reminders on has been made. */
+  /** Whether the one-time request for notification permission has been made. */
   offered: boolean;
 }
 
 const DEFAULTS: ReminderSettings = {
-  enabled: false,
+  enabled: true,
   hour: 20,
   minute: 30,
   language: 'mix',

@@ -15,9 +15,10 @@ import { BrandSplash } from './src/components/BrandSplash';
 import { useStore } from './src/store/useStore';
 import { useAuthStore } from './src/store/useAuthStore';
 import { initAds, preloadAppOpenAd, showAppOpenAd } from './src/services/ads';
-import { configureNotifications, rescheduleReminders } from './src/services/reminders';
+import { configureNotifications, ensurePermission, remindersSupported, rescheduleReminders } from './src/services/reminders';
 import { useReminderStore } from './src/store/useReminderStore';
-import { ToastHost } from './src/components/Toast';
+import { showToast, ToastHost } from './src/components/Toast';
+import { format } from 'date-fns';
 import { fontSizes, radius, spacing } from './src/theme/tokens';
 
 // Hold the native splash until the branded one is on screen, so the handoff
@@ -64,7 +65,7 @@ function AppContent() {
       rescheduleReminders(reminders, transactions, categories);
     }, 1200);
     return () => clearTimeout(timer);
-  }, [hydrated, reminders.loaded, reminders.enabled, reminders.hour, reminders.minute, reminders.language, transactions, categories]);
+  }, [hydrated, reminders.loaded, reminders.enabled, reminders.offered, reminders.hour, reminders.minute, reminders.language, transactions, categories]);
 
   // Paint the root view in the theme colour too: it is what shows in the frame
   // between the native splash going away and React drawing.
@@ -96,12 +97,27 @@ function AppContent() {
   const launchAdShown = useRef(false);
 
   useEffect(() => {
-    if (!unlocked || !splashDone || launchAdShown.current) return;
+    if (!unlocked || !splashDone || launchAdShown.current || !reminders.loaded) return;
     launchAdShown.current = true;
+    // The very first launch asks once whether Spendly may send its daily
+    // reminder (on by default), and shows no ad: a permission prompt and an
+    // ad fighting for the screen on someone's first minute is no welcome.
+    const r = useReminderStore.getState();
+    if (remindersSupported && r.enabled && !r.offered) {
+      setTimeout(async () => {
+        const granted = await ensurePermission();
+        useReminderStore.getState().update({ offered: true });
+        if (granted) {
+          const time = format(new Date(2000, 0, 1, r.hour, r.minute), 'h:mm a');
+          showToast(`Daily reminder on · ${time} ⏰`);
+        }
+      }, 700);
+      return;
+    }
     // Behind the splash the app has already loaded, so this covers the ad
     // rather than standing in front of an empty screen.
     showAppOpenAd();
-  }, [unlocked, splashDone]);
+  }, [unlocked, splashDone, reminders.loaded]);
 
   useEffect(() => {
     const onChange = (next: AppStateStatus) => {
