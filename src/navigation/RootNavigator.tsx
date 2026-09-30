@@ -4,6 +4,7 @@ import { NavigationContainer, DefaultTheme, DarkTheme, createNavigationContainer
 import { useTheme } from '../theme/ThemeContext';
 import { TabNavigator } from './TabNavigator';
 import TransactionEntryScreen from '../screens/TransactionEntryScreen';
+import ScanReceiptScreen from '../screens/ScanReceiptScreen';
 import CategoriesScreen from '../screens/CategoriesScreen';
 import CategoryDetailScreen from '../screens/CategoryDetailScreen';
 import AccountFormScreen from '../screens/AccountFormScreen';
@@ -79,6 +80,7 @@ export function RootNavigator() {
             <Stack.Screen name="Tabs" component={TabNavigator} />
             <Stack.Group screenOptions={{ presentation: 'modal', animation: 'slide_from_bottom', animationDuration: 300 }}>
               <Stack.Screen name="TransactionEntry" component={TransactionEntryScreen} />
+              <Stack.Screen name="ScanReceipt" component={ScanReceiptScreen} />
               <Stack.Screen name="AccountForm" component={AccountFormScreen} />
               <Stack.Screen name="CategoryForm" component={CategoryFormScreen} />
               <Stack.Screen name="BudgetForm" component={BudgetFormScreen} />

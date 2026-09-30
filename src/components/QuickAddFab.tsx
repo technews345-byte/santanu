@@ -57,6 +57,18 @@ export function QuickAddFab() {
 
       <View style={styles.dock} pointerEvents="box-none">
         <Action
+          label="Scan Receipt"
+          icon="scan"
+          color={theme.teal}
+          reveal={reveal}
+          distance={214}
+          delay={0.24}
+          onPress={() => {
+            setOpen(false);
+            navigation.navigate('ScanReceipt');
+          }}
+        />
+        <Action
           label="Add Income"
           icon="arrow-down-circle"
           color={theme.success}
