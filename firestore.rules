@@ -1,0 +1,41 @@
+rules_version = '2';
+
+// Paste into Firebase Console -> Firestore Database -> Rules.
+//
+// The app's Firebase config ships inside the APK, as every mobile Firebase
+// config does. These rules — not the client — are what keep one person's
+// expenses away from another's, so they deny by default and only ever allow
+// a signed-in user to touch documents under their own uid.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Reading and removing need only ownership. Writing content is split out
+    // below, because allow statements are OR-ed: granting `write` here would
+    // satisfy every create and update on its own and the checks underneath
+    // would never be reached.
+    match /users/{userId}/{collection}/{docId} {
+      allow read, delete: if isOwner(userId)
+                          && isSyncedCollection(collection);
+
+      // Reject a write that tries to land under someone else's id, or that
+      // arrives without the fields sync needs to merge it later.
+      allow create, update: if isOwner(userId)
+                            && isSyncedCollection(collection)
+                            && request.resource.data.id == docId
+                            && request.resource.data.updatedAt is string;
+    }
+
+    // Anything not matched above stays closed.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+
+function isOwner(userId) {
+  return request.auth != null && request.auth.uid == userId;
+}
+
+function isSyncedCollection(collection) {
+  return collection in ['accounts', 'categories', 'transactions', 'budgets'];
+}

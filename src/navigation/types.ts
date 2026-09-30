@@ -1,0 +1,28 @@
+import { TransactionType } from '../types';
+
+export type RootStackParamList = {
+  Tabs: undefined;
+  TransactionEntry: {
+    transactionId?: string;
+    initialType?: TransactionType;
+    /** What a scanned receipt said; every field stays editable on the form. */
+    prefill?: { amount?: number; categoryId?: string; note?: string; date?: string; attachments?: string[] };
+  };
+  ScanReceipt: undefined;
+  CategoryDetail: { categoryId: string };
+  Categories: undefined;
+  AccountForm: { accountId?: string };
+  CategoryForm: { categoryId?: string; type: 'expense' | 'income' };
+  BudgetForm: { categoryId: string };
+  Welcome: undefined;
+  Login: undefined;
+  Account: undefined;
+};
+
+export type TabParamList = {
+  Dashboard: undefined;
+  Transactions: undefined;
+  Budgets: undefined;
+  Analytics: undefined;
+  Settings: undefined;
+};
