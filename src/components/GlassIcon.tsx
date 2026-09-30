@@ -324,6 +324,23 @@ const DESIGNS: Record<string, Design> = {
     glyph: (ink) => <Path d="M16.5 25l4 4 7.5-8" {...stroke(ink)} />,
   },
 
+  // A paper receipt in glass, torn edge and all, a glow behind it.
+  receipt: {
+    turn: 45,
+    beadTurn: 150,
+    back: [
+      { kind: 'circle', cx: 32, cy: 15, r: 10 },
+      { kind: 'circle', cx: 40, cy: 37, r: 2.6, paint: 'bead' },
+    ],
+    glass: [
+      {
+        kind: 'path',
+        d: 'M12 7h19a3 3 0 0 1 3 3v31l-3.2-2.4-3.2 2.4-3.2-2.4-3.2 2.4-3.2-2.4-3.2 2.4L9 38.6V10a3 3 0 0 1 3-3z',
+      },
+    ],
+    glyph: (ink) => <Path d="M14.5 15h14M14.5 21h14M14.5 27h8" {...stroke(ink)} />,
+  },
+
   // A glass orb holding three dots, a smaller orb behind.
   other: {
     turn: 60,
@@ -364,6 +381,8 @@ const BY_ICON: Record<string, keyof typeof DESIGNS> = {
   business: 'bank',
   'shield-checkmark': 'shield',
   'ellipsis-horizontal': 'other',
+  receipt: 'receipt',
+  scan: 'receipt',
 };
 
 export function hasGlassIcon(icon: string): boolean {

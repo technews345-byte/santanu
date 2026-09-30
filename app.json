@@ -83,6 +83,7 @@
           "color": "#8494FF"
         }
       ],
+      "./plugins/withMlkitOcrModel",
       [
         "expo-build-properties",
         {

@@ -48,21 +48,25 @@ export default function TransactionEntryScreen() {
   const { theme } = useTheme();
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const { transactionId, initialType } = route.params ?? {};
+  const { transactionId, initialType, prefill } = route.params ?? {};
 
   const { accounts, categories, transactions, addTransaction, updateTransaction, removeTransaction, activeAccountId } = useStore();
   const existing = transactionId ? transactions.find((t) => t.id === transactionId) : undefined;
 
   const [type, setType] = useState<TransactionType>(existing?.type ?? initialType ?? 'expense');
-  const [expression, setExpression] = useState<string>(existing ? String(existing.amount) : '0');
+  const [expression, setExpression] = useState<string>(
+    existing ? String(existing.amount) : prefill?.amount ? String(prefill.amount) : '0'
+  );
   // Drives the note field's lit border, so focus is visible on glass.
   const [noteFocused, setNoteFocused] = useState(false);
   const [accountId, setAccountId] = useState<string>(existing?.accountId ?? activeAccountId ?? accounts[0]?.id ?? '');
   const [toAccountId, setToAccountId] = useState<string | null>(existing?.toAccountId ?? null);
-  const [categoryId, setCategoryId] = useState<string | null>(existing?.categoryId ?? null);
-  const [note, setNote] = useState(existing?.note ?? '');
-  const [date, setDate] = useState<Date>(existing ? new Date(existing.date) : new Date());
-  const [attachments, setAttachments] = useState<string[]>(existing?.attachments ?? []);
+  const [categoryId, setCategoryId] = useState<string | null>(existing?.categoryId ?? prefill?.categoryId ?? null);
+  const [note, setNote] = useState(existing?.note ?? prefill?.note ?? '');
+  const [date, setDate] = useState<Date>(
+    existing ? new Date(existing.date) : prefill?.date ? new Date(prefill.date) : new Date()
+  );
+  const [attachments, setAttachments] = useState<string[]>(existing?.attachments ?? prefill?.attachments ?? []);
   const [recurrence, setRecurrence] = useState<RecurrenceInterval>(existing?.recurrence ?? 'none');
 
   const [categorySheetOpen, setCategorySheetOpen] = useState(false);

@@ -2,7 +2,13 @@ import { TransactionType } from '../types';
 
 export type RootStackParamList = {
   Tabs: undefined;
-  TransactionEntry: { transactionId?: string; initialType?: TransactionType };
+  TransactionEntry: {
+    transactionId?: string;
+    initialType?: TransactionType;
+    /** What a scanned receipt said; every field stays editable on the form. */
+    prefill?: { amount?: number; categoryId?: string; note?: string; date?: string; attachments?: string[] };
+  };
+  ScanReceipt: undefined;
   CategoryDetail: { categoryId: string };
   Categories: undefined;
   AccountForm: { accountId?: string };

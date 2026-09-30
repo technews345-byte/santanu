@@ -149,7 +149,7 @@ export default function DashboardScreen() {
               <QuickAction icon="arrow-up-circle" label="Add Expense" color={theme.expense} onPress={() => navigation.navigate('TransactionEntry', { initialType: 'expense' })} />
               <QuickAction icon="arrow-down-circle" label="Add Income" color={theme.success} onPress={() => navigation.navigate('TransactionEntry', { initialType: 'income' })} />
               <QuickAction icon="pie-chart" label="Budgets" color={theme.investment} onPress={() => navigation.navigate('Budgets' as never)} />
-              <QuickAction icon="stats-chart" label="Analytics" color={theme.transfer} onPress={() => navigation.navigate('Analytics' as never)} />
+              <QuickAction icon="receipt" label="Scan Receipt" color={theme.teal} onPress={() => navigation.navigate('ScanReceipt')} />
             </View>
 
             <Text style={[styles.overline, { color: theme.textTertiary }]}>Spending</Text>
