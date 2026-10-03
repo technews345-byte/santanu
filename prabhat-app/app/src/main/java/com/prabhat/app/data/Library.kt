@@ -38,8 +38,8 @@ object Library {
             id = BUNDLED_ID,
             name = "Mahalakshmi Mantra",
             audio = R.raw.default_mantra,
-            art = R.drawable.prabhat_art,
-            poster = R.drawable.mantra_lyrics,
+            art = R.drawable.lakshmi_art,
+            poster = R.drawable.lakshmi_poster,
             description = "Listen three times every morning.",
             lyrics = """
                 ৰাতিপুৱা ৩ বাৰকৈ শুনক
