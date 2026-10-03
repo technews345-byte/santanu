@@ -58,6 +58,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.runtime.mutableFloatStateOf
+import coil.request.ImageRequest
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
@@ -92,42 +97,42 @@ import kotlin.random.Random
 fun SunriseBackground(modifier: Modifier = Modifier, content: @Composable BoxScope.() -> Unit) {
     val p = LocalPalette.current
     val drift = rememberInfiniteTransition(label = "drift")
-    val t by drift.animateFloat(0f, 1f, infiniteRepeatable(tween(90_000, easing = LinearEasing)), label = "t")
-    val motes = remember { List(26) { Triple(Random.nextFloat(), Random.nextFloat(), 0.4f + Random.nextFloat()) } }
+    // Read only while drawing (never during composition), so the motion costs one cheap redraw per frame.
+    val t = drift.animateFloat(0f, 1f, infiniteRepeatable(tween(90_000, easing = LinearEasing)), label = "t")
+    val motes = remember { List(18) { Triple(Random.nextFloat(), Random.nextFloat(), 0.4f + Random.nextFloat()) } }
     Box(
         modifier
             .fillMaxSize()
-            .background(Brush.verticalGradient(listOf(p.skyTop, p.skyMid, p.skyBottom, p.skyBottom)))
-    ) {
-        Canvas(Modifier.fillMaxSize()) {
-            val top = Offset(size.width / 2, -size.height * 0.05f)
-            drawCircle(
-                Brush.radialGradient(listOf(p.glow.copy(alpha = if (p.dark) 0.16f else 0.28f), Color.Transparent), top, size.width * 0.95f),
-                radius = size.width * 0.95f, center = top,
-            )
-            // Light rays fanning down from the glow.
-            for (i in 0 until 7) {
-                val a = PI / 2 + (i - 3) * 0.2 + sin(t * 2 * PI + i) * 0.015
+            .drawWithCache {
+                // Gradients and rays are built once per size and theme, then reused every frame.
+                val sky = Brush.verticalGradient(listOf(p.skyTop, p.skyMid, p.skyBottom, p.skyBottom))
+                val top = Offset(size.width / 2, -size.height * 0.05f)
+                val glowRadius = size.width * 0.95f
+                val glow = Brush.radialGradient(listOf(p.glow.copy(alpha = if (p.dark) 0.16f else 0.28f), Color.Transparent), top, glowRadius)
                 val len = size.height * 0.75f
-                drawLine(
-                    Brush.linearGradient(
-                        listOf(p.glow.copy(alpha = if (p.dark) 0.05f else 0.08f), Color.Transparent),
-                        top, Offset(top.x + (cos(a) * len).toFloat(), top.y + (sin(a) * len).toFloat()),
-                    ),
-                    start = top, end = Offset(top.x + (cos(a) * len).toFloat(), top.y + (sin(a) * len).toFloat()),
-                    strokeWidth = size.width * 0.06f,
-                )
+                val rays = (0 until 7).map { i ->
+                    val a = PI / 2 + (i - 3) * 0.2
+                    val end = Offset(top.x + (cos(a) * len).toFloat(), top.y + (sin(a) * len).toFloat())
+                    end to Brush.linearGradient(listOf(p.glow.copy(alpha = if (p.dark) 0.05f else 0.08f), Color.Transparent), top, end)
+                }
+                val moteAlpha = if (p.dark) 0.35f else 0.45f
+                onDrawBehind {
+                    drawRect(sky)
+                    drawCircle(glow, radius = glowRadius, center = top)
+                    rays.forEach { (end, brush) -> drawLine(brush, top, end, strokeWidth = size.width * 0.06f) }
+                    val tt = t.value
+                    motes.forEachIndexed { i, (x, y, speed) ->
+                        val yy = ((y - tt * speed * 1.5f) % 1f + 1f) % 1f
+                        val twinkle = 0.5f + 0.5f * sin((tt * 40 * speed + i) * PI).toFloat()
+                        drawCircle(
+                            p.particle.copy(alpha = moteAlpha * twinkle * (0.3f + yy * 0.7f)),
+                            radius = (1.2f + speed * 1.6f) * density,
+                            center = Offset(x * size.width + sin((tt * 6 + i) * PI).toFloat() * 8 * density, yy * size.height),
+                        )
+                    }
+                }
             }
-            motes.forEachIndexed { i, (x, y, speed) ->
-                val yy = ((y - t * speed * 1.5f) % 1f + 1f) % 1f
-                val twinkle = 0.5f + 0.5f * sin((t * 40 * speed + i) * PI).toFloat()
-                drawCircle(
-                    p.particle.copy(alpha = (if (p.dark) 0.35f else 0.45f) * twinkle * (0.3f + yy * 0.7f)),
-                    radius = (1.2f + speed * 1.6f) * density,
-                    center = Offset(x * size.width + sin((t * 6 + i) * PI).toFloat() * 8 * density, yy * size.height),
-                )
-            }
-        }
+    ) {
         content()
     }
 }
@@ -159,36 +164,52 @@ fun GlassCard(
 @Composable
 fun MantraArt(mantra: Mantra?, size: Dp, playing: Boolean = false, glow: Boolean = true) {
     val p = LocalPalette.current
-    val breath = rememberInfiniteTransition(label = "breath")
-    val pulse by breath.animateFloat(
-        0f, 1f, infiniteRepeatable(tween(4200, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "pulse",
-    )
-    val amount by animateFloatAsState(if (playing) 1f else 0f, tween(1200), label = "amount")
-    val scale = 1f + 0.035f * pulse * amount
+    val amount = animateFloatAsState(if (playing) 1f else 0f, tween(1200), label = "amount")
+    // The breathing animation only runs while it is visible, and is applied in the draw phase (no recomposition).
+    val pulse: State<Float> = if (playing || amount.value > 0f) {
+        rememberInfiniteTransition(label = "breath").animateFloat(
+            0f, 1f, infiniteRepeatable(tween(4200, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "pulse",
+        )
+    } else {
+        remember { mutableFloatStateOf(0f) }
+    }
     Box(Modifier.size(size * 1.4f), contentAlignment = Alignment.Center) {
         if (glow) {
-            Canvas(Modifier.fillMaxSize().scale(1f + 0.08f * pulse * amount)) {
+            Canvas(
+                Modifier.fillMaxSize().graphicsLayer {
+                    val s = 1f + 0.08f * pulse.value * amount.value
+                    scaleX = s; scaleY = s
+                }
+            ) {
                 drawCircle(
                     Brush.radialGradient(
-                        listOf(p.glow.copy(alpha = 0.45f + 0.2f * amount), p.glow.copy(alpha = 0.12f), Color.Transparent),
+                        listOf(p.glow.copy(alpha = 0.45f + 0.2f * amount.value), p.glow.copy(alpha = 0.12f), Color.Transparent),
                         center, this.size.minDimension / 2,
                     )
                 )
             }
         }
         val shape = RoundedCornerShape(size * 0.16f)
-        val art = Modifier
-            .size(size)
-            .scale(scale)
-            .clip(shape)
-            .background(p.glass)
-            .border(1.5.dp, p.gold.copy(alpha = 0.5f), shape)
+        val context = LocalContext.current
         val cover = mantra?.cover?.let(::File)?.takeIf { it.exists() }
-        if (cover != null) {
-            AsyncImage(model = cover, contentDescription = null, contentScale = ContentScale.Fit, modifier = art)
-        } else {
-            Image(painterResource(Library.artRes(mantra)), contentDescription = null, contentScale = ContentScale.Fit, modifier = art)
+        // Decoded off the main thread at the displayed size, then cached.
+        val request = remember(cover, mantra?.id) {
+            ImageRequest.Builder(context).data(cover ?: Library.artRes(mantra)).crossfade(250).build()
         }
+        AsyncImage(
+            model = request,
+            contentDescription = null,
+            contentScale = ContentScale.Fit,
+            modifier = Modifier
+                .size(size)
+                .graphicsLayer {
+                    val s = 1f + 0.035f * pulse.value * amount.value
+                    scaleX = s; scaleY = s
+                }
+                .clip(shape)
+                .background(p.glass)
+                .border(1.5.dp, p.gold.copy(alpha = 0.5f), shape),
+        )
     }
 }
 

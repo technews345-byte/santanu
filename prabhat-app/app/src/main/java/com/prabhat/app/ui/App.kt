@@ -1,6 +1,7 @@
 package com.prabhat.app.ui
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -148,7 +149,13 @@ private fun Shell(state: AppState, player: PlayerConnection) {
             }
         },
     ) { pad ->
-        NavHost(nav, startDestination = Routes.HOME, modifier = Modifier.fillMaxSize()) {
+        NavHost(
+            nav, startDestination = Routes.HOME, modifier = Modifier.fillMaxSize(),
+            enterTransition = { fadeIn(tween(260)) + slideInVertically(tween(320)) { it / 30 } },
+            exitTransition = { fadeOut(tween(180)) },
+            popEnterTransition = { fadeIn(tween(260)) },
+            popExitTransition = { fadeOut(tween(180)) + slideOutVertically(tween(220)) { it / 30 } },
+        ) {
             composable(Routes.HOME) { HomeScreen(state, player, pad, nav) }
             composable(Routes.LIBRARY) { LibraryScreen(state, player, pad, nav) }
             composable(

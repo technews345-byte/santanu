@@ -1,6 +1,9 @@
 package com.prabhat.app.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -60,6 +63,7 @@ import com.prabhat.app.domain.Format
 import com.prabhat.app.domain.ScheduleMath
 import com.prabhat.app.playback.PlaybackHub
 import com.prabhat.app.playback.PlayerConnection
+import com.prabhat.app.playback.PlayerUi
 import com.prabhat.app.playback.SessionKind
 import com.prabhat.app.ui.Routes
 import com.prabhat.app.ui.components.BigPlayButton
@@ -160,24 +164,7 @@ fun HomeScreen(state: AppState, player: PlayerConnection, pad: PaddingValues, na
             }
         }
 
-        // Progress
-        val duration = if (ui.loaded) ui.durationMs else mantra?.durationMs ?: 0L
-        var dragging by remember { mutableStateOf(false) }
-        var dragValue by remember { mutableFloatStateOf(0f) }
-        val progress = if (duration > 0) (ui.positionMs.toFloat() / duration).coerceIn(0f, 1f) else 0f
-        Slider(
-            value = if (dragging) dragValue else if (ui.loaded) progress else 0f,
-            onValueChange = { dragging = true; dragValue = it },
-            onValueChangeFinished = { dragging = false; if (ui.loaded) player.seekTo((dragValue * duration).toLong()) },
-            enabled = ui.loaded,
-            colors = SliderDefaults.colors(thumbColor = p.gold, activeTrackColor = p.gold, inactiveTrackColor = p.gold.copy(alpha = 0.2f)),
-            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-        )
-        Row(Modifier.fillMaxWidth()) {
-            Text(Format.duration(if (dragging) (dragValue * duration).toLong() else if (ui.loaded) ui.positionMs else 0L), style = MaterialTheme.typography.labelMedium, color = p.muted)
-            Spacer(Modifier.weight(1f))
-            Text(Format.duration(duration), style = MaterialTheme.typography.labelMedium, color = p.muted)
-        }
+        ProgressBar(player, ui, if (ui.loaded) ui.durationMs else mantra?.durationMs ?: 0L)
 
         // Controls
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(vertical = 8.dp)) {
@@ -234,6 +221,34 @@ fun HomeScreen(state: AppState, player: PlayerConnection, pad: PaddingValues, na
         "lyrics" -> mantra?.let { LyricsSheet(it) { sheet = null } }
     }
     if (editTime) ScheduleEditor(state, next?.rule ?: state.schedules.firstOrNull()) { editTime = false }
+}
+
+/** Reads the playback position itself, so its 4-per-second updates redraw only this bar. */
+@Composable
+private fun ProgressBar(player: PlayerConnection, ui: PlayerUi, duration: Long) {
+    val p = LocalPalette.current
+    val position by player.position.collectAsStateWithLifecycle()
+    var dragging by remember { mutableStateOf(false) }
+    var dragValue by remember { mutableFloatStateOf(0f) }
+    val target = if (ui.loaded && duration > 0) (position.toFloat() / duration).coerceIn(0f, 1f) else 0f
+    // Glides between position updates instead of jumping.
+    val smooth by animateFloatAsState(target, tween(260, easing = LinearEasing), label = "progress")
+    Slider(
+        value = if (dragging) dragValue else smooth,
+        onValueChange = { dragging = true; dragValue = it },
+        onValueChangeFinished = { dragging = false; if (ui.loaded) player.seekTo((dragValue * duration).toLong()) },
+        enabled = ui.loaded,
+        colors = SliderDefaults.colors(thumbColor = p.gold, activeTrackColor = p.gold, inactiveTrackColor = p.gold.copy(alpha = 0.2f)),
+        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+    )
+    Row(Modifier.fillMaxWidth()) {
+        Text(
+            Format.duration(if (dragging) (dragValue * duration).toLong() else if (ui.loaded) position else 0L),
+            style = MaterialTheme.typography.labelMedium, color = p.muted,
+        )
+        Spacer(Modifier.weight(1f))
+        Text(Format.duration(duration), style = MaterialTheme.typography.labelMedium, color = p.muted)
+    }
 }
 
 @Composable

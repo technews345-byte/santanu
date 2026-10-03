@@ -6,6 +6,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.serialization.json.Json
 import java.io.File
+import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * All settings, the library and the schedule, kept in one small JSON file in the app's private storage.
@@ -26,16 +28,25 @@ object Store {
             .getOrDefault(AppState())
     }
 
+    private val writer = Executors.newSingleThreadExecutor()
+    private val savePending = AtomicBoolean(false)
+
+    /** Applies a change at once; the file is written on a background thread, so dragging a slider never stutters. */
     @Synchronized
     fun update(change: (AppState) -> AppState): AppState {
         val next = change(_state.value)
         if (next == _state.value) return next
         _state.value = next
+        // Several quick changes are written once, with the latest state.
+        if (savePending.compareAndSet(false, true)) writer.execute { savePending.set(false); save(_state.value) }
+        return next
+    }
+
+    private fun save(s: AppState) {
         runCatching {
             val tmp = File(file.parentFile, file.name + ".tmp")
-            tmp.writeText(json.encodeToString(AppState.serializer(), next))
+            tmp.writeText(json.encodeToString(AppState.serializer(), s))
             if (!tmp.renameTo(file)) { file.delete(); tmp.renameTo(file) }
         }.onFailure { Log.e("Prabhat", "Could not save settings", it) }
-        return next
     }
 }

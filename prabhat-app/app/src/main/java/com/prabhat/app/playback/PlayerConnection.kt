@@ -19,7 +19,6 @@ data class PlayerUi(
     val loaded: Boolean = false,
     val isPlaying: Boolean = false,
     val mantraId: String? = null,
-    val positionMs: Long = 0,
     val durationMs: Long = 0,
 )
 
@@ -30,6 +29,9 @@ class PlayerConnection(private val context: Context, private val scope: Coroutin
     private var ticker: Job? = null
     private val _ui = MutableStateFlow(PlayerUi())
     val ui: StateFlow<PlayerUi> = _ui
+    /** Playback position, separate from [ui] so its frequent updates only redraw the progress bar. */
+    private val _position = MutableStateFlow(0L)
+    val position: StateFlow<Long> = _position
 
     private val listener = object : Player.Listener {
         override fun onEvents(player: Player, events: Player.Events) = refresh()
@@ -66,11 +68,13 @@ class PlayerConnection(private val context: Context, private val scope: Coroutin
             loaded = c.mediaItemCount > 0,
             isPlaying = c.isPlaying,
             mantraId = c.currentMediaItem?.mediaId,
-            positionMs = c.currentPosition.coerceAtLeast(0),
             durationMs = c.duration.takeIf { it > 0 } ?: 0,
         )
+        _position.value = c.currentPosition.coerceAtLeast(0)
         if (c.isPlaying && ticker?.isActive != true) {
-            ticker = scope.launch { while (isActive) { delay(500); refresh() } }
+            ticker = scope.launch {
+                while (isActive) { delay(250); controller?.let { _position.value = it.currentPosition.coerceAtLeast(0) } }
+            }
         } else if (!c.isPlaying) {
             ticker?.cancel()
         }
