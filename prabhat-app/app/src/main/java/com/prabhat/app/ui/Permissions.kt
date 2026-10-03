@@ -23,6 +23,7 @@ import androidx.compose.material.icons.rounded.AccessAlarm
 import androidx.compose.material.icons.rounded.BatteryChargingFull
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Notifications
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -141,7 +142,11 @@ private fun AccessRow(icon: ImageVector, title: String, text: String, ok: Boolea
         }
         if (!ok) {
             Spacer(Modifier.width(8.dp))
-            FilledTonalButton(onClick = onFix, modifier = Modifier.padding(start = 4.dp)) { Text(action) }
+            FilledTonalButton(
+                onClick = onFix,
+                modifier = Modifier.padding(start = 4.dp),
+                colors = ButtonDefaults.filledTonalButtonColors(containerColor = p.gold.copy(alpha = 0.18f), contentColor = if (p.dark) p.gold else p.text),
+            ) { Text(action) }
         }
     }
 }

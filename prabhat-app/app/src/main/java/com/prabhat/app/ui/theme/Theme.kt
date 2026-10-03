@@ -1,6 +1,7 @@
 package com.prabhat.app.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
@@ -24,6 +25,8 @@ data class Palette(
     val skyMid: Color,
     val skyBottom: Color,
     val glass: Color,
+    /** Bottom of the glass gradient. */
+    val glassLow: Color,
     val glassBorder: Color,
     val gold: Color,
     val glow: Color,
@@ -37,8 +40,9 @@ private val LightPalette = Palette(
     skyTop = Color(0xFFFCE3CB),
     skyMid = Color(0xFFFBEFE2),
     skyBottom = Color(0xFFFBF6EE),
-    glass = Color(0x99FFFFFF),
-    glassBorder = Color(0xB3FFFFFF),
+    glass = Color(0xCCFFFFFF),
+    glassLow = Color(0x99FFFDF9),
+    glassBorder = Color(0xE6FFFFFF),
     gold = Color(0xFFB8862E),
     glow = Color(0xFFF2B55E),
     text = Color(0xFF2B2230),
@@ -51,8 +55,9 @@ private val DarkPalette = Palette(
     skyTop = Color(0xFF1B2350),
     skyMid = Color(0xFF0F1533),
     skyBottom = Color(0xFF080C1F),
-    glass = Color(0x14FFFFFF),
-    glassBorder = Color(0x22FFFFFF),
+    glass = Color(0x1AFFFFFF),
+    glassLow = Color(0x0DFFFFFF),
+    glassBorder = Color(0x26FFFFFF),
     gold = Color(0xFFE8C27A),
     glow = Color(0xFFE8B566),
     text = Color(0xFFF6F1E7),
@@ -110,6 +115,9 @@ fun PrabhatTheme(mode: ThemeMode, content: @Composable () -> Unit) {
         )
     }
     CompositionLocalProvider(LocalPalette provides p) {
-        MaterialTheme(colorScheme = scheme, typography = AppTypography, content = content)
+        MaterialTheme(colorScheme = scheme, typography = AppTypography) {
+            // Text without an explicit colour follows the theme (otherwise it defaults to black, invisible in dark mode).
+            CompositionLocalProvider(LocalContentColor provides p.text, content = content)
+        }
     }
 }

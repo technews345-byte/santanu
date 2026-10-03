@@ -40,12 +40,14 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
@@ -138,15 +140,15 @@ fun GlassCard(
 ) {
     val p = LocalPalette.current
     val shape = RoundedCornerShape(28.dp)
-    Surface(
-        modifier = modifier,
-        shape = shape,
-        color = p.glass,
-        border = BorderStroke(1.dp, p.glassBorder),
-        shadowElevation = if (p.dark) 0.dp else 1.dp,
-    ) {
+    // Frosted glass without an elevation shadow: a shadow under a translucent card shows through as a grey box.
+    CompositionLocalProvider(LocalContentColor provides p.text) {
         Column(
-            (if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier).padding(padding),
+            modifier
+                .clip(shape)
+                .background(Brush.verticalGradient(listOf(p.glass, p.glassLow)))
+                .border(1.dp, p.glassBorder, shape)
+                .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+                .padding(padding),
             content = content,
         )
     }

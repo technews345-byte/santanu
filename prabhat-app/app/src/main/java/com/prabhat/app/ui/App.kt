@@ -124,6 +124,7 @@ private fun Shell(state: AppState, player: PlayerConnection) {
 
     Scaffold(
         containerColor = Color.Transparent,
+        contentColor = p.text,
         snackbarHost = { SnackbarHost(snack) },
         bottomBar = {
             Column {
