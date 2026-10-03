@@ -3,8 +3,8 @@
 **Wake up → mantra starts automatically → peaceful morning.**
 
 Prabhat plays your mantra every morning at the time you choose, with the screen locked and the app closed.
-It comes with two mantras built in: the *Mahalakshmi Mantra* (listen three times every morning) and
-*Shri Hanuman Chalisa* (Shankar Mahadevan), each with its picture. The Mahalakshmi Mantra plays at **6:30 AM**
+It comes with three mantras built in, each with its picture: the *Mahalakshmi Mantra* (listen three
+times every morning), *Shri Hanuman Chalisa* (Shankar Mahadevan) and *Krishnaya Vasudevaya*. The Mahalakshmi Mantra plays at **6:30 AM**
 every day by default. Change the time from Home (✎ on the *Next Morning Session* card), the Schedule tab,
 Settings, or during first-launch setup.
 

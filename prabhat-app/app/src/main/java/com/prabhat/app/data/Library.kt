@@ -60,6 +60,21 @@ object Library {
             poster = R.drawable.hanuman_poster,
             description = "শ্ৰী হনুমান চালিশা · Shankar Mahadevan",
         ),
+        BuiltIn(
+            id = "krishna-mantra",
+            name = "Krishnaya Vasudevaya",
+            audio = R.raw.krishna_mantra,
+            art = R.drawable.krishna_art,
+            poster = R.drawable.krishna_poster,
+            description = "Krishna mantra for peace, freedom from troubles and devotion.",
+            lyrics = """
+                কৃষ্ণায় বাসুদেৱায় হৰয়ে পৰমাত্মনে ।
+                প্ৰণতক্লেশনাশায় গোবিন্দায় নমো নমঃ ॥
+
+                कृष्णाय वासुदेवाय हरये परमात्मने ।
+                प्रणतक्लेशनाशाय गोविन्दाय नमो नमः ॥
+            """.trimIndent(),
+        ),
     )
 
     fun builtIn(id: String?): BuiltIn? = BUILT_INS.firstOrNull { it.id == id }
