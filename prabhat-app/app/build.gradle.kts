@@ -25,6 +25,8 @@ android {
         targetSdk = 35
         versionCode = config("PRABHAT_VERSION_CODE", "1").toInt()
         versionName = config("PRABHAT_VERSION_NAME", "1.0.0")
+        // Keep only English resources from libraries (the app's own text is in code); saves space.
+        resourceConfigurations += listOf("en")
     }
 
     signingConfigs {
@@ -72,7 +74,12 @@ android {
         compose = true
         buildConfig = true
     }
-    packaging { resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" } }
+    packaging {
+        resources {
+            // Build metadata the app never reads at runtime.
+            excludes += listOf("/META-INF/{AL2.0,LGPL2.1}", "/META-INF/*.version", "/META-INF/**/*.kotlin_module", "kotlin/**", "DebugProbesKt.bin")
+        }
+    }
     testOptions { unitTests.isReturnDefaultValues = true }
 }
 
