@@ -155,7 +155,7 @@ fun GlassCard(
     }
 }
 
-/** Round mantra artwork with a golden glow that breathes while the mantra plays. */
+/** Mantra artwork, always the whole picture (never cropped), with a golden glow that breathes while it plays. */
 @Composable
 fun MantraArt(mantra: Mantra?, size: Dp, playing: Boolean = false, glow: Boolean = true) {
     val p = LocalPalette.current
@@ -176,16 +176,18 @@ fun MantraArt(mantra: Mantra?, size: Dp, playing: Boolean = false, glow: Boolean
                 )
             }
         }
+        val shape = RoundedCornerShape(size * 0.16f)
         val art = Modifier
             .size(size)
             .scale(scale)
-            .clip(CircleShape)
-            .border(2.dp, p.gold.copy(alpha = 0.55f), CircleShape)
+            .clip(shape)
+            .background(p.glass)
+            .border(1.5.dp, p.gold.copy(alpha = 0.5f), shape)
         val cover = mantra?.cover?.let(::File)?.takeIf { it.exists() }
         if (cover != null) {
-            AsyncImage(model = cover, contentDescription = null, contentScale = ContentScale.Crop, modifier = art)
+            AsyncImage(model = cover, contentDescription = null, contentScale = ContentScale.Fit, modifier = art)
         } else {
-            Image(painterResource(Library.artRes(mantra)), contentDescription = null, contentScale = ContentScale.Crop, modifier = art)
+            Image(painterResource(Library.artRes(mantra)), contentDescription = null, contentScale = ContentScale.Fit, modifier = art)
         }
     }
 }

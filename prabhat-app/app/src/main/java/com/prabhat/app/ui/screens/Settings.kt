@@ -125,6 +125,8 @@ fun SettingsScreen(state: AppState, pad: PaddingValues, nav: NavHostController) 
                 "Works fully offline. No account. Your mantras and settings stay on this phone.",
                 color = p.muted, style = MaterialTheme.typography.bodySmall,
             )
+            Spacer(Modifier.height(10.dp))
+            Text("Developed by Santanu Bordoloi", style = MaterialTheme.typography.titleSmall, color = p.gold)
         }
     }
 

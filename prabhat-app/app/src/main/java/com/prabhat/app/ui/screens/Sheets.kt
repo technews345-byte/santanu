@@ -104,10 +104,10 @@ fun SleepSheet(player: PlayerConnection, onDismiss: () -> Unit) {
     }
 }
 
-/** True when a mantra has words or a picture to show. */
-fun hasText(m: Mantra) = m.lyrics.isNotBlank() || Library.builtIn(m.id)?.poster != null
+/** True when a mantra has words to show. */
+fun hasText(m: Mantra) = m.lyrics.isNotBlank()
 
-/** The words of the mantra, large and centred, and the picture that came with a built-in mantra. */
+/** The words of the mantra, large and centred. */
 @Composable
 fun LyricsSheet(mantra: Mantra, onDismiss: () -> Unit) {
     Sheet(mantra.name, null, onDismiss) {
@@ -119,22 +119,12 @@ fun LyricsSheet(mantra: Mantra, onDismiss: () -> Unit) {
 
 @Composable
 fun Lyrics(mantra: Mantra) {
-    if (mantra.lyrics.isNotBlank()) {
-        Text(
-            mantra.lyrics,
-            style = MaterialTheme.typography.titleLarge.copy(lineHeight = 38.sp),
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        Spacer(Modifier.height(20.dp))
-    }
-    Library.builtIn(mantra.id)?.poster?.let { poster ->
-        Image(
-            painterResource(poster), contentDescription = mantra.name,
-            contentScale = ContentScale.FillWidth,
-            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)),
-        )
-    }
+    Text(
+        mantra.lyrics,
+        style = MaterialTheme.typography.titleLarge.copy(lineHeight = 38.sp),
+        textAlign = TextAlign.Center,
+        modifier = Modifier.fillMaxWidth(),
+    )
 }
 
 val DAY_PRESETS = listOf(

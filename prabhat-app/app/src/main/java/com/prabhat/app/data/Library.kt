@@ -15,13 +15,13 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.UUID
 
-/** A mantra shipped inside the app: its audio in res/raw and its pictures in res/drawable-nodpi. */
+/** A mantra shipped inside the app: its audio in res/raw and its picture in res/drawable-nodpi. */
 class BuiltIn(
     val id: String,
     val name: String,
     @RawRes val audio: Int,
+    /** Shown whole (never cropped) on every screen and in the playback notification. */
     @DrawableRes val art: Int,
-    @DrawableRes val poster: Int?,
     val description: String,
     val lyrics: String = "",
 )
@@ -38,8 +38,7 @@ object Library {
             id = BUNDLED_ID,
             name = "Mahalakshmi Mantra",
             audio = R.raw.default_mantra,
-            art = R.drawable.lakshmi_art,
-            poster = R.drawable.lakshmi_poster,
+            art = R.drawable.lakshmi,
             description = "Listen three times every morning.",
             lyrics = """
                 ৰাতিপুৱা ৩ বাৰকৈ শুনক
@@ -56,16 +55,14 @@ object Library {
             id = "hanuman-chalisa",
             name = "Shri Hanuman Chalisa",
             audio = R.raw.hanuman_chalisa,
-            art = R.drawable.hanuman_art,
-            poster = R.drawable.hanuman_poster,
+            art = R.drawable.hanuman,
             description = "শ্ৰী হনুমান চালিশা · Shankar Mahadevan",
         ),
         BuiltIn(
             id = "krishna-mantra",
             name = "Krishnaya Vasudevaya",
             audio = R.raw.krishna_mantra,
-            art = R.drawable.krishna_art,
-            poster = R.drawable.krishna_poster,
+            art = R.drawable.krishna,
             description = "Krishna mantra for peace, freedom from troubles and devotion.",
             lyrics = """
                 কৃষ্ণায় বাসুদেৱায় হৰয়ে পৰমাত্মনে ।
@@ -79,7 +76,7 @@ object Library {
 
     fun builtIn(id: String?): BuiltIn? = BUILT_INS.firstOrNull { it.id == id }
 
-    /** Round artwork: the user's cover, else the built-in picture, else the Prabhat artwork. */
+    /** Artwork: the built-in picture, else the Prabhat artwork (a user's own cover takes precedence where shown). */
     @DrawableRes
     fun artRes(m: Mantra?): Int = builtIn(m?.id)?.art ?: R.drawable.prabhat_art
 

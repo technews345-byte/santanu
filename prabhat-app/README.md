@@ -2,6 +2,8 @@
 
 **Wake up → mantra starts automatically → peaceful morning.**
 
+Developed by Santanu Bordoloi.
+
 Prabhat plays your mantra every morning at the time you choose, with the screen locked and the app closed.
 It comes with three mantras built in, each with its picture: the *Mahalakshmi Mantra* (listen three
 times every morning), *Shri Hanuman Chalisa* (Shankar Mahadevan) and *Krishnaya Vasudevaya*. The Mahalakshmi Mantra plays at **6:30 AM**
@@ -56,7 +58,7 @@ Builds are signed with a fixed test key (`signing/prabhat-test.keystore`), so ea
 
 ## Built-in mantras
 
-Listed in `BUILT_INS` in `data/Library.kt`: audio in `res/raw/` (MP3/M4A/WAV), round artwork and poster in
+Listed in `BUILT_INS` in `data/Library.kt`: audio in `res/raw/` (MP3/M4A/WAV), one picture (shown whole) in
 `res/drawable-nodpi/`, plus name, description and words. Adding an entry with a new id also adds it on phones
 that already have the app (a built-in the user deleted is not brought back). The app icon is
 `res/mipmap-*/ic_launcher_art.webp`.

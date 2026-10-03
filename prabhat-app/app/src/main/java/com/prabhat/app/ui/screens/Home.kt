@@ -156,7 +156,7 @@ fun HomeScreen(state: AppState, player: PlayerConnection, pad: PaddingValues, na
             TextButton(onClick = { sheet = "lyrics" }) {
                 Icon(Icons.Rounded.AutoStories, null, Modifier.size(18.dp))
                 Spacer(Modifier.width(6.dp))
-                Text("View mantra")
+                Text("Mantra words")
             }
         }
 

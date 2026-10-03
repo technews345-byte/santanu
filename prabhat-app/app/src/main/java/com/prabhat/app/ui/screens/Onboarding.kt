@@ -181,6 +181,8 @@ private fun Welcome() {
         "Wake up, and your mantra begins on its own — softly, at the time you choose.",
         style = MaterialTheme.typography.bodyLarge, color = LocalPalette.current.muted, textAlign = TextAlign.Center,
     )
+    Spacer(Modifier.height(28.dp))
+    Text("Developed by Santanu Bordoloi", style = MaterialTheme.typography.labelLarge, color = LocalPalette.current.gold)
 }
 
 @Composable
