@@ -131,7 +131,7 @@ class PlaybackService : MediaSessionService() {
 
     private fun mediaItem(m: Mantra): MediaItem {
         val art = m.cover?.let { Uri.fromFile(File(it)) }
-            ?: Uri.parse("android.resource://$packageName/${R.drawable.prabhat_art}")
+            ?: Uri.parse("android.resource://$packageName/${Library.artRes(m)}")
         return MediaItem.Builder()
             .setMediaId(m.id)
             .setUri(Library.uri(this, m))

@@ -75,6 +75,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import coil.compose.AsyncImage
 import com.prabhat.app.R
+import com.prabhat.app.data.Library
 import com.prabhat.app.data.Mantra
 import com.prabhat.app.ui.theme.Eyebrow
 import com.prabhat.app.ui.theme.LocalPalette
@@ -184,7 +185,7 @@ fun MantraArt(mantra: Mantra?, size: Dp, playing: Boolean = false, glow: Boolean
         if (cover != null) {
             AsyncImage(model = cover, contentDescription = null, contentScale = ContentScale.Crop, modifier = art)
         } else {
-            Image(painterResource(R.drawable.prabhat_art), contentDescription = null, contentScale = ContentScale.Crop, modifier = art)
+            Image(painterResource(Library.artRes(mantra)), contentDescription = null, contentScale = ContentScale.Crop, modifier = art)
         }
     }
 }

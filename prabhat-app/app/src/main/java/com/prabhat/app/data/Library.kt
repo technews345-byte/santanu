@@ -7,11 +7,24 @@ import android.graphics.BitmapFactory
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.provider.OpenableColumns
+import androidx.annotation.DrawableRes
+import androidx.annotation.RawRes
 import com.prabhat.app.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.UUID
+
+/** A mantra shipped inside the app: its audio in res/raw and its pictures in res/drawable-nodpi. */
+class BuiltIn(
+    val id: String,
+    val name: String,
+    @RawRes val audio: Int,
+    @DrawableRes val art: Int,
+    @DrawableRes val poster: Int?,
+    val description: String,
+    val lyrics: String = "",
+)
 
 /**
  * The audio library. Imported files are copied into the app's own storage, so the mantra keeps playing
@@ -19,16 +32,41 @@ import java.util.UUID
  */
 object Library {
     const val BUNDLED_ID = "bundled"
-    private val BUNDLED_LYRICS = """
-        ৰাতিপুৱা ৩ বাৰকৈ শুনক
 
-        ওম মহালক্ষ্মী নম নমঃ
-        ওম বিষ্ণুপ্রিয়ায় নম নমঃ
-        ওম ধনপ্রদায়ে নম নমঃ
-        ওম বিশ্বজনমে নম নমঃ
+    val BUILT_INS = listOf(
+        BuiltIn(
+            id = BUNDLED_ID,
+            name = "Mahalakshmi Mantra",
+            audio = R.raw.default_mantra,
+            art = R.drawable.prabhat_art,
+            poster = R.drawable.mantra_lyrics,
+            description = "Listen three times every morning.",
+            lyrics = """
+                ৰাতিপুৱা ৩ বাৰকৈ শুনক
 
-        🙏 ॐ 🙏
-    """.trimIndent()
+                ওম মহালক্ষ্মী নম নমঃ
+                ওম বিষ্ণুপ্রিয়ায় নম নমঃ
+                ওম ধনপ্রদায়ে নম নমঃ
+                ওম বিশ্বজনমে নম নমঃ
+
+                🙏 ॐ 🙏
+            """.trimIndent(),
+        ),
+        BuiltIn(
+            id = "hanuman-chalisa",
+            name = "Shri Hanuman Chalisa",
+            audio = R.raw.hanuman_chalisa,
+            art = R.drawable.hanuman_art,
+            poster = R.drawable.hanuman_poster,
+            description = "শ্ৰী হনুমান চালিশা · Shankar Mahadevan",
+        ),
+    )
+
+    fun builtIn(id: String?): BuiltIn? = BUILT_INS.firstOrNull { it.id == id }
+
+    /** Round artwork: the user's cover, else the built-in picture, else the Prabhat artwork. */
+    @DrawableRes
+    fun artRes(m: Mantra?): Int = builtIn(m?.id)?.art ?: R.drawable.prabhat_art
 
     private fun audioDir(c: Context) = File(c.filesDir, "audio").apply { mkdirs() }
     private fun coverDir(c: Context) = File(c.filesDir, "covers").apply { mkdirs() }
@@ -39,34 +77,42 @@ object Library {
     fun isAvailable(m: Mantra): Boolean =
         m.file.startsWith(ContentResolver.SCHEME_ANDROID_RESOURCE) || File(m.file).let { it.isFile && it.length() > 0 }
 
-    /** Adds the bundled mantra (res/raw/default_mantra) on first launch. */
+    /**
+     * Adds each built-in mantra once (also to existing installs when a new one ships). A built-in the user
+     * deleted is remembered in [AppState.seededIds] and not brought back.
+     */
     suspend fun seed(c: Context): Unit = withContext(Dispatchers.IO) {
-        if (Store.value.seeded) return@withContext
-        val mantra = bundled(c)
+        // Installs from before seededIds already had the first built-in mantra.
+        val done = Store.value.seededIds + if (Store.value.seeded) setOf(BUNDLED_ID) else emptySet()
+        val missing = BUILT_INS.filter { it.id !in done }
+        if (missing.isEmpty()) return@withContext
+        val added = missing.map { toMantra(c, it) }
         Store.update { s ->
-            if (s.seeded) s else s.copy(
-                mantras = listOf(mantra) + s.mantras,
-                defaultMantraId = s.defaultMantraId ?: mantra.id,
+            val have = s.mantras.map { it.id }.toSet()
+            val fresh = added.filter { it.id !in have }
+            s.copy(
+                mantras = s.mantras + fresh,
+                defaultMantraId = s.defaultMantraId ?: fresh.firstOrNull()?.id,
                 seeded = true,
+                seededIds = s.seededIds + done + missing.map { it.id },
             )
         }
     }
 
-    private fun bundled(c: Context): Mantra {
-        val id = R.raw.default_mantra
+    private fun toMantra(c: Context, b: BuiltIn): Mantra {
         val duration = runCatching {
-            c.resources.openRawResourceFd(id).use { fd ->
+            c.resources.openRawResourceFd(b.audio).use { fd ->
                 MediaMetadataRetriever().run {
                     try { setDataSource(fd.fileDescriptor, fd.startOffset, fd.length); durationOf(this) } finally { release() }
                 }
             }
         }.getOrDefault(0L)
         return Mantra(
-            id = BUNDLED_ID,
-            name = "Mahalakshmi Mantra",
-            file = "${ContentResolver.SCHEME_ANDROID_RESOURCE}://${c.packageName}/$id",
-            description = "Listen three times every morning.",
-            lyrics = BUNDLED_LYRICS,
+            id = b.id,
+            name = b.name,
+            file = "${ContentResolver.SCHEME_ANDROID_RESOURCE}://${c.packageName}/${b.audio}",
+            description = b.description,
+            lyrics = b.lyrics,
             durationMs = duration,
             builtIn = true,
             addedAt = System.currentTimeMillis(),

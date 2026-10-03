@@ -3,7 +3,8 @@
 **Wake up → mantra starts automatically → peaceful morning.**
 
 Prabhat plays your mantra every morning at the time you choose, with the screen locked and the app closed.
-It comes with the *Mahalakshmi Mantra* built in (listen three times every morning) and plays it at **6:30 AM**
+It comes with two mantras built in: the *Mahalakshmi Mantra* (listen three times every morning) and
+*Shri Hanuman Chalisa* (Shankar Mahadevan), each with its picture. The Mahalakshmi Mantra plays at **6:30 AM**
 every day by default. Change the time from Home (✎ on the *Next Morning Session* card), the Schedule tab,
 Settings, or during first-launch setup.
 
@@ -53,11 +54,12 @@ Builds are signed with a fixed test key (`signing/prabhat-test.keystore`), so ea
 `keytool -genkeypair -v -keystore prabhat.jks -alias prabhat -keyalg RSA -keysize 2048 -validity 10000`, then
 `base64 -w0 prabhat.jks`. Keep it safe: updates must be signed with the same key.
 
-## Changing the built-in mantra
+## Built-in mantras
 
-Replace `app/src/main/res/raw/default_mantra.m4a` (MP3/M4A/WAV, keep the name `default_mantra`), and update its
-name and words in `data/Library.kt` (`bundled()` and `BUNDLED_LYRICS`). The mantra screenshot is
-`res/drawable-nodpi/mantra_lyrics.webp`; the app icon is `res/mipmap-*/ic_launcher_art.webp`.
+Listed in `BUILT_INS` in `data/Library.kt`: audio in `res/raw/` (MP3/M4A/WAV), round artwork and poster in
+`res/drawable-nodpi/`, plus name, description and words. Adding an entry with a new id also adds it on phones
+that already have the app (a built-in the user deleted is not brought back). The app icon is
+`res/mipmap-*/ic_launcher_art.webp`.
 
 ## Building locally
 

@@ -58,6 +58,8 @@ data class AppState(
     val onboarded: Boolean = false,
     /** Set once the starter mantra has been added, so deleting it does not bring it back. */
     val seeded: Boolean = false,
+    /** Built-in mantras already added once (see Library.seed). */
+    val seededIds: Set<String> = emptySet(),
     val resume: ResumePoint? = null,
     /** The scheduled time (epoch ms) of the last alarm that fired, to ignore duplicate deliveries. */
     val lastFiredAt: Long = 0,

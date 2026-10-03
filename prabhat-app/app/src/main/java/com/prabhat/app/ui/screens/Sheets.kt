@@ -104,7 +104,10 @@ fun SleepSheet(player: PlayerConnection, onDismiss: () -> Unit) {
     }
 }
 
-/** The words of the mantra, large and centred. The bundled mantra also shows its original picture. */
+/** True when a mantra has words or a picture to show. */
+fun hasText(m: Mantra) = m.lyrics.isNotBlank() || Library.builtIn(m.id)?.poster != null
+
+/** The words of the mantra, large and centred, and the picture that came with a built-in mantra. */
 @Composable
 fun LyricsSheet(mantra: Mantra, onDismiss: () -> Unit) {
     Sheet(mantra.name, null, onDismiss) {
@@ -116,16 +119,18 @@ fun LyricsSheet(mantra: Mantra, onDismiss: () -> Unit) {
 
 @Composable
 fun Lyrics(mantra: Mantra) {
-    Text(
-        mantra.lyrics,
-        style = MaterialTheme.typography.titleLarge.copy(lineHeight = 38.sp),
-        textAlign = TextAlign.Center,
-        modifier = Modifier.fillMaxWidth(),
-    )
-    if (mantra.id == Library.BUNDLED_ID) {
+    if (mantra.lyrics.isNotBlank()) {
+        Text(
+            mantra.lyrics,
+            style = MaterialTheme.typography.titleLarge.copy(lineHeight = 38.sp),
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
+        )
         Spacer(Modifier.height(20.dp))
+    }
+    Library.builtIn(mantra.id)?.poster?.let { poster ->
         Image(
-            painterResource(R.drawable.mantra_lyrics), contentDescription = "The mantra text",
+            painterResource(poster), contentDescription = mantra.name,
             contentScale = ContentScale.FillWidth,
             modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)),
         )

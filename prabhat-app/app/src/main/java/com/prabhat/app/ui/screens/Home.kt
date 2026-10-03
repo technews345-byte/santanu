@@ -152,11 +152,11 @@ fun HomeScreen(state: AppState, player: PlayerConnection, pad: PaddingValues, na
                 style = MaterialTheme.typography.bodySmall, color = p.gold,
             )
         }
-        if (mantra != null && mantra.lyrics.isNotBlank()) {
+        if (mantra != null && hasText(mantra)) {
             TextButton(onClick = { sheet = "lyrics" }) {
                 Icon(Icons.Rounded.AutoStories, null, Modifier.size(18.dp))
                 Spacer(Modifier.width(6.dp))
-                Text("Mantra words")
+                Text("View mantra")
             }
         }
 
