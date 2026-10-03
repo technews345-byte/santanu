@@ -48,7 +48,7 @@ Every push that changes `prabhat-app/` runs **Actions → Prabhat app**: unit te
 `Prabhat-N.apk` (release) and `Prabhat-N-debug.apk` in the run's **Artifacts**. Pushes to `main`
 (and manual runs) also publish a GitHub Release (`prabhat-v1.0.N`) with `Prabhat.apk` on the Releases page.
 
-Release signing (optional secrets): `PRABHAT_KEYSTORE_BASE64`, `PRABHAT_KEYSTORE_PASSWORD`, `PRABHAT_KEY_ALIAS`,
+Builds are signed with a fixed test key (`signing/prabhat-test.keystore`), so each new APK installs as an update over the last. For the Play Store, use your own key via the optional secrets: `PRABHAT_KEYSTORE_BASE64`, `PRABHAT_KEYSTORE_PASSWORD`, `PRABHAT_KEY_ALIAS`,
 `PRABHAT_KEY_PASSWORD`. Create once with
 `keytool -genkeypair -v -keystore prabhat.jks -alias prabhat -keyalg RSA -keysize 2048 -validity 10000`, then
 `base64 -w0 prabhat.jks`. Keep it safe: updates must be signed with the same key.

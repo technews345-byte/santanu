@@ -28,7 +28,16 @@ android {
     }
 
     signingConfigs {
-        // Release signing from CI secrets; without them the release APK is signed with the debug key.
+        // A fixed key committed with the project, so every build can update the previous one on the phone
+        // (a CI machine's generated debug key changes on every run, and Android refuses such updates).
+        // It is not secret: for a Play Store release, set the PRABHAT_KEYSTORE_* secrets instead.
+        create("stable") {
+            storeFile = rootProject.file("signing/prabhat-test.keystore")
+            storePassword = "prabhat-test"
+            keyAlias = "prabhat"
+            keyPassword = "prabhat-test"
+        }
+        // Release signing from CI secrets; without them the release APK uses the stable key above.
         val ks = config("PRABHAT_KEYSTORE_FILE")
         if (ks.isNotBlank() && file(ks).exists()) {
             create("release") {
@@ -44,12 +53,13 @@ android {
         debug {
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
+            signingConfig = signingConfigs.getByName("stable")
         }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("stable")
         }
     }
 

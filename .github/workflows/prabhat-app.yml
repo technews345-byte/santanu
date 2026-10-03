@@ -1,7 +1,7 @@
 # Builds and tests the Prabhat (morning mantra) Android app and publishes installable APKs.
 # Optional repository secrets (Settings → Secrets and variables → Actions):
 #   PRABHAT_KEYSTORE_BASE64, PRABHAT_KEYSTORE_PASSWORD, PRABHAT_KEY_ALIAS, PRABHAT_KEY_PASSWORD
-#     Release signing key. Without it the release APK is signed with a throwaway debug key.
+#     Release signing key. Without it the APK is signed with the fixed test key in prabhat-app/signing.
 name: Prabhat app
 
 on:
@@ -43,7 +43,7 @@ jobs:
             echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/prabhat.jks"
             echo "PRABHAT_KEYSTORE_FILE=$RUNNER_TEMP/prabhat.jks" >> "$GITHUB_ENV"
           else
-            echo "::notice::No PRABHAT_KEYSTORE_BASE64 secret: the release APK is signed with a debug key (fine for testing, not for the Play Store)."
+            echo "::notice::No PRABHAT_KEYSTORE_BASE64 secret: the APK is signed with the fixed test key (updates install over each other; use your own key for the Play Store)."
           fi
 
       - name: Unit tests and build
