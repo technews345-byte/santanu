@@ -35,6 +35,12 @@
         "WRITE_EXTERNAL_STORAGE",
         "USE_BIOMETRIC",
         "USE_FINGERPRINT"
+      ],
+      "allowBackup": false,
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
       ]
     },
     "web": {
@@ -45,7 +51,8 @@
         "expo-image-picker",
         {
           "photosPermission": "Allow selecting receipt images to attach to transactions.",
-          "cameraPermission": "Allow capturing receipt photos to attach to transactions."
+          "cameraPermission": "Allow capturing receipt photos to attach to transactions.",
+          "microphonePermission": false
         }
       ],
       [
