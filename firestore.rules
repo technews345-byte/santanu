@@ -1,28 +1,31 @@
 rules_version = '2';
 
-// Paste into Firebase Console -> Firestore Database -> Rules.
+// Paste into Firebase Console -> Firestore Database -> Rules, then Publish.
 //
 // The app's Firebase config ships inside the APK, as every mobile Firebase
-// config does. These rules — not the client — are what keep one person's
-// expenses away from another's, so they deny by default and only ever allow
-// a signed-in user to touch documents under their own uid.
+// config does, so anyone can talk to this database with it. These rules — not
+// the client — are what keep each person's money to themselves:
+//
+//  - Deny by default. Only a signed-in user, only under their own uid, only
+//    in the four collections the app syncs.
+//  - Every write must look like a record Spendly itself writes: only its
+//    field names, each of the right type, text within sensible lengths.
+//    Without this, any account (they are free to create) could store
+//    arbitrary data here, on this project's bill.
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Reading and removing need only ownership. Writing content is split out
-    // below, because allow statements are OR-ed: granting `write` here would
-    // satisfy every create and update on its own and the checks underneath
-    // would never be reached.
     match /users/{userId}/{collection}/{docId} {
       allow read, delete: if isOwner(userId)
                           && isSyncedCollection(collection);
 
-      // Reject a write that tries to land under someone else's id, or that
-      // arrives without the fields sync needs to merge it later.
+      // Create and update are listed apart from read: allow statements are
+      // OR-ed, so a broad `write` here would satisfy every write on its own.
       allow create, update: if isOwner(userId)
-                            && isSyncedCollection(collection)
+                            && docId.size() <= 128
                             && request.resource.data.id == docId
-                            && request.resource.data.updatedAt is string;
+                            && isSyncFields(request.resource.data)
+                            && isValidRecord(collection, request.resource.data);
     }
 
     // Anything not matched above stays closed.
@@ -30,12 +33,102 @@ service cloud.firestore {
       allow read, write: if false;
     }
   }
-}
 
-function isOwner(userId) {
-  return request.auth != null && request.auth.uid == userId;
-}
+  function isOwner(userId) {
+    return request.auth != null && request.auth.uid == userId;
+  }
 
-function isSyncedCollection(collection) {
-  return collection in ['accounts', 'categories', 'transactions', 'budgets'];
+  function isSyncedCollection(collection) {
+    return collection in ['accounts', 'categories', 'transactions', 'budgets'];
+  }
+
+  // --- Field checks ----------------------------------------------------------
+
+  function str(value, max) {
+    return value is string && value.size() <= max;
+  }
+
+  function optStr(value, max) {
+    return value == null || str(value, max);
+  }
+
+  // Amounts and balances: a number, within any sum a person could hold.
+  function money(value) {
+    return value is number && value > -10000000000000 && value < 10000000000000;
+  }
+
+  // SQLite stores booleans as 0/1, and they travel that way.
+  function flag(value) {
+    return value in [0, 1, true, false];
+  }
+
+  // Every synced row carries its id, when it last changed, and a tombstone.
+  function isSyncFields(data) {
+    return str(data.id, 128)
+        && str(data.updatedAt, 40)
+        && optStr(data.get('deletedAt', null), 40);
+  }
+
+  function isValidRecord(collection, data) {
+    return (collection == 'accounts' && isAccount(data))
+        || (collection == 'categories' && isCategory(data))
+        || (collection == 'transactions' && isTransaction(data))
+        || (collection == 'budgets' && isBudget(data));
+  }
+
+  function isAccount(data) {
+    return data.keys().hasOnly(['id', 'name', 'type', 'color', 'icon', 'initialBalance', 'currency',
+                                'archived', 'sortOrder', 'createdAt', 'updatedAt', 'deletedAt'])
+        && str(data.name, 80)
+        && str(data.type, 24)
+        && str(data.color, 32)
+        && str(data.icon, 64)
+        && money(data.initialBalance)
+        && str(data.currency, 8)
+        && flag(data.archived)
+        && data.sortOrder is number
+        && str(data.createdAt, 40);
+  }
+
+  function isCategory(data) {
+    return data.keys().hasOnly(['id', 'name', 'type', 'color', 'icon', 'archived', 'sortOrder',
+                                'createdAt', 'updatedAt', 'deletedAt'])
+        && str(data.name, 80)
+        && data.type in ['expense', 'income', 'investment']
+        && str(data.color, 32)
+        && str(data.icon, 64)
+        && flag(data.archived)
+        && data.sortOrder is number
+        && optStr(data.get('createdAt', null), 40);
+  }
+
+  function isTransaction(data) {
+    return data.keys().hasOnly(['id', 'type', 'amount', 'currency', 'accountId', 'toAccountId',
+                                'categoryId', 'note', 'date', 'attachments', 'recurrence',
+                                'nextOccurrence', 'createdAt', 'updatedAt', 'deletedAt'])
+        && data.type in ['expense', 'income', 'transfer', 'investment']
+        && money(data.amount)
+        && str(data.currency, 8)
+        && str(data.accountId, 128)
+        && optStr(data.get('toAccountId', null), 128)
+        && optStr(data.get('categoryId', null), 128)
+        && str(data.note, 1000)
+        && str(data.date, 40)
+        // Receipt photos stay on the phone; only their local paths sync, as a
+        // JSON list. Room for a handful of them.
+        && str(data.attachments, 6000)
+        && data.recurrence in ['none', 'daily', 'weekly', 'monthly', 'yearly']
+        && optStr(data.get('nextOccurrence', null), 40)
+        && str(data.createdAt, 40);
+  }
+
+  function isBudget(data) {
+    return data.keys().hasOnly(['id', 'categoryId', 'monthKey', 'amount', 'isRecurring',
+                                'createdAt', 'updatedAt', 'deletedAt'])
+        && str(data.categoryId, 128)
+        && str(data.monthKey, 16)
+        && money(data.amount)
+        && flag(data.isRecurring)
+        && optStr(data.get('createdAt', null), 40);
+  }
 }
