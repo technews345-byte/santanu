@@ -18,16 +18,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0   # scan the whole history, not just the latest commit
-      - name: Scan all commits for keys, tokens and private keys
-        run: |
-          pattern='AKIA[0-9A-Z]{16}|AIza[0-9A-Za-z_-]{35}|-----BEGIN [A-Z ]*PRIVATE KEY|"private_key"|rzp_live_[0-9A-Za-z]{10,}|gh[pousr]_[0-9A-Za-z]{30,}|sk_live_[0-9A-Za-z]{20,}|xox[baprs]-[0-9A-Za-z-]{10,}|EAA[0-9A-Za-z]{30,}|(JWT_SECRET|ADMIN_PASSWORD|RAZORPAY_KEY_SECRET|RAZORPAY_WEBHOOK_SECRET|WHATSAPP_ACCESS_TOKEN|WHATSAPP_APP_SECRET|SMTP_PASS|FIREBASE_SERVICE_ACCOUNT)[[:space:]]*[=:][[:space:]]*["'"'"']?[A-Za-z0-9_+/-]{12,}'
-          found=$(git rev-list --all | while read c; do git grep -InE "$pattern" "$c" -- . ':!*package-lock.json' ':!*.env.example' ':!.github/workflows/security.yml' ':!bowl-mania-site/test/*' 2>/dev/null; done | sort -u)
-          if [ -n "$found" ]; then
-            echo "$found" | cut -c1-120
-            echo "::error::Possible secret found in the git history (listed above). Rotate it, then remove it from history."
-            exit 1
-          fi
-          echo "No secrets found in $(git rev-list --all | wc -l) commits."
+      - name: Scan all commits on all branches for keys, tokens and private keys
+        run: bash .github/scripts/scan-secrets.sh
       - name: No real .env or key files committed
         run: |
           bad=$(git ls-files | grep -iE '(^|/)\.env$|(^|/)\.env\.[^e]|\.pem$|\.p12$|\.jks$|google-services\.json$|service-account.*\.json$|\.db$' || true)

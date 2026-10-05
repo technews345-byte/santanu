@@ -34,7 +34,7 @@ To report a vulnerability, email the repository owner rather than opening a publ
 | **Exposed files** | Only `public/` and public `uploads/` are served. Source, `.env`, the database, backups and private files are not, and hidden dotfiles are ignored. A test checks this. |
 | **Database** | Parameterised queries only, foreign keys on. **New:** the database and backups are readable only by the app's own user (mode 600, folders 700). Keep `DATABASE_FILE` / the Railway volume and `BACKUP_DIR` off any public path. |
 | **Password hashing** | scrypt with a random salt per password; plain passwords are never stored or logged; timing-safe comparison; equal timing for unknown emails. **Stronger:** new hashes use cost equivalent to OWASP's recommendation (N=65536, r=8, p=2), and older hashes are upgraded automatically at the next sign-in. Broken stored hashes fail safely. |
-| **Leaked secrets in git** | Full history scanned: none found (only placeholder values in `.env.example`). `prabhat-app/signing/prabhat-test.keystore` is a deliberate, non-secret test signing key, documented in `prabhat-app/README.md`. **New:** the *Security* workflow rescans the whole history on every push, blocks committed `.env`/key/database files, runs `npm audit` and the server tests, and repeats weekly. A root `.gitignore` keeps secrets out. |
+| **Leaked secrets in git** | All 126 commits on all 4 branches scanned. **Found:** a Firebase client `apiKey` (project `spendly-cdea9`) in `app.json` on branch `claude/expense-budget-app-vdww3s` (the expense app, not part of these apps). Firebase client keys are designed to ship inside apps, so it is not a password, but **it must be restricted** (owner checklist, step 8). Nothing else: no server secrets, passwords or private keys anywhere; `.env.example` holds only placeholders; `prabhat-app/signing/prabhat-test.keystore` is a deliberate, documented, non-secret test key. **New:** the *Security* workflow rescans every branch's history on every push (printing only redacted fingerprints), fails on any new key, blocks committed `.env`/key/database files, runs `npm audit` and the server tests, and repeats weekly. Accepted public keys are listed by fingerprint in `.github/secret-scan-allow.txt`. A root `.gitignore` keeps secrets out. |
 
 Tests: `cd bowl-mania-site && npm test` (25 tests, including headers, forged tokens, exposed files, password
 hashing and coupon brute-force limits).
@@ -48,3 +48,7 @@ hashing and coupon brute-force limits).
 5. Restrict the Google Maps key to the rider app's package name and signing SHA-1.
 6. Before publishing Prabhat on the Play Store, sign it with your own key (`PRABHAT_KEYSTORE_*` secrets).
 7. If a secret was ever shared or pasted anywhere public, rotate it at the provider.
+8. **Firebase key of the expense app (`spendly-cdea9`):** in Google Cloud Console → APIs & Services → Credentials,
+   restrict that key to your Android app (package name + SHA-1) and only the Firebase APIs it uses. In the Firebase
+   console, make sure Firestore / Storage security rules require sign-in and allow each user only their own data.
+   If the key was ever used without restrictions, create a new key and delete the old one.
