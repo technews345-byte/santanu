@@ -54,6 +54,8 @@ class PlaybackService : MediaSessionService() {
     private var plan = RepeatPlan(1)
     private var kind = SessionKind.MANUAL
     private var sleepAtEnd = false
+    /** The current session's own repeat count (from its schedule), or null to follow the setting. */
+    private var repeatOverride: Int? = null
     private var fadeJob: Job? = null
     private var sleepJob: Job? = null
 
@@ -86,7 +88,7 @@ class PlaybackService : MediaSessionService() {
             Store.state.map { it.volume }.distinctUntilChanged().collect { v -> if (fadeJob?.isActive != true) player.volume = v }
         }
         scope.launch {
-            Store.state.map { it.repeat }.distinctUntilChanged().collect { plan.target = it; applyRepeat() }
+            Store.state.map { it.repeat }.distinctUntilChanged().collect { if (repeatOverride == null) { plan.target = it; applyRepeat() } }
         }
         // Save the position now and then, so it survives the process being stopped mid-session.
         scope.launch {
@@ -99,13 +101,14 @@ class PlaybackService : MediaSessionService() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_SCHEDULED) {
             val mantraId = intent.getStringExtra(EXTRA_MANTRA)
+            val repeat = intent.getIntExtra(EXTRA_REPEAT, -1).takeIf { it >= 0 }
             // Started with startForegroundService: enter the foreground at once; the media notification replaces this.
             ServiceCompat.startForeground(
                 this, Notifier.PLAYBACK_ID,
                 Notifier.preparing(this, Store.value.mantra(mantraId)?.name ?: "Morning mantra"),
                 if (Build.VERSION.SDK_INT >= 29) ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK else 0,
             )
-            if (!start(mantraId, SessionKind.SCHEDULED, resume = false, fade = true)) {
+            if (!start(mantraId, SessionKind.SCHEDULED, resume = false, fade = true, repeat = repeat)) {
                 ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
                 stopSelf()
             }
@@ -116,7 +119,7 @@ class PlaybackService : MediaSessionService() {
 
     private fun handle(cmd: PlaybackHub.Command) {
         when (cmd) {
-            is PlaybackHub.Command.Start -> start(cmd.mantraId, cmd.kind, cmd.resume, cmd.fade)
+            is PlaybackHub.Command.Start -> start(cmd.mantraId, cmd.kind, cmd.resume, cmd.fade, cmd.repeat)
             is PlaybackHub.Command.Skip -> {
                 val count = player.mediaItemCount
                 if (count > 0) {
@@ -142,7 +145,7 @@ class PlaybackService : MediaSessionService() {
     }
 
     /** Starts a session with [mantraId] (or the default). Returns false when nothing in the library can be played. */
-    private fun start(mantraId: String?, kind: SessionKind, resume: Boolean, fade: Boolean): Boolean {
+    private fun start(mantraId: String?, kind: SessionKind, resume: Boolean, fade: Boolean, repeat: Int? = null): Boolean {
         val s = Store.value
         val playable = s.mantras.filter { Library.isAvailable(it) }
         if (playable.isEmpty()) {
@@ -157,7 +160,8 @@ class PlaybackService : MediaSessionService() {
         val point = s.resume?.takeIf { resume && it.mantraId == playable[index].id }
 
         this.kind = kind
-        plan = RepeatPlan(s.repeat, point?.played ?: 0)
+        repeatOverride = repeat
+        plan = RepeatPlan(repeat ?: s.repeat, point?.played ?: 0)
         clearSleep()
         player.setMediaItems(playable.map(::mediaItem), index, point?.positionMs ?: 0L)
         applyRepeat()
@@ -306,6 +310,7 @@ class PlaybackService : MediaSessionService() {
     companion object {
         const val ACTION_SCHEDULED = "com.prabhat.app.PLAY_SCHEDULED"
         const val EXTRA_MANTRA = "mantra"
+        const val EXTRA_REPEAT = "repeat"
         private const val FADE_OUT_MS = 8_000L
     }
 }

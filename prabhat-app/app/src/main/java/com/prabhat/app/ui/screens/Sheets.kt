@@ -157,6 +157,7 @@ fun ScheduleEditor(state: AppState, rule: ScheduleRule?, presetMantra: String? =
     val time = rememberTimePickerState(base.hour, base.minute, is24Hour = false)
     var days by remember { mutableStateOf(base.days) }
     var mantraId by remember { mutableStateOf(base.mantraId) }
+    var repeat by remember { mutableStateOf(base.repeat) }
     val p = LocalPalette.current
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -181,11 +182,17 @@ fun ScheduleEditor(state: AppState, rule: ScheduleRule?, presetMantra: String? =
                         { id -> if (id == null) "Default (${state.defaultMantra?.name ?: "none"})" else state.mantra(id)?.name ?: "" },
                     ) { mantraId = it }
                 }
+                Text("Repeat", style = MaterialTheme.typography.titleSmall)
+                OptionChips(
+                    listOf<Int?>(null) + AppState.REPEAT_OPTIONS,
+                    repeat,
+                    { r -> if (r == null) "App setting (${Format.repeat(state.repeat)})" else Format.repeat(r) },
+                ) { repeat = it }
             }
         },
         confirmButton = {
             TextButton(enabled = days.isNotEmpty(), onClick = {
-                val saved = base.copy(hour = time.hour, minute = time.minute, days = days, mantraId = mantraId, enabled = true)
+                val saved = base.copy(hour = time.hour, minute = time.minute, days = days, mantraId = mantraId, repeat = repeat, enabled = true)
                 Store.update { s ->
                     val exists = s.schedules.any { it.id == saved.id }
                     s.copy(

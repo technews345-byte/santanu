@@ -72,6 +72,7 @@ import com.prabhat.app.ui.components.GlassCard
 import com.prabhat.app.ui.components.MantraArt
 import com.prabhat.app.ui.components.rememberNow
 import com.prabhat.app.ui.morningMantra
+import com.prabhat.app.ui.morningRule
 import com.prabhat.app.ui.tab
 import com.prabhat.app.ui.theme.LocalPalette
 import java.time.LocalDate
@@ -93,8 +94,8 @@ fun HomeScreen(state: AppState, player: PlayerConnection, pad: PaddingValues, na
     val doneToday = state.completedOn == LocalDate.now().toString()
     val missed = if (state.scheduleOn && !doneToday && !ui.isPlaying) ScheduleMath.lastToday(state.schedules, now) else null
 
-    fun start(id: String?, kind: SessionKind, resume: Boolean, fade: Boolean) =
-        player.send(PlaybackHub.Command.Start(id, kind, resume, fade))
+    fun start(id: String?, kind: SessionKind, resume: Boolean, fade: Boolean, repeat: Int? = null) =
+        player.send(PlaybackHub.Command.Start(id, kind, resume, fade, repeat))
 
     fun skip(delta: Int) {
         if (ui.loaded) return player.send(PlaybackHub.Command.Skip(delta))
@@ -131,7 +132,7 @@ fun HomeScreen(state: AppState, player: PlayerConnection, pad: PaddingValues, na
                 )
                 Spacer(Modifier.height(12.dp))
                 Button(
-                    onClick = { start(state.mantraFor(missed?.rule)?.id, SessionKind.MORNING, resume = false, fade = true) },
+                    onClick = { start(state.mantraFor(missed?.rule)?.id, SessionKind.MORNING, resume = false, fade = true, missed?.rule?.repeat) },
                     colors = ButtonDefaults.buttonColors(containerColor = p.gold),
                 ) { Text("Play Now") }
             }
@@ -178,7 +179,7 @@ fun HomeScreen(state: AppState, player: PlayerConnection, pad: PaddingValues, na
                 when {
                     ui.isPlaying -> player.pause()
                     ui.loaded -> player.play()
-                    else -> start(home?.id, SessionKind.MORNING, resume = true, fade = false)
+                    else -> start(home?.id, SessionKind.MORNING, resume = true, fade = false, morningRule(state, now)?.repeat)
                 }
             }
             IconButton(onClick = { skip(1) }, modifier = Modifier.size(56.dp)) {

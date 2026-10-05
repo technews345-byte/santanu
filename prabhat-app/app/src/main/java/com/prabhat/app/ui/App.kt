@@ -73,9 +73,12 @@ import com.prabhat.app.ui.theme.PrabhatTheme
 import kotlinx.coroutines.flow.StateFlow
 import java.time.ZonedDateTime
 
+/** The next schedule (or the first one), which Home's Play and "Play now" follow. */
+fun morningRule(s: AppState, now: ZonedDateTime = ZonedDateTime.now()) =
+    ScheduleMath.next(s.schedules, now)?.rule ?: s.schedules.firstOrNull()
+
 /** The mantra the morning session will play: the next schedule's choice, or the default. */
-fun morningMantra(s: AppState, now: ZonedDateTime = ZonedDateTime.now()): Mantra? =
-    s.mantraFor(ScheduleMath.next(s.schedules, now)?.rule ?: s.schedules.firstOrNull())
+fun morningMantra(s: AppState, now: ZonedDateTime = ZonedDateTime.now()): Mantra? = s.mantraFor(morningRule(s, now))
 
 object Routes {
     const val HOME = "home"
@@ -99,7 +102,9 @@ fun AppRoot(player: PlayerConnection, playNow: StateFlow<Boolean>, onPlayNowHand
 
     LaunchedEffect(wantsPlay, state.onboarded) {
         if (wantsPlay && state.onboarded) {
-            player.send(PlaybackHub.Command.Start(morningMantra(state)?.id, SessionKind.MORNING, resume = false, fade = true))
+            player.send(
+                PlaybackHub.Command.Start(morningMantra(state)?.id, SessionKind.MORNING, resume = false, fade = true, repeat = morningRule(state)?.repeat)
+            )
             onPlayNowHandled()
         }
     }

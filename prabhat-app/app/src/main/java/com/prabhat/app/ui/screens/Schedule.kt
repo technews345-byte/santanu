@@ -127,7 +127,10 @@ private fun RuleCard(state: AppState, rule: ScheduleRule, onEdit: () -> Unit) {
                     color = if (active) MaterialTheme.colorScheme.onSurface else p.muted,
                 )
                 Text(ScheduleMath.daysLabel(rule.days), style = MaterialTheme.typography.bodyMedium, color = if (active) p.gold else p.muted)
-                Text(state.mantraFor(rule)?.name ?: "No mantra", style = MaterialTheme.typography.bodySmall, color = p.muted)
+                Text(
+                    (state.mantraFor(rule)?.name ?: "No mantra") + " · " + Format.repeat(state.repeatFor(rule)),
+                    style = MaterialTheme.typography.bodySmall, color = p.muted,
+                )
                 Text("Tap to change the time", style = MaterialTheme.typography.labelSmall, color = p.muted.copy(alpha = 0.8f))
             }
             Column(horizontalAlignment = Alignment.End) {

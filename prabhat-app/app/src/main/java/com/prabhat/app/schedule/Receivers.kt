@@ -28,13 +28,13 @@ class AlarmReceiver : BroadcastReceiver() {
                 }
             }
             Scheduler.ACTION_FIRE -> {
-                fire(context, at, mantra?.id, mantra?.name)
+                fire(context, at, mantra?.id, mantra?.name, rule?.repeat)
                 Scheduler.reschedule(context)
             }
         }
     }
 
-    private fun fire(context: Context, at: Long, mantraId: String?, mantraName: String?) {
+    private fun fire(context: Context, at: Long, mantraId: String?, mantraName: String?, repeat: Int?) {
         // The same alarm delivered twice (or re-armed for a time that already fired) plays only once.
         if (at != 0L && Store.value.lastFiredAt == at) return
         Store.update { it.copy(lastFiredAt = at) }
@@ -53,7 +53,8 @@ class AlarmReceiver : BroadcastReceiver() {
                 context,
                 Intent(context, PlaybackService::class.java)
                     .setAction(PlaybackService.ACTION_SCHEDULED)
-                    .putExtra(PlaybackService.EXTRA_MANTRA, mantraId),
+                    .putExtra(PlaybackService.EXTRA_MANTRA, mantraId)
+                    .putExtra(PlaybackService.EXTRA_REPEAT, repeat ?: -1),
             )
             if (Store.value.notifyStart) Notifier.starting(context, mantraName)
         } catch (e: Exception) {

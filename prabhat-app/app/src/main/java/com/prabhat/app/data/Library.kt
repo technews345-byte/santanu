@@ -97,16 +97,21 @@ object Library {
         // Installs from before seededIds already had the first built-in mantra.
         val done = Store.value.seededIds + if (Store.value.seeded) setOf(BUNDLED_ID) else emptySet()
         val missing = BUILT_INS.filter { it.id !in done }
-        if (missing.isEmpty()) return@withContext
+        // Default schedules that shipped after the user installed, added once (deleting them is respected).
+        val newSchedules = AppState.DEFAULT_EXTRA_SCHEDULES.filter { "schedule:" + it.id !in done }
+        if (missing.isEmpty() && newSchedules.isEmpty()) return@withContext
         val added = missing.map { toMantra(c, it) }
         Store.update { s ->
             val have = s.mantras.map { it.id }.toSet()
             val fresh = added.filter { it.id !in have }
+            val haveRules = s.schedules.map { it.id }.toSet()
             s.copy(
                 mantras = s.mantras + fresh,
+                schedules = s.schedules + newSchedules.filter { it.id !in haveRules },
                 defaultMantraId = s.defaultMantraId ?: fresh.firstOrNull()?.id,
                 seeded = true,
-                seededIds = s.seededIds + done + missing.map { it.id },
+                seededIds = s.seededIds + done + missing.map { it.id } +
+                    AppState.DEFAULT_EXTRA_SCHEDULES.map { "schedule:" + it.id },
             )
         }
     }

@@ -107,4 +107,18 @@ class ScheduleMathTest {
         assertEquals(20, s.fadeInSeconds)
         assertTrue(s.scheduleOn)
     }
+
+    @Test fun `default mornings - mahalakshmi 6 30 three times, hanuman chalisa 7 00 once`() {
+        val s = AppState()
+        val (morning, hanuman) = s.schedules
+        assertEquals(6 to 30, morning.hour to morning.minute)
+        assertEquals(3, s.repeatFor(morning))
+        assertEquals(7 to 0, hanuman.hour to hanuman.minute)
+        assertEquals("hanuman-chalisa", hanuman.mantraId)
+        assertEquals(7, hanuman.days.size)
+        assertEquals(1, s.repeatFor(hanuman))
+        // At 6:45 the next session is the Hanuman Chalisa at 7:00.
+        val n = ScheduleMath.next(s.schedules, at("2026-10-05T06:45"))!!
+        assertEquals("hanuman", n.rule.id)
+    }
 }

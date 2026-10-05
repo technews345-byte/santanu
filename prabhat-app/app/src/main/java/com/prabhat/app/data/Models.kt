@@ -27,6 +27,8 @@ data class ScheduleRule(
     /** The mantra to play, or null for the default mantra. */
     val mantraId: String? = null,
     val enabled: Boolean = true,
+    /** Plays for this session, or null to use the app's repeat setting. */
+    val repeat: Int? = null,
 ) {
     companion object {
         val ALL_DAYS = (1..7).toSet()
@@ -43,7 +45,7 @@ data class ResumePoint(val mantraId: String, val positionMs: Long, val played: I
 @Serializable
 data class AppState(
     val mantras: List<Mantra> = emptyList(),
-    val schedules: List<ScheduleRule> = listOf(ScheduleRule(id = "morning")),
+    val schedules: List<ScheduleRule> = listOf(ScheduleRule(id = "morning")) + DEFAULT_EXTRA_SCHEDULES,
     val scheduleOn: Boolean = true,
     val defaultMantraId: String? = null,
     /** How many times a session plays the mantra; [CONTINUOUS] loops until stopped. */
@@ -71,10 +73,15 @@ data class AppState(
 
     /** The mantra a schedule plays: its own choice if still in the library, else the default. */
     fun mantraFor(rule: ScheduleRule?): Mantra? = mantra(rule?.mantraId) ?: defaultMantra
+    fun repeatFor(rule: ScheduleRule?): Int = rule?.repeat ?: repeat
 
     companion object {
         const val CONTINUOUS = 0
         val REPEAT_OPTIONS = listOf(1, 3, 5, 11, 108, CONTINUOUS)
         val FADE_OPTIONS = listOf(0, 5, 10, 20, 30, 60)
+
+        /** Shri Hanuman Chalisa once at 7:00 AM every day (also added once to existing installs). */
+        val HANUMAN_SCHEDULE = ScheduleRule(id = "hanuman", hour = 7, minute = 0, mantraId = "hanuman-chalisa", repeat = 1)
+        val DEFAULT_EXTRA_SCHEDULES = listOf(HANUMAN_SCHEDULE)
     }
 }
