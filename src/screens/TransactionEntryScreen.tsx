@@ -21,7 +21,7 @@ import { useStore } from '../store/useStore';
 import { evaluateExpression, formatExpressionDisplay, isOperator } from '../utils/calculator';
 import { DEFAULT_CURRENCY } from '../utils/finance';
 import { CategoryType, RecurrenceInterval, TransactionType } from '../types';
-import { format } from 'date-fns';
+import { format } from 'date-fns/format';
 import { showToast } from '../components/Toast';
 import { useReminderStore } from '../store/useReminderStore';
 import { savedMessage } from '../utils/messages';

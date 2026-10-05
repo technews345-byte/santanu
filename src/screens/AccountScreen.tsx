@@ -3,7 +3,8 @@ import { Alert, Image, Pressable, ScrollView, StyleSheet, View } from 'react-nat
 import { Text } from '../theme/type';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns/format';
+import { parseISO } from 'date-fns/parseISO';
 import { Screen } from '../components/Screen';
 import { Card } from '../components/Card';
 import { IconBadge } from '../components/IconBadge';

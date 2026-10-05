@@ -1,4 +1,7 @@
-import { getDaysInMonth, parseISO, startOfMonth, subMonths } from 'date-fns';
+import { getDaysInMonth } from 'date-fns/getDaysInMonth';
+import { parseISO } from 'date-fns/parseISO';
+import { startOfMonth } from 'date-fns/startOfMonth';
+import { subMonths } from 'date-fns/subMonths';
 import { Budget, Category, Transaction } from '../types';
 import { effectiveBudgetFor, monthKeyFor, periodInterval, summarize, transactionsInRange } from './finance';
 

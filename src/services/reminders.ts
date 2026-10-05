@@ -1,6 +1,10 @@
 import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
-import { addDays, format, isSameDay, parseISO, subDays } from 'date-fns';
+import { addDays } from 'date-fns/addDays';
+import { format } from 'date-fns/format';
+import { isSameDay } from 'date-fns/isSameDay';
+import { parseISO } from 'date-fns/parseISO';
+import { subDays } from 'date-fns/subDays';
 import { Category, Transaction } from '../types';
 import { ReminderSettings } from '../store/useReminderStore';
 import { reminderFor, reminderPool, SpendingFocus } from '../utils/messages';

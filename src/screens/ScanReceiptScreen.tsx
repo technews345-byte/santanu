@@ -3,7 +3,7 @@ import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Vie
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as ImagePicker from 'expo-image-picker';
 import { useNavigation } from '@react-navigation/native';
-import { format } from 'date-fns';
+import { format } from 'date-fns/format';
 import { Text } from '../theme/type';
 import { Screen } from '../components/Screen';
 import { Card } from '../components/Card';

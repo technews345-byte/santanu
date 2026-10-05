@@ -1,11 +1,12 @@
-import * as XLSX from 'xlsx';
 import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import * as Print from 'expo-print';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns/format';
+import { parseISO } from 'date-fns/parseISO';
 import { Account, Category, Transaction } from '../types';
 import { formatCurrency, summarize } from './finance';
 import { REPORT_LOGO } from './reportLogo';
+import { buildXlsx } from './xlsx';
 
 interface ExportContext {
   transactions: Transaction[];
@@ -36,16 +37,17 @@ function toRows({ transactions, categories, accounts }: ExportContext) {
 
 export async function exportToXlsx(ctx: ExportContext): Promise<void> {
   const rows = toRows(ctx);
-  const worksheet = XLSX.utils.json_to_sheet(rows);
-  worksheet['!cols'] = [{ wch: 16 }, { wch: 10 }, { wch: 18 }, { wch: 14 }, { wch: 14 }, { wch: 12 }, { wch: 8 }, { wch: 30 }];
+  const header = ['Date', 'Type', 'Category', 'Account', 'To Account', 'Amount', 'Currency', 'Note'] as const;
+  const bytes = buildXlsx({
+    name: 'Transactions',
+    header: [...header],
+    rows: rows.map((r) => header.map((key) => r[key])),
+    widths: [16, 10, 18, 14, 14, 12, 8, 30],
+  });
 
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'Transactions');
-
-  const buffer: ArrayBuffer = XLSX.write(workbook, { type: 'array', bookType: 'xlsx' });
   const file = new File(Paths.cache, `transactions_${Date.now()}.xlsx`);
   file.create({ overwrite: true });
-  file.write(new Uint8Array(buffer));
+  file.write(bytes);
 
   if (await Sharing.isAvailableAsync()) {
     await Sharing.shareAsync(file.uri, {

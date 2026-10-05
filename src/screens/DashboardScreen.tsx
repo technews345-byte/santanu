@@ -1,7 +1,7 @@
 import React, { useId, useMemo, useState } from 'react';
 import { Image, Platform, Pressable, SectionList, StyleSheet, View } from 'react-native';
 import { Text } from '../theme/type';
-import { format } from 'date-fns';
+import { format } from 'date-fns/format';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import Svg, { Defs, RadialGradient, Rect, Stop } from 'react-native-svg';

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Alert, AppState, Linking, Platform, Pressable, StyleSheet, Switch, View } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { format } from 'date-fns';
+import { format } from 'date-fns/format';
 import { Text } from '../theme/type';
 import { useTheme } from '../theme/ThemeContext';
 import { fontSizes, spacing } from '../theme/tokens';
