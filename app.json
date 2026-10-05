@@ -67,11 +67,7 @@
           "image": "./assets/splash-icon.png",
           "imageWidth": 190,
           "resizeMode": "contain",
-          "backgroundColor": "#0B0E14",
-          "dark": {
-            "image": "./assets/splash-icon.png",
-            "backgroundColor": "#0B0E14"
-          }
+          "backgroundColor": "#0B0E14"
         }
       ],
       "expo-system-ui",
@@ -91,6 +87,7 @@
         }
       ],
       "./plugins/withMlkitOcrModel",
+      "./plugins/withLocaleFilter",
       [
         "expo-build-properties",
         {

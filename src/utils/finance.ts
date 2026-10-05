@@ -1,17 +1,15 @@
-import {
-  startOfDay,
-  endOfDay,
-  startOfWeek,
-  endOfWeek,
-  startOfMonth,
-  endOfMonth,
-  startOfYear,
-  endOfYear,
-  subMonths,
-  format,
-  isWithinInterval,
-  parseISO,
-} from 'date-fns';
+import { startOfDay } from 'date-fns/startOfDay';
+import { endOfDay } from 'date-fns/endOfDay';
+import { startOfWeek } from 'date-fns/startOfWeek';
+import { endOfWeek } from 'date-fns/endOfWeek';
+import { startOfMonth } from 'date-fns/startOfMonth';
+import { endOfMonth } from 'date-fns/endOfMonth';
+import { startOfYear } from 'date-fns/startOfYear';
+import { endOfYear } from 'date-fns/endOfYear';
+import { subMonths } from 'date-fns/subMonths';
+import { format } from 'date-fns/format';
+import { isWithinInterval } from 'date-fns/isWithinInterval';
+import { parseISO } from 'date-fns/parseISO';
 import { Account, Budget, PeriodKey, Transaction } from '../types';
 
 export const DEFAULT_CURRENCY = 'INR';

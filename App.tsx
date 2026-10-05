@@ -18,7 +18,7 @@ import { initAds, preloadAppOpenAd, showAppOpenAd } from './src/services/ads';
 import { configureNotifications, ensurePermission, remindersSupported, rescheduleReminders } from './src/services/reminders';
 import { useReminderStore } from './src/store/useReminderStore';
 import { showToast, ToastHost } from './src/components/Toast';
-import { format } from 'date-fns';
+import { format } from 'date-fns/format';
 import { fontSizes, radius, spacing } from './src/theme/tokens';
 
 // Hold the native splash until the branded one is on screen, so the handoff
