@@ -542,3 +542,41 @@ test('password reset link works once and logout ends the session', async () => {
   await owner.post('/api/auth/logout', {});
   assert.equal((await owner.get('/api/auth/me')).status, 401);
 });
+
+test('security headers, no caching of signed-in data, and forged tokens are refused', async () => {
+  const home = await guest.get('/');
+  assert.match(home.headers.get('content-security-policy') || '', /script-src 'self'/);
+  assert.equal(home.headers.get('x-content-type-options'), 'nosniff');
+  assert.match(home.headers.get('permissions-policy') || '', /camera=\(\)/);
+  assert.equal(home.headers.get('x-powered-by'), null);
+  const me = await owner.get('/api/auth/me');
+  assert.equal(me.headers.get('cache-control'), 'no-store');
+  // An unsigned ("alg: none") token claiming to be the owner must not work.
+  const b64 = o => Buffer.from(JSON.stringify(o)).toString('base64url');
+  const forged = `${b64({ alg: 'none', typ: 'JWT' })}.${b64({ sub: 1, sid: 1, aud: 'bm-admin' })}.`;
+  const r = await fetch(BASE + '/api/auth/me', { headers: { Cookie: `bm_at=${forged}` } });
+  assert.equal(r.status, 401);
+  // Server files outside public/ are never served.
+  for (const p of ['/.env', '/package.json', '/src/config.js', '/data/bowl-mania.db', '/uploads/../src/config.js']) {
+    const x = await fetch(BASE + p);
+    assert.ok(x.status === 404 || !(await x.text()).includes('jwtSecret'), `${p} must not be exposed`);
+  }
+});
+
+test('passwords use strong scrypt settings and weak or broken hashes are handled', async () => {
+  const { hashPassword, verifyPassword, needsRehash } = await import('../src/services/passwords.js');
+  const h = await hashPassword('Correct horse 42');
+  assert.match(h, /^scrypt\$65536\$8\$2\$/);
+  assert.equal(await verifyPassword('Correct horse 42', h), true);
+  assert.equal(await verifyPassword('wrong', h), false);
+  assert.equal(needsRehash(h), false);
+  assert.equal(needsRehash('scrypt$16384$8$1$c2FsdA$aGFzaA'), true);
+  for (const broken of ['', 'plain-text', 'scrypt$x$y$z$$', 'scrypt$16384$8$1$c2FsdA$c2hvcnQ']) assert.equal(await verifyPassword('x', broken), false);
+});
+
+test('coupon codes cannot be brute-forced', async () => {
+  const body = { items: [line('Morning Glow Bowl', '500 ml', 1)], fulfilment: 'pickup', coupon_code: 'GUESS' };
+  let limited = false;
+  for (let i = 0; i < 20 && !limited; i++) limited = (await guest.post('/api/coupons/validate', { ...body, coupon_code: 'GUESS' + i })).status === 429;
+  assert.ok(limited, 'repeated coupon guesses are rate limited');
+});

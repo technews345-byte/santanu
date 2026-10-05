@@ -4,8 +4,10 @@ import path from 'node:path';
 import { config, ROOT } from '../config.js';
 import { log } from '../lib/logger.js';
 
-fs.mkdirSync(path.dirname(config.dbFile), { recursive: true });
+fs.mkdirSync(path.dirname(config.dbFile), { recursive: true, mode: 0o700 });
 export const db = new Database(config.dbFile);
+// Only the app's own user may read the database (customer details, password hashes, sessions).
+try { fs.chmodSync(config.dbFile, 0o600); } catch (e) { log.warn('could not restrict database file permissions', { error: e.message }); }
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
 db.pragma('busy_timeout = 5000');

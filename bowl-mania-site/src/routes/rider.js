@@ -12,7 +12,7 @@ import { parse, z, text, email, ymd } from '../lib/validate.js';
 import { token, sha256 } from '../lib/ids.js';
 import { sqlNow, localParts } from '../lib/time.js';
 import { audit } from '../lib/audit.js';
-import { hashPassword, verifyPassword } from '../services/passwords.js';
+import { hashPassword, verifyPassword, needsRehash } from '../services/passwords.js';
 import { loadAdmin } from '../services/auth.js';
 import { getSetting } from '../services/settings.js';
 import { notifyAdmins } from '../services/notifications.js';
@@ -22,8 +22,9 @@ import * as R from '../services/riders.js';
 import * as A from '../services/attendance.js';
 
 const r = Router();
-const APP = 'Bowl Mania Rider app';
+const APP = 'Bowl Mania Rider app'; // must match services/auth.js
 const loginLimit = rateLimit({ windowMs: 15 * 60_000, max: 10, key: req => req.ip + '|' + String(req.body?.email || '').toLowerCase(), message: 'Too many sign-in attempts. Try again in 15 minutes.' });
+const accountLimit = rateLimit({ windowMs: 60 * 60_000, max: 30, key: req => 'rider-acct|' + String(req.body?.email || '').toLowerCase(), message: 'Too many sign-in attempts for this account. Try again in an hour.' });
 const otpLimit = rateLimit({ windowMs: 10 * 60_000, max: 30, key: req => 'otp|' + (req.admin?.id || req.ip), message: 'Too many code attempts. Please wait a few minutes.' });
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 8 * 1024 * 1024, files: 2, fields: 20 } });
 let dummyHash; hashPassword('timing-equaliser-2').then(h => { dummyHash = h; });
@@ -58,12 +59,13 @@ function riderAuth(req, res, next) {
 }
 
 // ---------- Session ----------
-r.post('/login', loginLimit, ah(async (req, res) => {
+r.post('/login', loginLimit, accountLimit, ah(async (req, res) => {
   const b = parse(z.object({ email, password: z.string().min(1, 'Enter your password.').max(200) }), req.body);
   const row = db.prepare('SELECT id, password_hash, status FROM admins WHERE email=?').get(b.email);
   const ok = await verifyPassword(b.password, row?.password_hash || dummyHash);
   if (!row || !ok) throw unauthorized('Wrong email or password.');
   if (row.status !== 'active') throw unauthorized('This account is disabled. Ask the owner to enable it.');
+  if (needsRehash(row.password_hash)) db.prepare('UPDATE admins SET password_hash=? WHERE id=?').run(await hashPassword(b.password), row.id);
   const admin = loadAdmin(row.id);
   if (!can(admin, 'delivery.update')) throw forbidden('This app is for delivery staff. Ask the owner to give your account the Delivery Staff role.');
   const t = token(32);

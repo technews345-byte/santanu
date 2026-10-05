@@ -18,6 +18,10 @@ const r = Router();
 const orderLimit = rateLimit({ windowMs: 10 * 60_000, max: 20, message: 'Too many orders from this device. Please wait a few minutes.' });
 const formLimit = rateLimit({ windowMs: 60 * 60_000, max: 10, message: 'Too many messages. Please try again later.' });
 const trackLimit = rateLimit({ windowMs: 60_000, max: 60 });
+const quoteLimit = rateLimit({ windowMs: 60_000, max: 60, message: 'Too many requests. Please slow down a little.' });
+// Coupon codes must not be guessable by trying many in a row.
+const couponLimit = rateLimit({ windowMs: 10 * 60_000, max: 15, message: 'Too many coupon attempts. Please wait a few minutes.' });
+const paymentLimit = rateLimit({ windowMs: 10 * 60_000, max: 30, message: 'Too many payment requests. Please wait a few minutes.' });
 
 const paymentOptions = () => {
   const p = getSetting('payments');
@@ -46,11 +50,11 @@ r.get('/public/config', (req, res) => {
 });
 r.get('/menu', (req, res) => { res.set('Cache-Control', 'no-store'); res.json(publicMenu()); });
 r.get('/delivery/areas', (req, res) => res.json(activeAreas().map(publicArea)));
-r.post('/delivery/calculate', ah(async (req, res) => {
+r.post('/delivery/calculate', quoteLimit, ah(async (req, res) => {
   const b = parse(z.object({ lat: z.coerce.number(), lng: z.coerce.number() }), req.body);
   res.json(quoteDelivery(b.lat, b.lng));
 }));
-r.get('/public/slots', ah(async (req, res) => {
+r.get('/public/slots', quoteLimit, ah(async (req, res) => {
   const { area_id } = parse(z.object({ area_id: z.coerce.number().int().positive() }), req.query);
   res.json({ slots: upcomingSlots(area_id, 3), status: restaurantStatus() });
 }));
@@ -65,13 +69,13 @@ const cartSchema = z.object({
   fulfilment: z.enum(['delivery', 'pickup']), area_id: z.coerce.number().int().positive().optional(),
   lat: z.coerce.number().optional(), lng: z.coerce.number().optional(), coupon_code: text(40).optional().default(''), phone: optPhone
 });
-r.post('/checkout/quote', ah(async (req, res) => {
+r.post('/checkout/quote', quoteLimit, ah(async (req, res) => {
   const b = parse(cartSchema, req.body);
   const q = priceCart(b);
   const { _offer, _coupon, ...pub } = q;
   res.json({ ...pub, slots: q.area ? upcomingSlots(q.area.id, 3) : [], payments: paymentOptions(), status: restaurantStatus() });
 }));
-r.post('/coupons/validate', ah(async (req, res) => {
+r.post('/coupons/validate', couponLimit, ah(async (req, res) => {
   const b = parse(cartSchema.extend({ coupon_code: text(40, 1) }), req.body);
   const q = priceCart(b);
   res.json(q.coupon);
@@ -86,12 +90,12 @@ r.post('/orders', orderLimit, ah(async (req, res) => {
   }
   res.status(201).json(base);
 }));
-r.post('/payments/verify', ah(async (req, res) => {
+r.post('/payments/verify', paymentLimit, ah(async (req, res) => {
   const b = parse(z.object({ razorpay_order_id: z.string().max(60), razorpay_payment_id: z.string().max(60), razorpay_signature: z.string().max(200) }), req.body);
   const { order } = await verifyCheckout(b);
   res.json({ ok: order.payment_status === 'paid', tracking_token: order.tracking_token, order_number: order.order_number });
 }));
-r.post('/payments/failed', ah(async (req, res) => {
+r.post('/payments/failed', paymentLimit, ah(async (req, res) => {
   const b = parse(z.object({ razorpay_order_id: z.string().max(60), reason: text(300).optional().default('') }), req.body);
   markFailed(b.razorpay_order_id, b.reason || 'Payment failed or was cancelled');
   res.json({ ok: true });

@@ -6,6 +6,7 @@ import fs from 'node:fs';
 import { config, ROOT } from './config.js';
 import { log } from './lib/logger.js';
 import { errorHandler, notFoundApi } from './middleware/errors.js';
+import { rateLimit } from './middleware/rateLimit.js';
 import authRoutes from './routes/auth.js';
 import publicRoutes, { webhooks } from './routes/public.js';
 import adminRoutes from './routes/admin/index.js';
@@ -44,7 +45,17 @@ export function createApp() {
     next();
   });
 
-  app.use('/api', webhooks);                       // raw bodies for signature checks
+  // Turn off browser features the site never uses.
+  app.use((req, res, next) => {
+    res.set('Permissions-Policy', 'camera=(), microphone=(), usb=(), serial=(), bluetooth=(), payment=(self "https://checkout.razorpay.com" "https://api.razorpay.com"), geolocation=(self)');
+    next();
+  });
+
+  app.use('/api', webhooks);                       // raw bodies for signature checks (not rate limited)
+  // Overall ceiling per IP for the API; individual routes have tighter limits where it matters.
+  app.use('/api', rateLimit({ windowMs: 60_000, max: Number(process.env.API_RATE_LIMIT_PER_MIN || 600) }));
+  // Signed-in responses carry private data: never store them in browser or proxy caches.
+  app.use(['/api/admin', '/api/auth', '/api/rider'], (req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
   app.use(express.json({ limit: '200kb' }));
   app.use(cookieParser());
   app.use('/api/auth', authRoutes);
