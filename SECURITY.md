@@ -148,6 +148,39 @@ suggested automated fix downgrades Expo to 44 and was not applied.
    this device's sync, but cannot prevent another already signed-in device writing
    during deletion or provide atomic deletion across Auth and Firestore.
 
+## Creating the release signing key
+
+Create the key on your own device, never in a shared or cloud session, and
+never paste it into a chat, issue or commit.
+
+1. Get `keytool`:
+   - **Computer:** install Java (any JDK 17+); `keytool` comes with it.
+   - **Android phone only:** install **Termux** from F-Droid, then run
+     `pkg install openjdk-17` and `termux-setup-storage`.
+2. Create the key (it asks for a password; use a long one and write it down):
+   `keytool -genkeypair -v -storetype PKCS12 -keystore spendly-release.keystore -alias spendly -keyalg RSA -keysize 4096 -validity 10000 -dname "CN=Spendly"`
+3. Turn it into text for GitHub:
+   - Computer (Linux/Termux): `base64 -w0 spendly-release.keystore > keystore.txt`
+   - macOS: `base64 -i spendly-release.keystore -o keystore.txt`
+   - Windows PowerShell: `[Convert]::ToBase64String([IO.File]::ReadAllBytes("spendly-release.keystore")) > keystore.txt`
+   - Termux: `cp keystore.txt ~/storage/downloads/` to open it from Files.
+4. GitHub → repository → **Settings → Secrets and variables → Actions → New
+   repository secret**, add four secrets:
+   - `ANDROID_KEYSTORE_BASE64` — the whole contents of `keystore.txt`
+   - `ANDROID_KEYSTORE_PASSWORD` — the password from step 2
+   - `ANDROID_KEY_ALIAS` — `spendly`
+   - `ANDROID_KEY_PASSWORD` — the same password (PKCS12 uses one password)
+5. **Back up** `spendly-release.keystore` and the password somewhere private
+   (e.g. a password manager). If it is lost, the app can never be updated
+   again. Then delete `keystore.txt`.
+6. Re-run the **Build Android APK** workflow. Its run summary shows the
+   certificate's **SHA-1**. Add it to:
+   - Google Cloud Console → APIs & Services → Credentials → the **Android**
+     OAuth client for `com.santanu.spendly` (create one with this SHA-1 if needed);
+   - Firebase Console → Project settings → your Android app → **Add fingerprint**.
+7. On the phone: export anything saved without signing in, uninstall the old
+   app (different signer), install the new APK, and sign in again.
+
 ## References
 
 - https://firebase.google.com/support/guides/security-checklist
