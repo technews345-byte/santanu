@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { nextOccurrence } from '../utils/recurrence';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
 import { Text, TextInput } from '../theme/type';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -95,6 +96,7 @@ export default function TransactionEntryScreen() {
   const selectedAccount = accounts.find((a) => a.id === accountId);
   const selectedToAccount = accounts.find((a) => a.id === toAccountId);
 
+  const saving = useRef(false);
   const amount = evaluateExpression(expression);
   const typeColor = TYPE_CONFIG[type].color(theme);
 
@@ -108,7 +110,9 @@ export default function TransactionEntryScreen() {
       return;
     }
     if (key === '=') {
-      setExpression(String(evaluateExpression(expression)));
+      const value = evaluateExpression(expression);
+      if (Number.isFinite(value)) setExpression(String(value));
+      else Alert.alert('Invalid calculation', 'Check the amount and try again.');
       return;
     }
     setExpression((prev) => {
@@ -139,7 +143,8 @@ export default function TransactionEntryScreen() {
   };
 
   const handleSave = async () => {
-    if (amount <= 0) {
+    if (saving.current) return;
+    if (!Number.isFinite(amount) || amount <= 0) {
       Alert.alert('Enter an amount', 'Amount must be greater than zero.');
       return;
     }
@@ -163,29 +168,38 @@ export default function TransactionEntryScreen() {
       date: date.toISOString(),
       attachments,
       recurrence,
-      nextOccurrence: null,
+      nextOccurrence: existing && existing.date === date.toISOString() && existing.recurrence === recurrence
+        ? existing.nextOccurrence
+        : nextOccurrence(date.toISOString(), recurrence),
     };
 
-    if (existing) {
-      await updateTransaction(existing.id, payload);
-    } else {
-      await addTransaction(payload);
-    }
-    navigation.goBack();
+    saving.current = true;
+    try {
+      if (existing) {
+        await updateTransaction(existing.id, payload);
+      } else {
+        await addTransaction(payload);
+      }
+      navigation.goBack();
 
-    const reminders = useReminderStore.getState();
-    if (reminders.confirmations) {
-      const category = type === 'transfer' ? undefined : categories.find((c) => c.id === categoryId);
-      savedCount += 1;
-      showToast(
-        savedMessage({
-          type,
-          categoryName: category?.name,
-          categoryIcon: category?.icon,
-          edited: !!existing,
-          variant: savedCount % 3 === 0 ? 1 : 0,
-        })
-      );
+      const reminders = useReminderStore.getState();
+      if (reminders.confirmations) {
+        const category = type === 'transfer' ? undefined : categories.find((c) => c.id === categoryId);
+        savedCount += 1;
+        showToast(
+          savedMessage({
+            type,
+            categoryName: category?.name,
+            categoryIcon: category?.icon,
+            edited: !!existing,
+            variant: savedCount % 3 === 0 ? 1 : 0,
+          })
+        );
+      }
+    } catch {
+      Alert.alert('Could not save', 'Your entry is still here. Please try again.');
+    } finally {
+      saving.current = false;
     }
   };
 
@@ -264,6 +278,7 @@ export default function TransactionEntryScreen() {
               onBlur={() => setNoteFocused(false)}
               placeholder="Add a note"
               placeholderTextColor={theme.textSecondary}
+              maxLength={1000}
               value={note}
               onChangeText={setNote}
               style={[styles.noteInput, { color: theme.text }]}

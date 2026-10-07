@@ -29,7 +29,15 @@ export function evaluateExpression(expression: string): number {
   const rawTokens = sanitized.match(/(\d+\.?\d*|\.\d+|[+\-*/%])/g);
   if (!rawTokens || rawTokens.length === 0) return 0;
 
+  // A leading minus can result from pressing '=' after a subtraction.
+  if (rawTokens[0] === '-') rawTokens.unshift('0');
   const tokens = resolvePercents(rawTokens);
+  // Ignore a trailing operator while the next operand is being entered, but
+  // never silently accept malformed decimals or missing operands.
+  if (isOperator(tokens[tokens.length - 1])) tokens.pop();
+  if (tokens.some((token, index) => index % 2 === 0
+    ? !/^-?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?$/.test(token) || !Number.isFinite(Number(token))
+    : !isOperator(token))) return NaN;
   if (tokens.length === 0) return 0;
 
   // Pass 1: handle * and /
@@ -44,7 +52,7 @@ export function evaluateExpression(expression: string): number {
     if (op === '*' || op === '/') {
       const prev = stage1.pop() as number;
       const nextVal = num(next);
-      stage1.push(op === '*' ? prev * nextVal : nextVal !== 0 ? prev / nextVal : 0);
+      stage1.push(op === '*' ? prev * nextVal : nextVal !== 0 ? prev / nextVal : NaN);
     } else {
       stage1.push(op, num(next));
     }

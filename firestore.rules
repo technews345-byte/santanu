@@ -79,26 +79,26 @@ service cloud.firestore {
   function isAccount(data) {
     return data.keys().hasOnly(['id', 'name', 'type', 'color', 'icon', 'initialBalance', 'currency',
                                 'archived', 'sortOrder', 'createdAt', 'updatedAt', 'deletedAt'])
-        && str(data.name, 80)
-        && str(data.type, 24)
-        && str(data.color, 32)
+        && str(data.name, 80) && data.name.size() > 0
+        && data.type in ['cash', 'checking', 'savings', 'credit_card', 'wallet', 'bank']
+        && str(data.color, 32) && data.color.matches('^#[0-9a-fA-F]{6}$')
         && str(data.icon, 64)
         && money(data.initialBalance)
         && str(data.currency, 8)
         && flag(data.archived)
-        && data.sortOrder is number
+        && data.sortOrder is int && data.sortOrder >= 0
         && str(data.createdAt, 40);
   }
 
   function isCategory(data) {
     return data.keys().hasOnly(['id', 'name', 'type', 'color', 'icon', 'archived', 'sortOrder',
                                 'createdAt', 'updatedAt', 'deletedAt'])
-        && str(data.name, 80)
+        && str(data.name, 80) && data.name.size() > 0
         && data.type in ['expense', 'income', 'investment']
-        && str(data.color, 32)
+        && str(data.color, 32) && data.color.matches('^#[0-9a-fA-F]{6}$')
         && str(data.icon, 64)
         && flag(data.archived)
-        && data.sortOrder is number
+        && data.sortOrder is int && data.sortOrder >= 0
         && optStr(data.get('createdAt', null), 40);
   }
 
@@ -107,10 +107,11 @@ service cloud.firestore {
                                 'categoryId', 'note', 'date', 'attachments', 'recurrence',
                                 'nextOccurrence', 'createdAt', 'updatedAt', 'deletedAt'])
         && data.type in ['expense', 'income', 'transfer', 'investment']
-        && money(data.amount)
+        && money(data.amount) && data.amount > 0
         && str(data.currency, 8)
         && str(data.accountId, 128)
         && optStr(data.get('toAccountId', null), 128)
+        && (data.type != 'transfer' || (data.toAccountId is string && data.toAccountId.size() > 0 && data.toAccountId != data.accountId))
         && optStr(data.get('categoryId', null), 128)
         && str(data.note, 1000)
         && str(data.date, 40)
@@ -126,8 +127,8 @@ service cloud.firestore {
     return data.keys().hasOnly(['id', 'categoryId', 'monthKey', 'amount', 'isRecurring',
                                 'createdAt', 'updatedAt', 'deletedAt'])
         && str(data.categoryId, 128)
-        && str(data.monthKey, 16)
-        && money(data.amount)
+        && str(data.monthKey, 16) && data.monthKey.matches('^(recurring|[0-9]{4}-(0[1-9]|1[0-2]))$')
+        && money(data.amount) && data.amount > 0
         && flag(data.isRecurring)
         && optStr(data.get('createdAt', null), 40);
   }

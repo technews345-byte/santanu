@@ -32,19 +32,16 @@ export type OwnerTransition = 'first-sign-in' | 'same-account' | 'switched-accou
  */
 export async function claimLocalDataFor(uid: string): Promise<OwnerTransition> {
   const previous = await getMeta(OWNER_KEY);
-  await setMeta(OWNER_KEY, uid);
-
-  if (!previous) return 'first-sign-in';
+  if (!previous) {
+    await setMeta(OWNER_KEY, uid);
+    return 'first-sign-in';
+  }
   if (previous === uid) return 'same-account';
 
   const { clearLocalData } = await import('../db/syncStore');
   await clearLocalData();
   await setMeta(OWNER_KEY, uid);
   return 'switched-account';
-}
-
-export async function releaseOwner(): Promise<void> {
-  await setMeta(OWNER_KEY, '');
 }
 
 export interface SyncOutcome {
@@ -60,30 +57,36 @@ let inFlight: Promise<SyncOutcome> | null = null;
  * Runs whole-table at a time and is safe to call repeatedly — an interrupted
  * run leaves rows dirty, so the next one simply retries them.
  */
-export async function runSync(adapter: RemoteAdapter): Promise<SyncOutcome> {
+export async function runSync(adapter: RemoteAdapter, isCurrent: () => boolean = () => true): Promise<SyncOutcome> {
   if (inFlight) return inFlight;
 
   inFlight = (async () => {
     let pulled = 0;
     let pushed = 0;
 
+    const checkSession = () => { if (!isCurrent()) throw new Error('Sign-in changed during sync'); };
     for (const table of SYNCED_TABLES) {
+      checkSession();
       const cursorKey = `cursor:${table}`;
       const since = await getMeta(cursorKey);
 
       const remoteRows = await adapter.pull(table, since);
+      checkSession();
       const localRows = await readAll(table);
       const dirtyIds = await readDirtyIds(table);
 
       const plan = planMerge(localRows, remoteRows, dirtyIds);
 
-      await applyRemote(table, plan.applyLocally);
+      checkSession();
+      await applyRemote(table, plan.applyLocally, localRows);
       pulled += plan.applyLocally.length;
 
       if (plan.pushRemote.length > 0) {
+        checkSession();
         await adapter.push(table, plan.pushRemote);
         // Only cleared once the server has them, so a failed push is retried.
-        await markClean(table, plan.pushRemote.map((r) => r.id));
+        checkSession();
+        await markClean(table, plan.pushRemote);
         pushed += plan.pushRemote.length;
       }
 

@@ -50,3 +50,8 @@ GoogleService-Info.plist
 client_secret*.json
 service-account*.json
 *-firebase-adminsdk-*.json
+
+
+# Local emulator output
+*-debug.log
+.firebase/

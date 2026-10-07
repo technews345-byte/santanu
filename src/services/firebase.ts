@@ -1,7 +1,7 @@
 import { FirebaseApp, initializeApp, getApps } from 'firebase/app';
 import { Auth, getAuth, initializeAuth, useDeviceLanguage } from 'firebase/auth';
 import { Firestore, initializeFirestore } from 'firebase/firestore';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { authStorage } from './authStorage';
 import { getCloudConfig, isCloudConfigured } from './cloudConfig';
 
 let app: FirebaseApp | null = null;
@@ -29,7 +29,7 @@ export function getFirebaseAuth(): Auth {
       getReactNativePersistence?: (storage: unknown) => unknown;
     };
     authInstance = getReactNativePersistence
-      ? initializeAuth(instance, { persistence: getReactNativePersistence(AsyncStorage) as never })
+      ? initializeAuth(instance, { persistence: getReactNativePersistence(authStorage) as never })
       : getAuth(instance);
   } catch {
     authInstance = getAuth(instance);

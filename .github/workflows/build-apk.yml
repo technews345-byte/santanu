@@ -24,7 +24,7 @@ jobs:
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: 20
+          node-version: 24
 
       - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
         with:
@@ -54,9 +54,8 @@ jobs:
       # Signing. The generated project signs release builds with React
       # Native's public debug key, which anyone can download — so anyone could
       # sign an "update" that installs over Spendly and inherits its data.
-      # When a private upload key is stored in the repository's Actions
-      # secrets (see SECURITY.md), it signs the APK instead. Secrets never
-      # reach the log, and the decoded key is deleted after the build.
+      # A private release key is mandatory. Never publish a debug-signed APK.
+      # Secrets never reach the log, and the decoded key is deleted after the build.
       - name: Prepare release signing key
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -66,7 +65,8 @@ jobs:
             echo "SIGNING_STORE=$RUNNER_TEMP/release.keystore" >> "$GITHUB_ENV"
             echo "Signing with the private release key."
           else
-            echo "::warning::No ANDROID_KEYSTORE_BASE64 secret: signing with the public debug key. See SECURITY.md."
+            echo "::error::A private release key is required. Configure the ANDROID_KEYSTORE_* secrets before publishing."
+            exit 1
           fi
 
       - name: Build release APK
@@ -79,6 +79,12 @@ jobs:
         # One ABI only: every phone from the last decade is arm64, and building
         # all four multiplies the native compile time.
         run: |
+          for REQUIRED_VALUE in "$SIGNING_STORE" "$STORE_PASSWORD" "$KEY_ALIAS" "$KEY_PASSWORD"; do
+            if [ -z "$REQUIRED_VALUE" ]; then
+              echo "::error::Release signing configuration is incomplete."
+              exit 1
+            fi
+          done
           SIGNING=()
           if [ -n "$SIGNING_STORE" ]; then
             SIGNING=(

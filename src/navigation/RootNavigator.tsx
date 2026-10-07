@@ -1,3 +1,5 @@
+import { ActivityIndicator, View, Pressable } from 'react-native';
+import { Text } from '../theme/type';
 import React, { useEffect, useRef } from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { NavigationContainer, DefaultTheme, DarkTheme, createNavigationContainerRef } from '@react-navigation/native';
@@ -38,6 +40,8 @@ export function RootNavigator() {
   useEffect(() => onReminderTapped(openEntry), []);
   const ready = useAuthStore((s) => s.ready);
   const user = useAuthStore((s) => s.user);
+  const switchingAccount = useAuthStore((s) => s.switchingAccount);
+  const syncError = useAuthStore((s) => s.syncError);
   const guestAcknowledged = useAuthStore((s) => s.guestAcknowledged);
 
   // Someone opening Spendly for the first time is offered the choice up front:
@@ -56,6 +60,18 @@ export function RootNavigator() {
       primary: theme.tint,
     },
   };
+
+  if (switchingAccount) {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.bg }}>
+        {syncError ? (
+          <Pressable onPress={() => useAuthStore.getState().syncNow()}>
+            <Text style={{ color: theme.text }}>Could not prepare your account. Tap to retry.</Text>
+          </Pressable>
+        ) : <ActivityIndicator color={theme.tint} />}
+      </View>
+    );
+  }
 
   return (
     <NavigationContainer

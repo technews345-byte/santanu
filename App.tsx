@@ -14,7 +14,7 @@ import { RootNavigator } from './src/navigation/RootNavigator';
 import { BrandSplash } from './src/components/BrandSplash';
 import { useStore } from './src/store/useStore';
 import { useAuthStore } from './src/store/useAuthStore';
-import { initAds, preloadAppOpenAd, showAppOpenAd } from './src/services/ads';
+import { holdAppOpenAds, initAds, preloadAppOpenAd, showAppOpenAd } from './src/services/ads';
 import { configureNotifications, ensurePermission, remindersSupported, rescheduleReminders } from './src/services/reminders';
 import { useReminderStore } from './src/store/useReminderStore';
 import { showToast, ToastHost } from './src/components/Toast';
@@ -73,22 +73,40 @@ function AppContent() {
     SystemUI.setBackgroundColorAsync(theme.bg).catch(() => {});
   }, [theme.bg]);
 
-  useEffect(() => {
-    if (!hydrated) return;
-    if (!biometricLockEnabled) {
-      setUnlocked(true);
-      return;
-    }
-    authenticate();
-  }, [hydrated, biometricLockEnabled]);
+  const authenticating = useRef(false);
+  const appState = useRef(AppState.currentState);
+  const everUnlocked = useRef(false);
+  if (unlocked) everUnlocked.current = true;
 
-  const authenticate = async () => {
-    const result = await LocalAuthentication.authenticateAsync({
-      promptMessage: 'Unlock Spendly',
-      fallbackLabel: 'Use passcode',
-    });
-    if (result.success) setUnlocked(true);
-  };
+  const authenticate = useCallback(async () => {
+    if (authenticating.current) return;
+    authenticating.current = true;
+    const releaseAds = holdAppOpenAds();
+    try {
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: 'Unlock Spendly',
+        fallbackLabel: 'Use passcode',
+      });
+      if (result.success && appState.current !== 'background') setUnlocked(true);
+    } catch {
+      // Native failures leave the lock screen available for another attempt.
+      setUnlocked(false);
+    } finally {
+      authenticating.current = false;
+      releaseAds();
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated || hydrationError) return;
+    setUnlocked(!biometricLockEnabled);
+    if (biometricLockEnabled) void authenticate();
+  }, [hydrated, hydrationError, biometricLockEnabled, authenticate]);
+
+  useEffect(() => {
+    if (!biometricLockEnabled || unlocked) return;
+    return holdAppOpenAds();
+  }, [biometricLockEnabled, unlocked]);
 
   // An ad on every open: once the app is actually usable after launch, and
   // again each time it is brought back. The service holds the only limits —
@@ -121,14 +139,25 @@ function AppContent() {
 
   useEffect(() => {
     const onChange = (next: AppStateStatus) => {
+      const previous = appState.current;
+      appState.current = next;
+      if (next === 'background' && biometricLockEnabled) {
+        setUnlocked(false);
+        return;
+      }
       if (next !== 'active') return;
+      if (previous === 'background') void hydrate();
+      if (biometricLockEnabled && (previous === 'background' || !unlocked)) {
+        void authenticate();
+        return;
+      }
       if (!unlocked || !splashDone) return;
       showAppOpenAd();
     };
 
     const subscription = AppState.addEventListener('change', onChange);
     return () => subscription.remove();
-  }, [unlocked, splashDone]);
+  }, [unlocked, splashDone, biometricLockEnabled, authenticate]);
 
   const handleSplashShown = useCallback(() => {
     SplashScreen.hideAsync().catch(() => {});
@@ -143,16 +172,21 @@ function AppContent() {
         <Text style={styles.unlockLabel}>Retry</Text>
       </Pressable>
     </View>
-  ) : !unlocked ? (
-    <View style={[styles.center, { backgroundColor: theme.bg }]}>
-      <Ionicons name="lock-closed-outline" size={44} color={theme.textSecondary} />
-      <Text style={[styles.lockTitle, { color: theme.text }]}>Locked</Text>
-      <Pressable style={[styles.unlockButton, { backgroundColor: theme.tint }]} onPress={authenticate}>
-        <Text style={styles.unlockLabel}>Unlock</Text>
-      </Pressable>
-    </View>
   ) : (
-    <RootNavigator />
+    <>
+      {everUnlocked.current && (
+        <View style={[styles.flex, !unlocked && { display: 'none' }]}><RootNavigator /></View>
+      )}
+      {!unlocked && (
+        <View style={[styles.center, { backgroundColor: theme.bg }]}>
+          <Ionicons name="lock-closed-outline" size={44} color={theme.textSecondary} />
+          <Text style={[styles.lockTitle, { color: theme.text }]}>Locked</Text>
+          <Pressable style={[styles.unlockButton, { backgroundColor: theme.tint }]} onPress={authenticate}>
+            <Text style={styles.unlockLabel}>Unlock</Text>
+          </Pressable>
+        </View>
+      )}
+    </>
   );
 
   return (

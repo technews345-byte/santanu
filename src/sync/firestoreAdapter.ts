@@ -1,4 +1,5 @@
-import { collection, doc, getDocs, query, where, writeBatch, orderBy, limit } from 'firebase/firestore';
+import { assertRecord } from '../security/validation';
+import { collection, doc, getDocs, query, writeBatch, orderBy, limit, startAfter, documentId, QueryConstraint } from 'firebase/firestore';
 import { getFirestoreDb } from '../services/firebase';
 import { SyncedTable } from '../db/syncStore';
 import { RemoteAdapter } from './engine';
@@ -13,14 +14,27 @@ const PUSH_CHUNK = 400; // Firestore caps a batch at 500 writes.
 
 export function createFirestoreAdapter(uid: string): RemoteAdapter {
   return {
-    async pull(table, since) {
+    async pull(table, _since) {
       const db = getFirestoreDb();
       const base = collection(db, userPath(uid, table));
-      const q = since
-        ? query(base, where('updatedAt', '>', since), orderBy('updatedAt', 'asc'), limit(2000))
-        : query(base, orderBy('updatedAt', 'asc'), limit(2000));
-      const snapshot = await getDocs(q);
-      return snapshot.docs.map((d) => d.data() as SyncRecord);
+      // updatedAt is a device clock, not a server watermark. A late upload
+      // can be older than our cursor. Page the full collection by document
+      // ID so offline edits and equal-timestamp page boundaries are not lost.
+      const rows: SyncRecord[] = [];
+      let cursor: string | null = null;
+      for (;;) {
+        const constraints: QueryConstraint[] = [orderBy(documentId()), limit(2000)];
+        if (cursor !== null) constraints.push(startAfter(cursor));
+        const snapshot = await getDocs(query(base, ...constraints));
+        for (const document of snapshot.docs) {
+          const row = document.data() as SyncRecord;
+          if (row.id !== document.id) throw new Error('Cloud record ID does not match its path');
+          assertRecord(table, row, true);
+          rows.push(row);
+        }
+        if (snapshot.docs.length < 2000) return rows;
+        cursor = snapshot.docs[snapshot.docs.length - 1].id;
+      }
     },
 
     async push(table, rows) {

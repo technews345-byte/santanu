@@ -1,3 +1,4 @@
+import { assertRecord } from '../security/validation';
 import { getDb } from './client';
 import { Account, Budget, Category, Transaction } from '../types';
 
@@ -74,6 +75,7 @@ export const AccountsRepo = {
     return rows.map(rowToAccount);
   },
   async upsert(account: Account): Promise<void> {
+    assertRecord('accounts', { ...account });
     const db = await getDb();
     await db.runAsync(
       `INSERT INTO accounts (id, name, type, color, icon, initialBalance, currency, archived, sortOrder, createdAt, updatedAt, dirty, deletedAt)
@@ -109,6 +111,7 @@ export const CategoriesRepo = {
     return rows.map(rowToCategory);
   },
   async upsert(category: Category): Promise<void> {
+    assertRecord('categories', { ...category });
     const db = await getDb();
     const now = new Date().toISOString();
     await db.runAsync(
@@ -132,6 +135,7 @@ export const TransactionsRepo = {
     return rows.map(rowToTransaction);
   },
   async upsert(tx: Transaction): Promise<void> {
+    assertRecord('transactions', { ...tx });
     const db = await getDb();
     await db.runAsync(
       `INSERT INTO transactions
@@ -170,7 +174,8 @@ export const BudgetsRepo = {
     const rows = await db.getAllAsync('SELECT * FROM budgets WHERE deletedAt IS NULL');
     return rows.map(rowToBudget);
   },
-  async upsert(budget: Budget): Promise<void> {
+  async upsert(budget: Budget): Promise<Budget> {
+    assertRecord('budgets', { ...budget });
     const db = await getDb();
     const now = new Date().toISOString();
     await db.runAsync(
@@ -180,6 +185,11 @@ export const BudgetsRepo = {
          updatedAt=excluded.updatedAt, dirty=1, deletedAt=NULL`,
       [budget.id, budget.categoryId, budget.monthKey, budget.amount, budget.isRecurring ? 1 : 0, now, now]
     );
+    // A tombstoned category/month keeps its original ID on conflict.
+    const saved = await db.getFirstAsync('SELECT * FROM budgets WHERE categoryId = ? AND monthKey = ?', [
+      budget.categoryId, budget.monthKey,
+    ]);
+    return rowToBudget(saved);
   },
   async remove(id: string): Promise<void> {
     await softDelete('budgets', id);
