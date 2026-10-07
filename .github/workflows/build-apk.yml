@@ -63,7 +63,22 @@ jobs:
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
         run: |
           if [ -n "$KEYSTORE_BASE64" ]; then
-            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.keystore"
+            # Pasting on a phone or from a Windows file can add spaces, line
+            # breaks or a byte-order mark; keep only the base64 alphabet.
+            printf '%s' "$KEYSTORE_BASE64" | tr '_-' '/+' | tr -cd 'A-Za-z0-9+/=' > "$RUNNER_TEMP/keystore.b64"
+            if ! base64 -d "$RUNNER_TEMP/keystore.b64" > "$RUNNER_TEMP/release.keystore" 2>/dev/null; then
+              echo "::error::ANDROID_KEYSTORE_BASE64 is not valid base64. Paste the whole contents of keystore.txt again."
+              exit 1
+            fi
+            rm -f "$RUNNER_TEMP/keystore.b64"
+            if ! keytool -list -keystore "$RUNNER_TEMP/release.keystore" -storepass:env STORE_PASSWORD > /dev/null 2>&1; then
+              echo "::error::The keystore could not be opened: either ANDROID_KEYSTORE_BASE64 is incomplete or ANDROID_KEYSTORE_PASSWORD is wrong."
+              exit 1
+            fi
+            if ! keytool -list -keystore "$RUNNER_TEMP/release.keystore" -storepass:env STORE_PASSWORD -alias "$KEY_ALIAS" > /dev/null 2>&1; then
+              echo "::error::The keystore has no key named by ANDROID_KEY_ALIAS (expected: spendly)."
+              exit 1
+            fi
             echo "SIGNING_STORE=$RUNNER_TEMP/release.keystore" >> "$GITHUB_ENV"
             echo "Signing with the private release key."
             # The certificate fingerprints are public (every installed APK
