@@ -67,7 +67,12 @@ jobs:
             # breaks or a byte-order mark; keep only the base64 alphabet.
             printf '%s' "$KEYSTORE_BASE64" | tr '_-' '/+' | tr -cd 'A-Za-z0-9+/=' > "$RUNNER_TEMP/keystore.b64"
             if ! base64 -d "$RUNNER_TEMP/keystore.b64" > "$RUNNER_TEMP/release.keystore" 2>/dev/null; then
-              echo "::error::ANDROID_KEYSTORE_BASE64 is not valid base64. Paste the whole contents of keystore.txt again."
+              # Safe to show: the length, and whether it starts like every
+              # PKCS12 keystore ("MII…"), reveal nothing about the key.
+              LENGTH=$(wc -c < "$RUNNER_TEMP/keystore.b64")
+              if head -c 3 "$RUNNER_TEMP/keystore.b64" | grep -q '^MII'; then STARTS=yes; else STARTS=no; fi
+              echo "Base64 characters received: $LENGTH (a whole number of 4-character groups: $([ $((LENGTH % 4)) -eq 0 ] && echo yes || echo no)); starts like a keystore: $STARTS"
+              echo "::error::ANDROID_KEYSTORE_BASE64 is not valid base64. It is probably cut short: paste the whole contents of keystore.txt again."
               exit 1
             fi
             rm -f "$RUNNER_TEMP/keystore.b64"
