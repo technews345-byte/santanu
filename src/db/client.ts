@@ -263,9 +263,16 @@ export function getDb(): Promise<SQLite.SQLiteDatabase> {
     dbPromise = (async () => {
       const db = await SQLite.openDatabaseAsync('expense_budget.db');
       await db.execAsync(SCHEMA_SQL);
-      await seedIfEmpty(db);
+      // All or nothing: interrupted halfway, a retry would see a partly
+      // seeded table and skip what was missing.
+      await db.withTransactionAsync(() => seedIfEmpty(db));
       return db;
     })();
+    // A failed open must not be remembered: cached, it would fail every
+    // later attempt — the Retry button included — until the app restarted.
+    dbPromise.catch(() => {
+      dbPromise = null;
+    });
   }
   return dbPromise;
 }

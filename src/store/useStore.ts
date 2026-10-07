@@ -59,8 +59,12 @@ export const useStore = create<StoreState>((set, get) => ({
   supportCount: 0,
 
   hydrate: async () => {
-    try {
-      const [accounts, categories, transactions, budgets, storedActive, storedVisible, storedBiometric, storedSupport] = await Promise.all([
+    // Loading only reads, and the database's own setup steps are safe to
+    // repeat, so a transient native failure on the first attempt (one was
+    // seen in a race inside the SQLite bridge) gets one quiet retry before
+    // the error screen is shown.
+    const load = () =>
+      Promise.all([
         AccountsRepo.list(),
         CategoriesRepo.list(),
         TransactionsRepo.list(),
@@ -70,6 +74,15 @@ export const useStore = create<StoreState>((set, get) => ({
         AsyncStorage.getItem(BIOMETRIC_KEY),
         AsyncStorage.getItem(SUPPORT_COUNT_KEY),
       ]);
+    try {
+      let loaded: Awaited<ReturnType<typeof load>>;
+      try {
+        loaded = await load();
+      } catch {
+        await new Promise((resolve) => setTimeout(resolve, 400));
+        loaded = await load();
+      }
+      const [accounts, categories, transactions, budgets, storedActive, storedVisible, storedBiometric, storedSupport] = loaded;
       set({
         accounts,
         categories,
