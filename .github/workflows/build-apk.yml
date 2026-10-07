@@ -59,11 +59,26 @@ jobs:
       - name: Prepare release signing key
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
         run: |
           if [ -n "$KEYSTORE_BASE64" ]; then
             echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.keystore"
             echo "SIGNING_STORE=$RUNNER_TEMP/release.keystore" >> "$GITHUB_ENV"
             echo "Signing with the private release key."
+            # The certificate fingerprints are public (every installed APK
+            # carries them). Google sign-in needs the SHA-1, so show it in the
+            # run summary. A wrong password or alias also fails here, early.
+            keytool -list -v -keystore "$RUNNER_TEMP/release.keystore" -storepass:env STORE_PASSWORD -alias "$KEY_ALIAS" \
+              | grep -E '^\s*SHA(1|256):' | sed 's/^\s*//' > "$RUNNER_TEMP/fingerprints.txt"
+            cat "$RUNNER_TEMP/fingerprints.txt"
+            {
+              echo "### Release signing certificate"
+              echo "Add the SHA-1 to the Android OAuth client and to Firebase project settings."
+              echo '```'
+              cat "$RUNNER_TEMP/fingerprints.txt"
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
           else
             echo "::error::A private release key is required. Configure the ANDROID_KEYSTORE_* secrets before publishing."
             exit 1
