@@ -31,17 +31,25 @@ export default function AccountFormScreen() {
   const [initialBalance, setInitialBalance] = useState(existing ? String(existing.initialBalance) : '0');
 
   const handleSave = async () => {
-    if (!name.trim()) {
-      Alert.alert('Enter a name');
-      return;
+    try {
+      if (!name.trim()) {
+        Alert.alert('Enter a name');
+        return;
+      }
+      const balance = Number(initialBalance);
+      if (!Number.isFinite(balance)) {
+        Alert.alert('Enter a valid balance');
+        return;
+      }
+      if (existing) {
+        await updateAccount(existing.id, { name: name.trim(), type, color, icon, initialBalance: balance });
+      } else {
+        await addAccount({ name: name.trim(), type, color, icon, initialBalance: balance, currency: 'INR' });
+      }
+      navigation.goBack();
+    } catch (error: any) {
+      Alert.alert("Could not save", error?.message ?? "Please try again.");
     }
-    const balance = parseFloat(initialBalance) || 0;
-    if (existing) {
-      await updateAccount(existing.id, { name: name.trim(), type, color, icon, initialBalance: balance });
-    } else {
-      await addAccount({ name: name.trim(), type, color, icon, initialBalance: balance, currency: 'INR' });
-    }
-    navigation.goBack();
   };
 
   const handleDelete = () => {
@@ -75,6 +83,7 @@ export default function AccountFormScreen() {
 
         <Text style={[styles.label, { color: theme.textSecondary }]}>Name</Text>
         <TextInput
+          maxLength={80}
           value={name}
           onChangeText={setName}
           placeholder="e.g. Personal Checking"

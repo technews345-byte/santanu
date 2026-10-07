@@ -27,20 +27,33 @@ export async function readDirtyIds(table: SyncedTable): Promise<Set<string>> {
  * Writes rows that came from the server. They are stored clean: marking them
  * dirty would push them straight back and loop forever.
  */
-export async function applyRemote(table: SyncedTable, rows: SyncRecord[]): Promise<void> {
+export async function applyRemote(table: SyncedTable, rows: SyncRecord[], expected: SyncRecord[]): Promise<void> {
   if (rows.length === 0) return;
   const db = await getDb();
   const allowed = new Set(await columnsOf(table));
+  const expectedById = new Map(expected.map((row) => [row.id, row]));
 
   for (const row of rows) {
     const keys = Object.keys(row).filter((k) => allowed.has(k) && k !== 'dirty');
     if (!keys.includes('id')) continue;
     const placeholders = keys.map(() => '?').join(', ');
     const values = keys.map((k) => normalise((row as any)[k]));
-    await db.runAsync(
-      `INSERT OR REPLACE INTO ${table} (${keys.join(', ')}, dirty) VALUES (${placeholders}, 0)`,
-      values
-    );
+    const previous = expectedById.get(row.id);
+    if (previous) {
+      const compare = Object.keys(previous).filter((key) => allowed.has(key) && key !== 'dirty');
+      // Do not overwrite a local edit made after the merge was planned.
+      await db.runAsync(
+        `UPDATE ${table} SET ${keys.map((key) => `${key} = ?`).join(', ')}, dirty = 0
+         WHERE ${compare.map((key) => `${key} IS ?`).join(' AND ')}`,
+        [...values, ...compare.map((key) => normalise(previous[key]))]
+      );
+    } else {
+      // REPLACE would delete a different budget with the same category/month.
+      await db.runAsync(
+        `INSERT OR IGNORE INTO ${table} (${keys.join(', ')}, dirty) VALUES (${placeholders}, 0)`,
+        values
+      );
+    }
   }
 }
 
@@ -52,11 +65,20 @@ function normalise(value: unknown): any {
   return value;
 }
 
-export async function markClean(table: SyncedTable, ids: string[]): Promise<void> {
-  if (ids.length === 0) return;
+export async function markClean(table: SyncedTable, rows: SyncRecord[]): Promise<void> {
+  if (rows.length === 0) return;
   const db = await getDb();
-  const placeholders = ids.map(() => '?').join(', ');
-  await db.runAsync(`UPDATE ${table} SET dirty = 0 WHERE id IN (${placeholders})`, ids);
+  const allowed = new Set(await columnsOf(table));
+  for (const row of rows) {
+    // Compare the uploaded snapshot, including same-millisecond edits and
+    // tombstones. An edit made during the network request must stay pending.
+    const keys = Object.keys(row).filter((key) => allowed.has(key) && key !== 'dirty');
+    if (!keys.includes('id')) continue;
+    await db.runAsync(
+      `UPDATE ${table} SET dirty = 0 WHERE ${keys.map((key) => `${key} IS ?`).join(' AND ')}`,
+      keys.map((key) => normalise(row[key]))
+    );
+  }
 }
 
 export async function countPending(): Promise<number> {
@@ -83,10 +105,10 @@ export async function setMeta(key: string, value: string): Promise<void> {
 /** Used when signing into a different account, so one user's rows never leak into another's. */
 export async function clearLocalData(): Promise<void> {
   const db = await getDb();
-  for (const table of SYNCED_TABLES) {
-    await db.runAsync(`DELETE FROM ${table}`);
-  }
-  for (const table of SYNCED_TABLES) {
-    await db.runAsync('DELETE FROM meta WHERE key = ?', [`cursor:${table}`]);
-  }
+  await db.withTransactionAsync(async () => {
+    for (const table of SYNCED_TABLES) {
+      await db.runAsync(`DELETE FROM ${table}`);
+      await db.runAsync('DELETE FROM meta WHERE key = ?', [`cursor:${table}`]);
+    }
+  });
 }

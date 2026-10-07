@@ -203,7 +203,9 @@ export async function exportToPdf(ctx: ExportContext): Promise<void> {
     : '';
 
   const html = `<!doctype html>
-<html lang="en-IN"><head><meta charset="utf-8" />
+<html lang="en-IN"><head>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer"><meta charset="utf-8" />
 <title>Spendly Report — ${esc(who.name)}</title>
 <style>
   @page { size: A4; margin: 12mm 12mm 13mm; }

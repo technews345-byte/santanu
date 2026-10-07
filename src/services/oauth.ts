@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
 import { cloudProviders, isCloudConfigured } from './cloudConfig';
@@ -27,6 +27,7 @@ export interface ProviderSignIn {
 
 export function useGoogleSignIn(onSignedIn: () => void): ProviderSignIn {
   const config = extra();
+  const prompting = useRef(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -72,10 +73,19 @@ export function useGoogleSignIn(onSignedIn: () => void): ProviderSignIn {
     busy,
     error,
     signIn: async () => {
+      if (prompting.current || busy || !request) return;
+      prompting.current = true;
       setError(null);
       setBusy(true);
-      const result = await promptAsync();
-      if (result?.type !== 'success') setBusy(false);
+      try {
+        const result = await promptAsync();
+        if (result?.type !== 'success') setBusy(false);
+      } catch (e) {
+        setError(describe(e));
+        setBusy(false);
+      } finally {
+        prompting.current = false;
+      }
     },
   };
 }

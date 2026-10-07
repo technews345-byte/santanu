@@ -36,7 +36,7 @@ export default function AccountScreen() {
   const handleSignOut = () => {
     Alert.alert('Sign out?', 'Your expenses stay on this device and sync again when you sign back in.', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Sign out', style: 'destructive', onPress: () => signOut() },
+      { text: 'Sign out', style: 'destructive', onPress: () => signOut().catch(() => Alert.alert('Could not sign out', 'Please try again.')) },
     ]);
   };
 
@@ -51,8 +51,7 @@ export default function AccountScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              const { deleteAccount } = require('../services/auth') as typeof import('../services/auth');
-              await deleteAccount();
+              await useAuthStore.getState().deleteAccount();
             } catch (e: any) {
               const { describeAuthError } = require('../services/auth') as typeof import('../services/auth');
               Alert.alert('Could not delete account', describeAuthError(e));

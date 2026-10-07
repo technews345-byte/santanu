@@ -8,7 +8,8 @@ import {
   signOut as firebaseSignOut,
   AuthCredential,
 } from 'firebase/auth';
-import { getFirebaseAuth } from './firebase';
+import { getFirebaseAuth, getFirestoreDb } from './firebase';
+import { collection, getDocs, limit, query, writeBatch } from 'firebase/firestore';
 
 export interface AuthUser {
   uid: string;
@@ -76,6 +77,24 @@ export async function signOut(): Promise<void> {
 export async function deleteAccount(): Promise<void> {
   const user = getFirebaseAuth().currentUser;
   if (!user) return;
+  // Require recent authentication before removing data, not after it is gone.
+  const token = await user.getIdTokenResult(true);
+  const authTime = Number(token.claims.auth_time) * 1000;
+  if (!Number.isFinite(authTime) || Date.now() - authTime > 5 * 60 * 1000) {
+    throw Object.assign(new Error('Sign in again before deleting your account.'), { code: 'auth/requires-recent-login' });
+  }
+  const db = getFirestoreDb();
+  for (const table of ['accounts', 'categories', 'transactions', 'budgets']) {
+    for (;;) {
+      if (getFirebaseAuth().currentUser?.uid !== user.uid) throw new Error('The signed-in account changed.');
+      const snapshot = await getDocs(query(collection(db, `users/${user.uid}/${table}`), limit(400)));
+      if (snapshot.empty) break;
+      const batch = writeBatch(db);
+      for (const document of snapshot.docs) batch.delete(document.ref);
+      await batch.commit();
+    }
+  }
+  // Firebase Auth deletion alone does not delete Firestore subcollections.
   await deleteUser(user);
 }
 

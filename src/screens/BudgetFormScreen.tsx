@@ -26,13 +26,17 @@ export default function BudgetFormScreen() {
   const [isRecurring, setIsRecurring] = useState(existing?.isRecurring ?? true);
 
   const handleSave = async () => {
-    const value = parseFloat(amount);
-    if (isNaN(value) || value <= 0) {
-      Alert.alert('Enter a valid amount');
-      return;
+    try {
+      const value = Number(amount);
+      if (!Number.isFinite(value) || value <= 0) {
+        Alert.alert('Enter a valid amount');
+        return;
+      }
+      await setBudget(categoryId, isRecurring ? RECURRING_BUDGET_KEY : monthKey, value, isRecurring);
+      navigation.goBack();
+    } catch (error: any) {
+      Alert.alert("Could not save", error?.message ?? "Please try again.");
     }
-    await setBudget(categoryId, isRecurring ? RECURRING_BUDGET_KEY : monthKey, value, isRecurring);
-    navigation.goBack();
   };
 
   const handleRemove = () => {
@@ -75,6 +79,7 @@ export default function BudgetFormScreen() {
         <View style={[styles.amountInputWrap, { borderColor: theme.border }]}>
           <Text style={[styles.currencyPrefix, { color: theme.textSecondary }]}>₹</Text>
           <TextInput
+            maxLength={16}
             value={amount}
             onChangeText={setAmount}
             keyboardType="decimal-pad"

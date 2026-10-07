@@ -30,16 +30,20 @@ export default function CategoryFormScreen() {
   const iconSet = formType === 'income' ? INCOME_ICONS : formType === 'investment' ? INVESTMENT_ICONS : EXPENSE_ICONS;
 
   const handleSave = async () => {
-    if (!name.trim()) {
-      Alert.alert('Enter a name');
-      return;
+    try {
+      if (!name.trim()) {
+        Alert.alert('Enter a name');
+        return;
+      }
+      if (existing) {
+        await updateCategory(existing.id, { name: name.trim(), color, icon });
+      } else {
+        await addCategory({ name: name.trim(), color, icon, type });
+      }
+      navigation.goBack();
+    } catch (error: any) {
+      Alert.alert("Could not save", error?.message ?? "Please try again.");
     }
-    if (existing) {
-      await updateCategory(existing.id, { name: name.trim(), color, icon });
-    } else {
-      await addCategory({ name: name.trim(), color, icon, type });
-    }
-    navigation.goBack();
   };
 
   const handleArchive = () => {
@@ -80,6 +84,7 @@ export default function CategoryFormScreen() {
 
         <Text style={[styles.label, { color: theme.textSecondary }]}>Name</Text>
         <TextInput
+          maxLength={80}
           value={name}
           onChangeText={setName}
           placeholder="e.g. Groceries"

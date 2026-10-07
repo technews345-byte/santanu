@@ -11,9 +11,13 @@ import { countPending, getMeta, setMeta } from '../db/syncStore';
 
 const GUEST_ACK_KEY = 'auth:guestAcknowledged';
 const LAST_SYNC_KEY = 'sync:lastCompletedAt';
+let syncTask: Promise<void> | null = null;
+let sessionGeneration = 0;
+let deletingAccount = false;
 
 interface AuthStoreState {
   ready: boolean;
+  switchingAccount: boolean;
   user: AuthUser | null;
   /** True once the person has chosen to keep using the app without an account. */
   guestAcknowledged: boolean;
@@ -28,10 +32,12 @@ interface AuthStoreState {
   refreshPending: () => Promise<void>;
   syncNow: () => Promise<void>;
   signOut: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthStoreState>((set, get) => ({
   ready: false,
+  switchingAccount: false,
   user: null,
   guestAcknowledged: false,
   syncState: 'idle',
@@ -65,8 +71,15 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
       const { subscribeToAuth } = require('../services/auth') as typeof import('../services/auth');
       subscribeToAuth((user) => {
         clearTimeout(giveUpWaiting);
-        set({ user, ready: true });
-        if (user) get().syncNow();
+        if (get().user?.uid !== user?.uid) sessionGeneration++;
+        set({ user, ready: true, switchingAccount: !!user });
+        if (user) {
+          // A new account waits for old work to finish before claiming SQLite.
+          void (async () => {
+            if (syncTask) await syncTask;
+            if (get().user?.uid === user.uid) await get().syncNow();
+          })();
+        }
       });
     } catch {
       clearTimeout(giveUpWaiting);
@@ -97,33 +110,56 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
   refreshPending: async () => set({ pendingCount: await countPending() }),
 
   syncNow: async () => {
-    const { user, syncState } = get();
-    if (!isCloudConfigured || !user || syncState === 'syncing') return;
-
+    if (deletingAccount) return;
+    if (syncTask) return syncTask;
+    const { user } = get();
+    if (!isCloudConfigured || !user) return;
+    const generation = sessionGeneration;
+    const current = () => generation === sessionGeneration && get().user?.uid === user.uid;
     set({ syncState: 'syncing', syncError: null });
-    try {
-      const { runSync, claimLocalDataFor } = require('../sync/engine') as typeof import('../sync/engine');
-      const { createFirestoreAdapter } = require('../sync/firestoreAdapter') as typeof import('../sync/firestoreAdapter');
+    syncTask = (async () => {
+      try {
+        const { runSync, claimLocalDataFor } = require('../sync/engine') as typeof import('../sync/engine');
+        const { createFirestoreAdapter } = require('../sync/firestoreAdapter') as typeof import('../sync/firestoreAdapter');
+        if (!current()) return;
+        await claimLocalDataFor(user.uid);
+        if (!current()) return;
+        // Refresh before network access: an offline failure must not leave
+        // another account's records visible under this account's identity.
+        await useStore.getState().hydrate();
+        if (!current()) return;
+        set({ switchingAccount: false });
+        await runSync(createFirestoreAdapter(user.uid), current);
+        if (!current()) return;
+        const now = new Date().toISOString();
+        await setMeta(LAST_SYNC_KEY, now);
+        set({ syncState: 'idle', lastSyncedAt: now, pendingCount: await countPending() });
+        await useStore.getState().hydrate();
+      } catch (error: any) {
+        if (!current()) return;
+        const offline = /network|offline|unavailable/i.test(String(error?.message ?? error));
+        set({
+          syncState: offline ? 'offline' : 'error',
+          syncError: offline ? null : String(error?.message ?? error),
+          pendingCount: await countPending().catch(() => get().pendingCount),
+        });
+      }
+    })();
+    try { await syncTask; } finally { syncTask = null; }
+  },
 
-      // Guest rows are kept and uploaded; another account's rows are cleared
-      // before anything is pulled or pushed.
-      const transition = await claimLocalDataFor(user.uid);
-      await runSync(createFirestoreAdapter(user.uid));
-      if (transition === 'switched-account') await useStore.getState().hydrate();
-      const now = new Date().toISOString();
-      await setMeta(LAST_SYNC_KEY, now);
-      set({ syncState: 'idle', lastSyncedAt: now, pendingCount: await countPending() });
-      // Pulled rows have to reach the screens, not just the database.
-      await useStore.getState().hydrate();
-    } catch (error: any) {
-      // Nothing is lost here: the rows stay queued and the next attempt
-      // picks them up, so this only affects what the indicator shows.
-      const offline = /network|offline|unavailable/i.test(String(error?.message ?? error));
-      set({
-        syncState: offline ? 'offline' : 'error',
-        syncError: offline ? null : String(error?.message ?? error),
-        pendingCount: await countPending(),
-      });
+  deleteAccount: async () => {
+    if (deletingAccount) return;
+    deletingAccount = true;
+    sessionGeneration++;
+    try {
+      if (syncTask) await syncTask;
+      const { deleteAccount } = require('../services/auth') as typeof import('../services/auth');
+      await deleteAccount();
+      set({ user: null, syncState: 'idle', switchingAccount: false });
+    } finally {
+      deletingAccount = false;
+      set({ syncState: 'idle' });
     }
   },
 
@@ -133,9 +169,9 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
     // strand an expense that never reached the account.
     await get().syncNow();
     const { signOut } = require('../services/auth') as typeof import('../services/auth');
-    const { releaseOwner } = require('../sync/engine') as typeof import('../sync/engine');
     await signOut();
-    await releaseOwner();
-    set({ user: null, syncState: 'idle' });
+    // Keep the owner marker: signing out does not turn saved account data into guest data.
+    sessionGeneration++;
+    set({ user: null, syncState: 'idle', switchingAccount: false });
   },
 }));

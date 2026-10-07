@@ -1,7 +1,9 @@
 import { create } from 'zustand';
 import { Account, Budget, Category, Transaction } from '../types';
 import { AccountsRepo, BudgetsRepo, CategoriesRepo, TransactionsRepo } from '../db/repositories';
+import { nextOccurrence } from '../utils/recurrence';
 import { generateId } from '../utils/id';
+import { materializeRecurring } from '../db/recurring';
 import { requestSync } from '../sync/scheduler';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -59,12 +61,13 @@ export const useStore = create<StoreState>((set, get) => ({
   supportCount: 0,
 
   hydrate: async () => {
-    // Loading only reads, and the database's own setup steps are safe to
-    // repeat, so a transient native failure on the first attempt (one was
+    // Loading materializes due repeats idempotently; the database's setup
+    // is also safe to repeat, so a transient native failure (one was
     // seen in a race inside the SQLite bridge) gets one quiet retry before
     // the error screen is shown.
-    const load = () =>
-      Promise.all([
+    const load = async () => {
+      await materializeRecurring();
+      return Promise.all([
         AccountsRepo.list(),
         CategoriesRepo.list(),
         TransactionsRepo.list(),
@@ -74,6 +77,7 @@ export const useStore = create<StoreState>((set, get) => ({
         AsyncStorage.getItem(BIOMETRIC_KEY),
         AsyncStorage.getItem(SUPPORT_COUNT_KEY),
       ]);
+    };
     try {
       let loaded: Awaited<ReturnType<typeof load>>;
       try {
@@ -88,7 +92,7 @@ export const useStore = create<StoreState>((set, get) => ({
         categories,
         transactions,
         budgets,
-        activeAccountId: storedActive || null,
+        activeAccountId: accounts.some((a) => a.id === storedActive) ? storedActive : null,
         balanceVisible: storedVisible === null ? true : storedVisible === 'true',
         biometricLockEnabled: storedBiometric === 'true',
         supportCount: Number(storedSupport) || 0,
@@ -147,6 +151,7 @@ export const useStore = create<StoreState>((set, get) => ({
 
   removeAccount: async (id) => {
     await AccountsRepo.remove(id);
+    if (get().activeAccountId === id) get().setActiveAccountId(null);
     requestSync();
     set({
       accounts: get().accounts.filter((a) => a.id !== id),
@@ -186,7 +191,7 @@ export const useStore = create<StoreState>((set, get) => ({
     const now = new Date().toISOString();
     const tx: Transaction = { ...input, id: generateId('txn'), createdAt: now, updatedAt: now };
     await TransactionsRepo.upsert(tx);
-    set({ transactions: [tx, ...get().transactions] });
+    set({ transactions: [tx, ...get().transactions].sort((a, b) => b.date.localeCompare(a.date)) });
     requestSync();
     return tx;
   },
@@ -214,7 +219,8 @@ export const useStore = create<StoreState>((set, get) => ({
     const existing = get().transactions.find((t) => t.id === id);
     if (!existing) return;
     const now = new Date().toISOString();
-    const copy: Transaction = { ...existing, id: generateId('txn'), date: now, createdAt: now, updatedAt: now };
+    const copy: Transaction = { ...existing, id: generateId('txn'), date: now, createdAt: now, updatedAt: now,
+      nextOccurrence: nextOccurrence(now, existing.recurrence) };
     await TransactionsRepo.upsert(copy);
     set({ transactions: [copy, ...get().transactions] });
     requestSync();
@@ -225,10 +231,10 @@ export const useStore = create<StoreState>((set, get) => ({
     const budget: Budget = existing
       ? { ...existing, amount, isRecurring }
       : { id: generateId('bud'), categoryId, monthKey, amount, isRecurring };
-    await BudgetsRepo.upsert(budget);
+    const saved = await BudgetsRepo.upsert(budget);
     requestSync();
     set({
-      budgets: existing ? get().budgets.map((b) => (b.id === budget.id ? budget : b)) : [...get().budgets, budget],
+      budgets: [...get().budgets.filter((b) => b.categoryId !== categoryId || b.monthKey !== monthKey), saved],
     });
   },
 
