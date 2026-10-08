@@ -1,0 +1,223 @@
+import React, { useEffect, useRef, useState } from 'react';
+import { Animated, Easing, Image, Pressable, StyleSheet, View } from 'react-native';
+import { Text } from '../theme/type';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { useNavigation } from '@react-navigation/native';
+import { Screen } from '../components/Screen';
+import { GlassPressable } from '../components/glass/GlassPressable';
+import { holdAppOpenAds } from '../services/ads';
+import { useTheme } from '../theme/ThemeContext';
+import { fontSizes, radius, spacing } from '../theme/tokens';
+import { useAuthStore } from '../store/useAuthStore';
+import { cloudProviders, isCloudConfigured } from '../services/cloudConfig';
+import { useGoogleSignIn } from '../services/oauth';
+
+// Two lockups, because the wordmark is near-black in one and near-white in
+// the other: each is legible only on the background it was drawn for.
+const LOCKUP_LIGHT = require('../../assets/logo-lockup-light.webp');
+const LOCKUP_DARK = require('../../assets/logo-lockup-dark.webp');
+
+export default function LoginScreen() {
+  // No ad may land on top of signing in: the flow deliberately leaves the
+  // app — for the SMS, for a security check — and each return would
+  // otherwise read as the app being reopened.
+  useEffect(() => holdAppOpenAds(), []);
+
+  const { theme } = useTheme();
+  const navigation = useNavigation<any>();
+  const continueAsGuest = useAuthStore((s) => s.continueAsGuest);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  const intro = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(intro, {
+      toValue: 1,
+      duration: 760,
+      easing: Easing.bezier(0.22, 1, 0.36, 1),
+      useNativeDriver: true,
+    }).start();
+  }, []);
+
+  // One value drives a short stagger: each element starts a little later.
+  const step = (index: number) => ({
+    opacity: intro.interpolate({
+      inputRange: [index * 0.12, Math.min(1, 0.45 + index * 0.12)],
+      outputRange: [0, 1],
+      extrapolate: 'clamp',
+    }),
+    transform: [
+      {
+        translateY: intro.interpolate({
+          inputRange: [index * 0.12, Math.min(1, 0.55 + index * 0.12)],
+          outputRange: [18, 0],
+          extrapolate: 'clamp',
+        }),
+      },
+    ],
+  });
+
+  const handleUnconfigured = () => {
+    setNotice('Cloud sync is not set up in this build yet. Everything still saves on this device.');
+  };
+
+  // As the first screen there is nothing behind to return to: answering the
+  // question is what dismisses it.
+  const dismiss = () => {
+    if (navigation.canGoBack()) navigation.goBack();
+  };
+
+  const handleGuest = async () => {
+    await continueAsGuest();
+    dismiss();
+  };
+
+  return (
+    <Screen edges={['top', 'left', 'right', 'bottom']}>
+      <View style={styles.container}>
+        {navigation.canGoBack() ? (
+          <Pressable style={styles.close} onPress={dismiss} hitSlop={12}>
+            <Ionicons name="close" size={24} color={theme.textTertiary} />
+          </Pressable>
+        ) : (
+          <View style={styles.close} />
+        )}
+
+        <View style={styles.hero}>
+          <Animated.View style={step(0)}>
+            <Image
+              source={theme.mode === 'dark' ? LOCKUP_DARK : LOCKUP_LIGHT}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+          </Animated.View>
+
+          <Animated.View style={[styles.headlineWrap, step(1)]}>
+            <Text style={[styles.headline, { color: theme.text }]}>Your Money,</Text>
+            <Text style={[styles.headline, { color: theme.textSecondary }]}>Simplified</Text>
+          </Animated.View>
+        </View>
+
+        <Animated.View style={[styles.actions, step(2)]}>
+          {cloudProviders.google ? (
+            <GoogleAuthButton onDone={dismiss} onNotice={setNotice} />
+          ) : (
+            <ProviderButton
+              icon="logo-google"
+              label="Continue with Google"
+              onPress={() => setNotice(unconfiguredMessage('Google'))}
+              loading={false}
+              dimmed
+            />
+          )}
+
+          {notice && (
+            <View style={[styles.notice, { backgroundColor: theme.warningMuted }]}>
+              <Ionicons name="information-circle-outline" size={16} color={theme.warning} />
+              <Text style={[styles.noticeText, { color: theme.textSecondary }]}>{notice}</Text>
+            </View>
+          )}
+
+          <Pressable onPress={handleGuest} style={styles.guest} hitSlop={8}>
+            <Text style={[styles.guestLabel, { color: theme.textSecondary }]}>Continue as Guest</Text>
+          </Pressable>
+        </Animated.View>
+
+        <Animated.View style={[styles.footer, step(3)]}>
+          <Ionicons name="lock-closed-outline" size={14} color={theme.textTertiary} />
+          <Text style={[styles.footerText, { color: theme.textTertiary }]}>
+            Your expenses stay on this device and back up to your account over an encrypted connection.
+          </Text>
+        </Animated.View>
+      </View>
+    </Screen>
+  );
+}
+
+function unconfiguredMessage(provider: string) {
+  return isCloudConfigured
+    ? `${provider} sign-in needs its OAuth client id for this platform added to this build.`
+    : 'Cloud sync is not set up in this build yet. Everything still saves on this device.';
+}
+
+/**
+ * Each provider gets its own component because Expo's auth hooks throw when
+ * their client id is missing, which blanks the whole screen. Mounting them
+ * separately means a project with only some providers set up still works.
+ */
+function GoogleAuthButton({ onDone, onNotice }: { onDone: () => void; onNotice: (message: string) => void }) {
+  const google = useGoogleSignIn(onDone);
+
+  useEffect(() => {
+    if (google.error) onNotice(google.error);
+  }, [google.error]);
+
+  return (
+    <ProviderButton
+      icon="logo-google"
+      label="Continue with Google"
+      loading={google.busy}
+      onPress={() => (google.available ? google.signIn() : onNotice(unconfiguredMessage('Google')))}
+    />
+  );
+}
+
+
+function ProviderButton({
+  icon,
+  label,
+  onPress,
+  loading,
+  dimmed,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  onPress: () => void;
+  loading: boolean;
+  dimmed?: boolean;
+}) {
+  const { theme } = useTheme();
+  // The same control glass as every other button: it sinks under the finger
+  // and catches the travelling light, rather than just fading.
+  return (
+    <GlassPressable
+      feedback="press"
+      level="control"
+      blur={false}
+      borderRadius={radius.pill}
+      disabled={loading}
+      onPress={onPress}
+      accessibilityLabel={label}
+      style={{ opacity: dimmed ? 0.55 : 1 }}
+      contentStyle={styles.provider}
+    >
+      <Ionicons name={loading ? 'ellipsis-horizontal' : icon} size={20} color={theme.text} />
+      <Text style={[styles.providerLabel, { color: theme.text }]}>{label}</Text>
+    </GlassPressable>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, paddingHorizontal: spacing.lg, paddingBottom: spacing.lg },
+  close: { alignSelf: 'flex-end', padding: spacing.xs },
+  hero: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  logo: { width: 234, height: 268 },
+  headlineWrap: { alignItems: 'center', marginTop: spacing.lg },
+  headline: { fontSize: fontSizes.xxl, fontWeight: '800', letterSpacing: -0.5, lineHeight: 38 },
+  actions: { gap: spacing.sm },
+  provider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    minHeight: 56,
+  },
+  providerLabel: { fontSize: fontSizes.base, fontWeight: '700' },
+  notice: { flexDirection: 'row', gap: spacing.xs, padding: spacing.sm, borderRadius: radius.md, alignItems: 'flex-start' },
+  noticeText: { flex: 1, fontSize: fontSizes.xs, lineHeight: 17 },
+  guest: { alignSelf: 'center', paddingVertical: spacing.sm, marginTop: spacing.xxs },
+  guestLabel: { fontSize: fontSizes.base, fontWeight: '600' },
+  footer: { flexDirection: 'row', gap: 6, alignItems: 'flex-start', marginTop: spacing.lg, paddingHorizontal: spacing.xs },
+  footerText: { flex: 1, fontSize: fontSizes.xs, lineHeight: 16 },
+});

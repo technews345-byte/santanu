@@ -1,0 +1,154 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - claude/expense-budget-app-vdww3s
+
+permissions:
+  contents: write
+
+# The release tag is shared, so an older run finishing late would publish a
+# stale APK over a newer one.
+concurrency:
+  group: build-apk
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      # Exactly the versions in package-lock.json, verified against their
+      # recorded checksums: a build never picks up a newly published (or
+      # tampered) release of anything. Actions above are pinned to commits for
+      # the same reason — a moved tag can't change what runs here.
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Generate native Android project
+        run: npx expo prebuild --platform android --no-install
+
+      # The template's 512m metaspace is not enough to compile every Expo
+      # module in one daemon. Set this in Gradle's user-level config, which
+      # takes precedence over the generated project file — appending to that
+      # file corrupts its last property, since prebuild writes no trailing
+      # newline.
+      - name: Raise Gradle memory limits
+        run: |
+          mkdir -p ~/.gradle
+          echo "org.gradle.jvmargs=-Xmx6144m -XX:MaxMetaspaceSize=2048m" >> ~/.gradle/gradle.properties
+
+      # Signing. The generated project signs release builds with React
+      # Native's public debug key, which anyone can download — so anyone could
+      # sign an "update" that installs over Spendly and inherits its data.
+      # A valid private key in the ANDROID_KEYSTORE_* secrets is used whenever
+      # one is configured. Until then (or if it is broken) the build falls back
+      # to the debug key with a warning, so an APK is still produced; see
+      # SECURITY.md. Secrets never reach the log, and the decoded key is
+      # deleted after the build.
+      - name: Prepare release signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          fallback() {
+            rm -f "$RUNNER_TEMP/release.keystore" "$RUNNER_TEMP/keystore.b64"
+            echo "::warning::$1 Signing with the public debug key instead. See SECURITY.md."
+            {
+              echo "### ⚠️ Signed with the public debug key"
+              echo "$1"
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          }
+          [ -n "$KEYSTORE_BASE64" ] || fallback "No ANDROID_KEYSTORE_BASE64 secret."
+          [ -n "$STORE_PASSWORD" ] && [ -n "$KEY_ALIAS" ] && [ -n "$KEY_PASSWORD" ] \
+            || fallback "ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS or ANDROID_KEY_PASSWORD is missing."
+          # Pasting on a phone or from a Windows file can add spaces, line
+          # breaks or a byte-order mark; keep only the base64 alphabet.
+          printf '%s' "$KEYSTORE_BASE64" | tr '_-' '/+' | tr -cd 'A-Za-z0-9+/=' > "$RUNNER_TEMP/keystore.b64"
+          if ! base64 -d "$RUNNER_TEMP/keystore.b64" > "$RUNNER_TEMP/release.keystore" 2>/dev/null; then
+            # Safe to show: the length, and whether it starts like every
+            # PKCS12 keystore ("MII…"), reveal nothing about the key.
+            LENGTH=$(wc -c < "$RUNNER_TEMP/keystore.b64")
+            if head -c 3 "$RUNNER_TEMP/keystore.b64" | grep -q '^MII'; then STARTS=yes; else STARTS=no; fi
+            fallback "ANDROID_KEYSTORE_BASE64 is not valid base64 ($LENGTH characters; starts like a keystore: $STARTS). A keystore is several thousand characters starting with MII."
+          fi
+          rm -f "$RUNNER_TEMP/keystore.b64"
+          keytool -list -keystore "$RUNNER_TEMP/release.keystore" -storepass:env STORE_PASSWORD > /dev/null 2>&1 \
+            || fallback "The keystore could not be opened: ANDROID_KEYSTORE_BASE64 is incomplete or ANDROID_KEYSTORE_PASSWORD is wrong."
+          keytool -list -keystore "$RUNNER_TEMP/release.keystore" -storepass:env STORE_PASSWORD -alias "$KEY_ALIAS" > /dev/null 2>&1 \
+            || fallback "The keystore has no key named by ANDROID_KEY_ALIAS (expected: spendly)."
+          echo "SIGNING_STORE=$RUNNER_TEMP/release.keystore" >> "$GITHUB_ENV"
+          echo "Signing with the private release key."
+          # The certificate fingerprints are public (every installed APK
+          # carries them). Google sign-in needs the SHA-1, so show it in the
+          # run summary.
+          keytool -list -v -keystore "$RUNNER_TEMP/release.keystore" -storepass:env STORE_PASSWORD -alias "$KEY_ALIAS" \
+            | grep -E '^\s*SHA(1|256):' | sed 's/^\s*//' > "$RUNNER_TEMP/fingerprints.txt"
+          cat "$RUNNER_TEMP/fingerprints.txt"
+          {
+            echo "### Release signing certificate"
+            echo "Add the SHA-1 to the Android OAuth client and to Firebase project settings."
+            echo '```'
+            cat "$RUNNER_TEMP/fingerprints.txt"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Build release APK
+        working-directory: android
+        timeout-minutes: 60
+        env:
+          STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        # One ABI only: every phone from the last decade is arm64, and building
+        # all four multiplies the native compile time.
+        run: |
+          SIGNING=()
+          if [ -n "$SIGNING_STORE" ]; then
+            SIGNING=(
+              "-Pandroid.injected.signing.store.file=$SIGNING_STORE"
+              "-Pandroid.injected.signing.store.password=$STORE_PASSWORD"
+              "-Pandroid.injected.signing.key.alias=$KEY_ALIAS"
+              "-Pandroid.injected.signing.key.password=$KEY_PASSWORD"
+            )
+          fi
+          ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a "${SIGNING[@]}"
+
+      - name: Remove signing key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/release.keystore"
+
+      - name: Upload APK as workflow artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: spendly-apk
+          path: android/app/build/outputs/apk/release/*.apk
+
+      - name: Publish APK to a release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete android-apk --yes || true
+          git push --delete origin android-apk || true
+          gh release create android-apk \
+            android/app/build/outputs/apk/release/app-release.apk \
+            --title "Spendly — Android APK" \
+            --notes "Install on Android: tap the .apk below, then allow installation from unknown sources. Built from ${GITHUB_SHA}." \
+            --prerelease \
+            --target "${GITHUB_SHA}"
