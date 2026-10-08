@@ -20,7 +20,7 @@ have been updated. No application can be certified hack-proof by a code audit.
 | A previous account's in-flight sync could apply after authentication changed | High | Track session generations, cancel stale work, serialize account transitions, and wait for active sync on sign-out |
 | App lock authenticated only once per process | High | Re-lock on background, authenticate on return, suppress ads during lock/authentication, retain the mounted form behind the lock |
 | Native Firebase session persisted unencrypted in AsyncStorage | Medium | Migrate to Keychain/Keystore using Expo SecureStore; chunk large Unicode payloads; publish new sessions atomically; remove legacy plaintext |
-| Release builds fell back to the public Android debug key | High | Fail release build when private signing credentials are missing; retain cleanup of decoded key |
+| Release builds fell back to the public Android debug key | High | Use the private key whenever valid secrets exist; until then the build falls back to the debug key with a visible warning (owner's choice, 8 Oct 2026). **Still open until the key secrets are fixed.** |
 | Account deletion removed Firebase Auth identity but left Firestore records behind | Medium | Require recent authentication, stop concurrent local sync, delete the four cloud collections in batches before deleting the identity |
 | Invalid numbers and malformed remote records could enter the local database | Medium | Validate records at repository write and cloud-read boundaries; reject nonfinite/nonpositive amounts, malformed attachments, invalid dates/types, and overlong input |
 | Firestore accepted negative transaction amounts, arbitrary account types and invalid budget months | Medium | Tighten rules while preserving owner-only, deny-by-default access and valid tombstones |
@@ -137,7 +137,7 @@ suggested automated fix downgrades Expo to 44 and was not applied.
    monitor before enforcement, and set quotas and billing alerts. Alerts are not caps.
 4. Configure `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`,
    `ANDROID_KEY_ALIAS`, and `ANDROID_KEY_PASSWORD` in GitHub Actions secrets. The
-   workflow now refuses to publish without them. Do not create/rotate keys casually:
+   workflow signs with them when they are valid, and otherwise warns and falls back to the debug key. Do not create/rotate keys casually:
    changing the installed app's signer can require uninstalling it and losing guest
    data. Export/verify recovery first and register the new certificate for Google login.
 5. Build and test a newly signed APK (SecureStore adds a native module), including

@@ -54,55 +54,60 @@ jobs:
       # Signing. The generated project signs release builds with React
       # Native's public debug key, which anyone can download — so anyone could
       # sign an "update" that installs over Spendly and inherits its data.
-      # A private release key is mandatory. Never publish a debug-signed APK.
-      # Secrets never reach the log, and the decoded key is deleted after the build.
+      # A valid private key in the ANDROID_KEYSTORE_* secrets is used whenever
+      # one is configured. Until then (or if it is broken) the build falls back
+      # to the debug key with a warning, so an APK is still produced; see
+      # SECURITY.md. Secrets never reach the log, and the decoded key is
+      # deleted after the build.
       - name: Prepare release signing key
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          if [ -n "$KEYSTORE_BASE64" ]; then
-            # Pasting on a phone or from a Windows file can add spaces, line
-            # breaks or a byte-order mark; keep only the base64 alphabet.
-            printf '%s' "$KEYSTORE_BASE64" | tr '_-' '/+' | tr -cd 'A-Za-z0-9+/=' > "$RUNNER_TEMP/keystore.b64"
-            if ! base64 -d "$RUNNER_TEMP/keystore.b64" > "$RUNNER_TEMP/release.keystore" 2>/dev/null; then
-              # Safe to show: the length, and whether it starts like every
-              # PKCS12 keystore ("MII…"), reveal nothing about the key.
-              LENGTH=$(wc -c < "$RUNNER_TEMP/keystore.b64")
-              if head -c 3 "$RUNNER_TEMP/keystore.b64" | grep -q '^MII'; then STARTS=yes; else STARTS=no; fi
-              echo "Base64 characters received: $LENGTH (a whole number of 4-character groups: $([ $((LENGTH % 4)) -eq 0 ] && echo yes || echo no)); starts like a keystore: $STARTS"
-              echo "::error::ANDROID_KEYSTORE_BASE64 is not valid base64. It is probably cut short: paste the whole contents of keystore.txt again."
-              exit 1
-            fi
-            rm -f "$RUNNER_TEMP/keystore.b64"
-            if ! keytool -list -keystore "$RUNNER_TEMP/release.keystore" -storepass:env STORE_PASSWORD > /dev/null 2>&1; then
-              echo "::error::The keystore could not be opened: either ANDROID_KEYSTORE_BASE64 is incomplete or ANDROID_KEYSTORE_PASSWORD is wrong."
-              exit 1
-            fi
-            if ! keytool -list -keystore "$RUNNER_TEMP/release.keystore" -storepass:env STORE_PASSWORD -alias "$KEY_ALIAS" > /dev/null 2>&1; then
-              echo "::error::The keystore has no key named by ANDROID_KEY_ALIAS (expected: spendly)."
-              exit 1
-            fi
-            echo "SIGNING_STORE=$RUNNER_TEMP/release.keystore" >> "$GITHUB_ENV"
-            echo "Signing with the private release key."
-            # The certificate fingerprints are public (every installed APK
-            # carries them). Google sign-in needs the SHA-1, so show it in the
-            # run summary. A wrong password or alias also fails here, early.
-            keytool -list -v -keystore "$RUNNER_TEMP/release.keystore" -storepass:env STORE_PASSWORD -alias "$KEY_ALIAS" \
-              | grep -E '^\s*SHA(1|256):' | sed 's/^\s*//' > "$RUNNER_TEMP/fingerprints.txt"
-            cat "$RUNNER_TEMP/fingerprints.txt"
+          fallback() {
+            rm -f "$RUNNER_TEMP/release.keystore" "$RUNNER_TEMP/keystore.b64"
+            echo "::warning::$1 Signing with the public debug key instead. See SECURITY.md."
             {
-              echo "### Release signing certificate"
-              echo "Add the SHA-1 to the Android OAuth client and to Firebase project settings."
-              echo '```'
-              cat "$RUNNER_TEMP/fingerprints.txt"
-              echo '```'
+              echo "### ⚠️ Signed with the public debug key"
+              echo "$1"
             } >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "::error::A private release key is required. Configure the ANDROID_KEYSTORE_* secrets before publishing."
-            exit 1
+            exit 0
+          }
+          [ -n "$KEYSTORE_BASE64" ] || fallback "No ANDROID_KEYSTORE_BASE64 secret."
+          [ -n "$STORE_PASSWORD" ] && [ -n "$KEY_ALIAS" ] && [ -n "$KEY_PASSWORD" ] \
+            || fallback "ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS or ANDROID_KEY_PASSWORD is missing."
+          # Pasting on a phone or from a Windows file can add spaces, line
+          # breaks or a byte-order mark; keep only the base64 alphabet.
+          printf '%s' "$KEYSTORE_BASE64" | tr '_-' '/+' | tr -cd 'A-Za-z0-9+/=' > "$RUNNER_TEMP/keystore.b64"
+          if ! base64 -d "$RUNNER_TEMP/keystore.b64" > "$RUNNER_TEMP/release.keystore" 2>/dev/null; then
+            # Safe to show: the length, and whether it starts like every
+            # PKCS12 keystore ("MII…"), reveal nothing about the key.
+            LENGTH=$(wc -c < "$RUNNER_TEMP/keystore.b64")
+            if head -c 3 "$RUNNER_TEMP/keystore.b64" | grep -q '^MII'; then STARTS=yes; else STARTS=no; fi
+            fallback "ANDROID_KEYSTORE_BASE64 is not valid base64 ($LENGTH characters; starts like a keystore: $STARTS). A keystore is several thousand characters starting with MII."
           fi
+          rm -f "$RUNNER_TEMP/keystore.b64"
+          keytool -list -keystore "$RUNNER_TEMP/release.keystore" -storepass:env STORE_PASSWORD > /dev/null 2>&1 \
+            || fallback "The keystore could not be opened: ANDROID_KEYSTORE_BASE64 is incomplete or ANDROID_KEYSTORE_PASSWORD is wrong."
+          keytool -list -keystore "$RUNNER_TEMP/release.keystore" -storepass:env STORE_PASSWORD -alias "$KEY_ALIAS" > /dev/null 2>&1 \
+            || fallback "The keystore has no key named by ANDROID_KEY_ALIAS (expected: spendly)."
+          echo "SIGNING_STORE=$RUNNER_TEMP/release.keystore" >> "$GITHUB_ENV"
+          echo "Signing with the private release key."
+          # The certificate fingerprints are public (every installed APK
+          # carries them). Google sign-in needs the SHA-1, so show it in the
+          # run summary.
+          keytool -list -v -keystore "$RUNNER_TEMP/release.keystore" -storepass:env STORE_PASSWORD -alias "$KEY_ALIAS" \
+            | grep -E '^\s*SHA(1|256):' | sed 's/^\s*//' > "$RUNNER_TEMP/fingerprints.txt"
+          cat "$RUNNER_TEMP/fingerprints.txt"
+          {
+            echo "### Release signing certificate"
+            echo "Add the SHA-1 to the Android OAuth client and to Firebase project settings."
+            echo '```'
+            cat "$RUNNER_TEMP/fingerprints.txt"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Build release APK
         working-directory: android
@@ -114,12 +119,6 @@ jobs:
         # One ABI only: every phone from the last decade is arm64, and building
         # all four multiplies the native compile time.
         run: |
-          for REQUIRED_VALUE in "$SIGNING_STORE" "$STORE_PASSWORD" "$KEY_ALIAS" "$KEY_PASSWORD"; do
-            if [ -z "$REQUIRED_VALUE" ]; then
-              echo "::error::Release signing configuration is incomplete."
-              exit 1
-            fi
-          done
           SIGNING=()
           if [ -n "$SIGNING_STORE" ]; then
             SIGNING=(
