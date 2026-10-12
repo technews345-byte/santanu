@@ -8,7 +8,7 @@ import { useTheme } from '../../theme/ThemeContext';
  */
 export const BlurTargetContext = createContext<RefObject<View | null> | null>(null);
 
-const ROOM = {
+export const ROOM = {
   dark: require('../../../assets/space-dark.webp'),
   light: require('../../../assets/space-light.webp'),
 };
