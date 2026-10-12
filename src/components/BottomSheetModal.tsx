@@ -3,7 +3,7 @@ import { Animated, Easing, Modal, Pressable, StyleSheet, View } from 'react-nati
 import { Text } from '../theme/type';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
-import { fontSizes, motion, radius, spacing } from '../theme/tokens';
+import { fontSizes, radius, spacing } from '../theme/tokens';
 import { useReducedMotion } from '../theme/useReducedMotion';
 import { GlassSurface } from './glass/GlassSurface';
 

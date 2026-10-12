@@ -8,7 +8,6 @@ import { format } from 'date-fns/format';
 import { subMonths } from 'date-fns/subMonths';
 import { Screen } from '../components/Screen';
 import { Card } from '../components/Card';
-import { Pill } from '../components/Pill';
 import { IconBadge } from '../components/IconBadge';
 import { DonutChart, DonutSlice } from '../components/DonutChart';
 import { TrendChart } from '../components/TrendChart';

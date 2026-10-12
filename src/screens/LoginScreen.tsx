@@ -57,10 +57,6 @@ export default function LoginScreen() {
     ],
   });
 
-  const handleUnconfigured = () => {
-    setNotice('Cloud sync is not set up in this build yet. Everything still saves on this device.');
-  };
-
   // As the first screen there is nothing behind to return to: answering the
   // question is what dismisses it.
   const dismiss = () => {

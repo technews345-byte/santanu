@@ -43,7 +43,7 @@ const SORT_OPTIONS: { key: SortKey; label: string }[] = [
 export default function TransactionsScreen() {
   const { theme } = useTheme();
   const navigation = useNavigation<any>();
-  const { transactions, categories, accounts, activeAccountId, removeTransaction, duplicateTransaction, updateTransaction } = useStore();
+  const { transactions, categories, accounts, activeAccountId, removeTransaction, updateTransaction } = useStore();
 
   const [tab, setTab] = useState<IntervalTab>('all');
   const [filterOpen, setFilterOpen] = useState(false);

@@ -17,7 +17,7 @@ export default function CategoryFormScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const { categoryId, type } = route.params;
-  const { categories, addCategory, updateCategory, removeCategory } = useStore();
+  const { categories, addCategory, updateCategory } = useStore();
   const existing = categoryId ? categories.find((c) => c.id === categoryId) : undefined;
 
   const [name, setName] = useState(existing?.name ?? '');

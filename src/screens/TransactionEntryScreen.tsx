@@ -1,6 +1,6 @@
 import { nextOccurrence } from '../utils/recurrence';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Image, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
+import { Alert, Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text, TextInput } from '../theme/type';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation, useRoute } from '@react-navigation/native';

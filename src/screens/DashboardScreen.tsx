@@ -62,7 +62,6 @@ export default function DashboardScreen() {
     accounts,
     categories,
     transactions,
-    budgets,
     activeAccountId,
     setActiveAccountId,
     balanceVisible,
