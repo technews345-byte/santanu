@@ -7,13 +7,15 @@ import { token, sha256 } from '../lib/ids.js';
 import { sqlNow } from '../lib/time.js';
 import { audit } from '../lib/audit.js';
 import { log } from '../lib/logger.js';
-import { hashPassword, verifyPassword, strongEnough, passwordRule } from '../services/passwords.js';
+import { hashPassword, verifyPassword, needsRehash, strongEnough, passwordRule } from '../services/passwords.js';
 import { startSession, refreshSession, endSession, revokeAllSessions, loadAdmin, readAccess } from '../services/auth.js';
 import { sendMail, mailConfigured } from '../services/mailer.js';
 import { requireAuth, csrf } from '../middleware/auth.js';
 import { rateLimit } from '../middleware/rateLimit.js';
 
 const r = Router();
+// Per account, whatever the IP: stops slow password guessing spread over many addresses.
+const accountLimit = rateLimit({ windowMs: 60 * 60_000, max: 30, key: req => 'acct|' + String(req.body?.email || '').toLowerCase(), message: 'Too many sign-in attempts for this account. Try again in an hour.' });
 const loginLimit = rateLimit({ windowMs: 15 * 60_000, max: 10, key: req => req.ip + '|' + String(req.body?.email || '').toLowerCase(), message: 'Too many sign-in attempts. Try again in 15 minutes.' });
 const forgotLimit = rateLimit({ windowMs: 60 * 60_000, max: 5, message: 'Too many reset requests. Try again later.' });
 // A fixed hash so a wrong email takes as long as a wrong password.
@@ -21,12 +23,13 @@ let dummyHash; hashPassword('timing-equaliser-1').then(h => { dummyHash = h; });
 
 const me = admin => ({ id: admin.id, name: admin.name, email: admin.email, phone: admin.phone, role: admin.role, role_name: admin.role_name, permissions: admin.permissions });
 
-r.post('/login', loginLimit, ah(async (req, res) => {
+r.post('/login', loginLimit, accountLimit, ah(async (req, res) => {
   const { email: em, password } = parse(z.object({ email, password: z.string().min(1, 'Enter your password.').max(200) }), req.body);
   const row = db.prepare('SELECT id, password_hash, status FROM admins WHERE email=?').get(em);
   const ok = await verifyPassword(password, row?.password_hash || dummyHash);
   if (!row || !ok) throw unauthorized('Wrong email or password.');
   if (row.status !== 'active') throw unauthorized('This account is disabled. Ask the owner to enable it.');
+  if (needsRehash(row.password_hash)) db.prepare('UPDATE admins SET password_hash=? WHERE id=?').run(await hashPassword(password), row.id);
   const admin = loadAdmin(row.id);
   const { csrf: c } = startSession(res, admin, req);
   req.admin = admin; audit(req, 'login', 'admin', admin.id, `${admin.name} signed in`);

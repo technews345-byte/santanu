@@ -8,9 +8,10 @@ export const backupDir = () => process.env.BACKUP_DIR || path.join(DATA_DIR || R
 
 export async function backupDatabase(keep = 30) {
   const dir = backupDir();
-  fs.mkdirSync(dir, { recursive: true });
+  fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
   const file = path.join(dir, `bowl-mania-${new Date().toISOString().replace(/[:.]/g, '-')}.db`);
   await db.backup(file);
+  try { fs.chmodSync(file, 0o600); } catch {} // backups hold the same private data as the database
   const old = fs.readdirSync(dir).filter(f => f.startsWith('bowl-mania-') && f.endsWith('.db')).sort().reverse().slice(keep);
   old.forEach(f => fs.unlinkSync(path.join(dir, f)));
   return { file, removed: old.length };

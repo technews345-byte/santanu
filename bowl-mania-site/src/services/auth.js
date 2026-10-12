@@ -4,6 +4,7 @@ import { config } from '../config.js';
 import { token, sha256 } from '../lib/ids.js';
 import { sqlNow } from '../lib/time.js';
 
+const RIDER_APP = 'Bowl Mania Rider app'; // must match routes/rider.js
 export const COOKIES = { access: 'bm_at', refresh: 'bm_rt', csrf: 'bm_csrf' };
 const base = () => ({ httpOnly: true, sameSite: 'strict', secure: config.isProd, path: '/' });
 
@@ -16,7 +17,7 @@ export function loadAdmin(id) {
 }
 
 function issueAccess(res, admin, sessionId) {
-  const at = jwt.sign({ sub: admin.id, sid: sessionId }, config.jwtSecret, { expiresIn: `${config.accessTtlMin}m`, audience: 'bm-admin' });
+  const at = jwt.sign({ sub: admin.id, sid: sessionId }, config.jwtSecret, { algorithm: 'HS256', expiresIn: `${config.accessTtlMin}m`, audience: 'bm-admin' });
   res.cookie(COOKIES.access, at, { ...base(), maxAge: config.accessTtlMin * 60_000 });
 }
 function issueCsrf(res) {
@@ -42,7 +43,8 @@ export function refreshSession(req, res) {
   const rt = req.cookies?.[COOKIES.refresh];
   if (!rt) return null;
   const s = db.prepare('SELECT * FROM admin_sessions WHERE token_hash=?').get(sha256(rt));
-  if (!s || s.revoked_at || s.expires_at < sqlNow()) return null;
+  // Rider-app tokens are bearer tokens for /api/rider only, never a web admin session.
+  if (!s || s.revoked_at || s.expires_at < sqlNow() || s.user_agent === RIDER_APP) return null;
   const admin = loadAdmin(s.admin_id);
   if (!admin || admin.status !== 'active') return null;
   const next = token(32);
@@ -68,7 +70,7 @@ export function readAccess(req) {
   const at = req.cookies?.[COOKIES.access];
   if (!at) return null;
   try {
-    const p = jwt.verify(at, config.jwtSecret, { audience: 'bm-admin' });
+    const p = jwt.verify(at, config.jwtSecret, { algorithms: ['HS256'], audience: 'bm-admin' });
     const s = db.prepare('SELECT revoked_at FROM admin_sessions WHERE id=?').get(p.sid);
     if (!s || s.revoked_at) return null;
     const admin = loadAdmin(p.sub);

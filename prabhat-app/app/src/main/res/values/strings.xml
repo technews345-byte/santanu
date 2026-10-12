@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Prabhat</string>
+    <string name="channel_playback">Mantra playback</string>
+    <string name="channel_sessions">Morning sessions</string>
+</resources>
