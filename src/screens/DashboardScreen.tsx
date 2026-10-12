@@ -17,6 +17,7 @@ import { ProgressBar } from '../components/ProgressBar';
 import { BottomSheetModal } from '../components/BottomSheetModal';
 import { GlassPressable } from '../components/glass/GlassPressable';
 import { GlassSurface } from '../components/glass/GlassSurface';
+import { Rise } from '../components/glass/Rise';
 import { GlassTabs } from '../components/glass/GlassTabs';
 import { useTheme } from '../theme/ThemeContext';
 import { shade, withAlpha } from '../theme/color';
@@ -133,6 +134,7 @@ export default function DashboardScreen() {
         contentContainerStyle={{ paddingBottom: 168, paddingHorizontal: spacing.md }}
         ListHeaderComponent={
           <View style={{ marginBottom: spacing.xs }}>
+            <Rise order={0} flat>
             <BalanceHero
               balance={balance}
               visible={balanceVisible}
@@ -144,18 +146,23 @@ export default function DashboardScreen() {
               investment={investment}
               net={net}
             />
+            </Rise>
 
-            <View style={styles.quickActions}>
+            <Rise order={1} style={styles.quickActions}>
               <QuickAction icon="arrow-up-circle" label="Add Expense" color={theme.expense} onPress={() => navigation.navigate('TransactionEntry', { initialType: 'expense' })} />
               <QuickAction icon="arrow-down-circle" label="Add Income" color={theme.success} onPress={() => navigation.navigate('TransactionEntry', { initialType: 'income' })} />
               <QuickAction icon="pie-chart" label="Budgets" color={theme.investment} onPress={() => navigation.navigate('Budgets' as never)} />
               <QuickAction icon="receipt" label="Scan Receipt" color={theme.teal} onPress={() => navigation.navigate('ScanReceipt')} />
-            </View>
+            </Rise>
 
-            <Text style={[styles.overline, { color: theme.textTertiary }]}>Spending</Text>
-            <SpendingBento transactions={scoped} />
+            <Rise order={2}>
+              <Text style={[styles.overline, { color: theme.textTertiary }]}>Spending</Text>
+              <SpendingBento transactions={scoped} />
+            </Rise>
 
-            <SmartTip transactions={scoped} categories={categories} />
+            <Rise order={3}>
+              <SmartTip transactions={scoped} categories={categories} />
+            </Rise>
 
             <View style={styles.sectionHead}>
               <Text style={[styles.sectionTitle, { color: theme.text }]}>Recent Transactions</Text>

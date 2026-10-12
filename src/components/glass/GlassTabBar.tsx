@@ -52,7 +52,7 @@ export function GlassTabBar({ state, descriptors, navigation }: BottomTabBarProp
       style={[styles.dock, { paddingBottom: Math.max(insets.bottom, spacing.sm) }]}
       pointerEvents="box-none"
     >
-      <GlassSurface level="raised" opaque borderRadius={radius.xl} style={styles.bar}>
+      <GlassSurface level="raised" opaque borderRadius={radius.pill} style={styles.bar}>
         <View
           style={styles.row}
           onLayout={(e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width)}
@@ -73,7 +73,7 @@ export function GlassTabBar({ state, descriptors, navigation }: BottomTabBarProp
               <GlassSurface
                 level="control"
                 blur={false}
-                borderRadius={radius.lg}
+                borderRadius={radius.pill}
                 style={styles.pillGlass}
                 contentStyle={styles.pillFill}
                 tint={withAlpha(theme.tint, theme.mode === 'dark' ? 0.2 : 0.1)}
@@ -160,13 +160,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
   },
   bar: { alignSelf: 'stretch' },
-  row: { flexDirection: 'row', paddingHorizontal: spacing.xs, paddingVertical: 5 },
+  row: { flexDirection: 'row', paddingHorizontal: spacing.xs, paddingVertical: 6 },
   pill: {
     position: 'absolute',
     top: 4,
     bottom: 4,
     left: spacing.xs,
-    borderRadius: radius.lg,
+    borderRadius: radius.pill,
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 4 },
   },

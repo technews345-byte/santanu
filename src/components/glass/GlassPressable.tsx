@@ -17,6 +17,11 @@ import { motion, radius } from '../../theme/tokens';
 import { useReducedMotion } from '../../theme/useReducedMotion';
 import { GlassLevel, GlassSurface } from './GlassSurface';
 
+// A soft spot of light under the fingertip, as glass catches a point light
+// held close to it. One small picture, moved rather than redrawn.
+const GLOW = require('../../../assets/touch-glow.png');
+const GLOW_SIZE = 150;
+
 /**
  * Glass that answers the finger the way a physical pane would.
  *
@@ -28,6 +33,9 @@ import { GlassLevel, GlassSurface } from './GlassSurface';
  *   the room's light changes.
  * - `press` (buttons): the control sinks — a touch smaller, a pixel lower and
  *   a shade darker — and the same band of light crosses it.
+ *
+ * While the finger stays down the pane follows it: the tilt and a soft spot
+ * of light track the fingertip across the glass.
  *
  * Everything runs on springs driven natively: fast to depart, soft to settle,
  * and letting go halfway carries the motion on instead of snapping back. With
@@ -79,6 +87,13 @@ export function GlassPressable({
   // The travelling band of light is only built once the pane is first touched
   // — most panes in a list never are.
   const [armed, setArmed] = useState(false);
+  const host = useRef<View>(null);
+  const pressing = useRef(false);
+  // Where the pane sits on screen, measured as each touch begins, so a finger
+  // moving across children of the pane is still placed on the pane itself.
+  const origin = useRef<{ x: number; y: number } | null>(null);
+  const glowX = useRef(new Animated.Value(-GLOW_SIZE)).current;
+  const glowY = useRef(new Animated.Value(-GLOW_SIZE)).current;
 
   const springTo = useCallback(
     (value: Animated.Value, toValue: number) =>
@@ -86,8 +101,25 @@ export function GlassPressable({
     []
   );
 
+  // Points the tilt and the light at a fingertip, given in screen coordinates.
+  const aim = (pageX: number, pageY: number) => {
+    const o = origin.current;
+    const size = sizeRef.current;
+    if (!o || size.width <= 0 || size.height <= 0) return;
+    const lx = pageX - o.x;
+    const ly = pageY - o.y;
+    glowX.setValue(lx - GLOW_SIZE / 2);
+    glowY.setValue(ly - GLOW_SIZE / 2);
+    if (feedback === 'lift') {
+      const nx = Math.max(-1, Math.min(1, (lx / size.width) * 2 - 1));
+      const ny = Math.max(-1, Math.min(1, (ly / size.height) * 2 - 1));
+      Animated.parallel([springTo(tiltY, nx * motion.tilt), springTo(tiltX, -ny * motion.tilt)]).start();
+    }
+  };
+
   const handlePressIn = (event: GestureResponderEvent) => {
     if (disabled) return;
+    pressing.current = true;
     const size = sizeRef.current;
     if (!armed && !reduced) setArmed(true);
     const moves: Animated.CompositeAnimation[] = [springTo(press, 1)];
@@ -114,9 +146,22 @@ export function GlassPressable({
     }
 
     Animated.parallel(moves).start();
+
+    if (!reduced) {
+      const { pageX, pageY, locationX, locationY } = event.nativeEvent;
+      glowX.setValue(locationX - GLOW_SIZE / 2);
+      glowY.setValue(locationY - GLOW_SIZE / 2);
+      host.current?.measure((_x, _y, _w, _h, px, py) => {
+        if (!pressing.current || typeof px !== 'number' || typeof py !== 'number') return;
+        origin.current = { x: px, y: py };
+        aim(pageX, pageY);
+      });
+    }
   };
 
   const handlePressOut = () => {
+    pressing.current = false;
+    origin.current = null;
     Animated.parallel([springTo(press, 0), springTo(tiltX, 0), springTo(tiltY, 0)]).start();
   };
 
@@ -144,9 +189,13 @@ export function GlassPressable({
 
   return (
     <Pressable
+      ref={host}
       disabled={disabled}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
+      onTouchMove={(e) => {
+        if (pressing.current && !reduced) aim(e.nativeEvent.pageX, e.nativeEvent.pageY);
+      }}
       onLayout={(e) => {
         sizeRef.current = e.nativeEvent.layout;
       }}
@@ -186,6 +235,22 @@ export function GlassPressable({
                 {
                   backgroundColor: '#000',
                   opacity: press.interpolate({ inputRange: [0, 1], outputRange: [0, theme.mode === 'dark' ? 0.18 : 0.06] }),
+                },
+              ]}
+            />
+          )}
+          {armed && (
+            <Animated.Image
+              source={GLOW}
+              fadeDuration={0}
+              style={[
+                styles.glow,
+                {
+                  opacity: press.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0, theme.mode === 'dark' ? 0.22 : 0.55],
+                  }),
+                  transform: [{ translateX: glowX }, { translateY: glowY }],
                 },
               ]}
             />
@@ -230,4 +295,5 @@ export function GlassPressable({
 const styles = StyleSheet.create({
   clip: { overflow: 'hidden' },
   band: { position: 'absolute', top: -20, bottom: -20, left: 0 },
+  glow: { position: 'absolute', left: 0, top: 0, width: GLOW_SIZE, height: GLOW_SIZE },
 });

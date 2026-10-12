@@ -171,8 +171,8 @@ export const darkTheme: Theme = {
   glass: 'rgba(160, 175, 210, 0.07)',
   glassStrong: 'rgba(170, 185, 225, 0.10)',
   glassControl: 'rgba(190, 205, 240, 0.13)',
-  glassBorder: 'rgba(200, 215, 255, 0.10)',
-  glassEdge: 'rgba(235, 242, 255, 0.34)',
+  glassBorder: 'rgba(200, 215, 255, 0.13)',
+  glassEdge: 'rgba(235, 242, 255, 0.5)',
   glassSheen: 'rgba(210, 222, 255, 0.07)',
   glassDepth: 'rgba(0, 0, 0, 0.32)',
   glassTint: 'dark',
@@ -221,9 +221,9 @@ export const motion = {
   /** Buttons sink under the finger. */
   pressScale: 0.97,
   /** Cards rise toward it. */
-  liftScale: 1.015,
+  liftScale: 1.02,
   /** How far a card tips toward the point touched, in degrees. */
-  tilt: 1.8,
+  tilt: 3.2,
 };
 
 export const fontSizes = {

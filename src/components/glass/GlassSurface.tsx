@@ -43,6 +43,8 @@ const DEPTH: Record<GlassLevel, Depth> = {
  *  4. a hairline edge all the way round
  *  5. light caught along the top edge, brightest at the left and dying out
  *     across, with a shorter run down the left side
+ *  6. a fainter rim along the lower right, where light that passed through
+ *     the pane is caught again — what makes it read as thick glass
  *
  * Only (5) is bright, and only for a pixel, which is what keeps it from
  * looking like a white border.
@@ -229,6 +231,17 @@ export function GlassSurface({
             style={[styles.edgeLeft, { opacity: d.edge * 0.55 }]}
           />
         )}
+        {/* Light that has passed through the pane, caught again on the far
+            lower edge: the second, fainter rim that gives thick glass its
+            depth. */}
+        {light && (
+          <LinearGradient
+            colors={['transparent', theme.glassEdge]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={[styles.edgeBottom, { opacity: d.edge * 0.4 }]}
+          />
+        )}
       </View>
 
       <View style={[styles.clip, { borderRadius }, contentStyle]}>{children}</View>
@@ -248,4 +261,5 @@ const styles = StyleSheet.create({
   // Just inside the hairline border, which absolute children sit within.
   edgeTop: { position: 'absolute', top: 0, left: 0, right: '18%', height: 1 },
   edgeLeft: { position: 'absolute', top: 0, left: 0, bottom: '45%', width: 1 },
+  edgeBottom: { position: 'absolute', bottom: 0, left: '35%', right: 0, height: 1 },
 });
