@@ -38,7 +38,6 @@ import com.prabhat.app.data.AppState
 import com.prabhat.app.data.Store
 import com.prabhat.app.data.ThemeMode
 import com.prabhat.app.domain.Format
-import com.prabhat.app.domain.ScheduleMath
 import com.prabhat.app.ui.BackgroundChecklist
 import com.prabhat.app.ui.Routes
 import com.prabhat.app.ui.SystemAccess
@@ -55,8 +54,6 @@ fun SettingsScreen(state: AppState, pad: PaddingValues, nav: NavHostController) 
     val p = LocalPalette.current
     val context = LocalContext.current
     var pickDefault by remember { mutableStateOf(false) }
-    var editTime by remember { mutableStateOf(false) }
-    val first = state.schedules.firstOrNull()
 
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).statusBarsPadding()
@@ -68,9 +65,11 @@ fun SettingsScreen(state: AppState, pad: PaddingValues, nav: NavHostController) 
 
         Section("Morning session") {
             ActionRow(
-                Icons.Rounded.AccessTime, "Morning playback time",
-                first?.let { Format.time(it.hour, it.minute) + " · " + ScheduleMath.daysLabel(it.days) } ?: "Not set",
-            ) { editTime = true }
+                Icons.Rounded.AccessTime, if (state.schedules.size > 1) "Morning playback times" else "Morning playback time",
+                state.schedules.sortedBy { it.hour * 60 + it.minute }
+                    .joinToString(" · ") { Format.time(it.hour, it.minute) }
+                    .ifEmpty { "Not set" },
+            ) { nav.tab(Routes.SCHEDULE) }
             ActionRow(Icons.Rounded.Star, "Default mantra", state.defaultMantra?.name ?: "None") { pickDefault = true }
             Label("Repeat count")
             OptionChips(AppState.REPEAT_OPTIONS, state.repeat, Format::repeat) { r -> Store.update { it.copy(repeat = r) } }
@@ -130,7 +129,6 @@ fun SettingsScreen(state: AppState, pad: PaddingValues, nav: NavHostController) 
         }
     }
 
-    if (editTime) ScheduleEditor(state, first) { editTime = false }
     if (pickDefault) {
         AlertDialog(
             onDismissRequest = { pickDefault = false },

@@ -36,7 +36,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.io.File
-import java.time.LocalDate
 
 /**
  * Plays mantras in the background with lock-screen, notification, Bluetooth and headphone controls.
@@ -129,6 +128,13 @@ class PlaybackService : MediaSessionService() {
                 }
             }
             is PlaybackHub.Command.Sleep -> setSleep(cmd.minutes)
+            PlaybackHub.Command.Stop -> {
+                clearSleep()
+                fadeJob?.cancel()
+                player.stop()
+                player.clearMediaItems()
+                publishSession()
+            }
         }
     }
 
@@ -237,7 +243,7 @@ class PlaybackService : MediaSessionService() {
         val completed = plan.isFinalPlay
         if (sleepAtEnd) clearSleep()
         if (completed && kind != SessionKind.MANUAL) {
-            Store.update { it.copy(completedOn = LocalDate.now().toString()) }
+            Store.update { it.copy(lastCompletedAt = System.currentTimeMillis()) }
             if (Store.value.notifyComplete) {
                 Notifier.completed(this, player.currentMediaItem?.mediaMetadata?.title?.toString() ?: "Morning mantra")
             }

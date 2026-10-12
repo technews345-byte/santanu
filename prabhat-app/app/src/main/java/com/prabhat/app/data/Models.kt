@@ -65,8 +65,8 @@ data class AppState(
     val resume: ResumePoint? = null,
     /** The scheduled time (epoch ms) of the last alarm that fired, to ignore duplicate deliveries. */
     val lastFiredAt: Long = 0,
-    /** ISO date of the last completed morning session. */
-    val completedOn: String? = null,
+    /** When the last morning session finished (epoch ms), to tell done sessions from missed ones. */
+    val lastCompletedAt: Long = 0,
 ) {
     fun mantra(id: String?): Mantra? = mantras.firstOrNull { it.id == id }
     val defaultMantra: Mantra? get() = mantra(defaultMantraId) ?: mantras.firstOrNull()

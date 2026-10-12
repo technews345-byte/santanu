@@ -121,4 +121,19 @@ class ScheduleMathTest {
         val n = ScheduleMath.next(s.schedules, at("2026-10-05T06:45"))!!
         assertEquals("hanuman", n.rule.id)
     }
+
+    @Test fun `finishing the 6 30 session does not hide a missed 7 00 session`() {
+        val rules = AppState().schedules // 6:30 Mahalakshmi, 7:00 Hanuman Chalisa
+        val ms = { t: String -> at(t).toInstant().toEpochMilli() }
+        // Before any session is due there is nothing pending.
+        assertNull(ScheduleMath.pendingToday(rules, at("2026-10-05T06:00"), 0))
+        // 6:45, nothing played yet: the 6:30 session is pending.
+        assertEquals("morning", ScheduleMath.pendingToday(rules, at("2026-10-05T06:45"), 0)!!.rule.id)
+        // 6:45, the 6:30 session finished at 6:31: nothing pending.
+        assertNull(ScheduleMath.pendingToday(rules, at("2026-10-05T06:45"), ms("2026-10-05T06:31")))
+        // 7:20, the 7:00 session was missed although 6:30 was heard: 7:00 is pending.
+        assertEquals("hanuman", ScheduleMath.pendingToday(rules, at("2026-10-05T07:20"), ms("2026-10-05T06:31"))!!.rule.id)
+        // Yesterday's completion does not count for today.
+        assertEquals("morning", ScheduleMath.pendingToday(rules, at("2026-10-05T06:40"), ms("2026-10-04T07:05"))!!.rule.id)
+    }
 }

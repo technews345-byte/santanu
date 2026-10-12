@@ -75,7 +75,6 @@ import com.prabhat.app.ui.morningMantra
 import com.prabhat.app.ui.morningRule
 import com.prabhat.app.ui.tab
 import com.prabhat.app.ui.theme.LocalPalette
-import java.time.LocalDate
 
 @Composable
 fun HomeScreen(state: AppState, player: PlayerConnection, pad: PaddingValues, nav: NavHostController) {
@@ -91,8 +90,11 @@ fun HomeScreen(state: AppState, player: PlayerConnection, pad: PaddingValues, na
     val home = morningMantra(state, now)
     val mantra = (if (ui.loaded) state.mantra(ui.mantraId) else null) ?: home
     val (greeting, subtitle) = Format.greeting(now.hour)
-    val doneToday = state.completedOn == LocalDate.now().toString()
-    val missed = if (state.scheduleOn && !doneToday && !ui.isPlaying) ScheduleMath.lastToday(state.schedules, now) else null
+    val due = if (state.scheduleOn) ScheduleMath.lastToday(state.schedules, now) else null
+    val pending = if (state.scheduleOn) ScheduleMath.pendingToday(state.schedules, now, state.lastCompletedAt) else null
+    val doneToday = due != null && pending == null
+    val missed = pending?.takeIf { !ui.isPlaying }
+    val homeRule = morningRule(state, now)
 
     fun start(id: String?, kind: SessionKind, resume: Boolean, fade: Boolean, repeat: Int? = null) =
         player.send(PlaybackHub.Command.Start(id, kind, resume, fade, repeat))
@@ -148,7 +150,7 @@ fun HomeScreen(state: AppState, player: PlayerConnection, pad: PaddingValues, na
         val detail = when {
             ui.loaded -> session?.playLabel ?: if (session?.kind == SessionKind.MANUAL) "Listening" else "Today's session"
             doneToday -> "Today's session complete ✓"
-            else -> "Today's session"
+            else -> "Today's session · ${Format.repeat(state.repeatFor(homeRule)).lowercase()}"
         }
         Text(detail, style = MaterialTheme.typography.bodyMedium, color = p.muted)
         if (sleep != null) {
@@ -179,7 +181,7 @@ fun HomeScreen(state: AppState, player: PlayerConnection, pad: PaddingValues, na
                 when {
                     ui.isPlaying -> player.pause()
                     ui.loaded -> player.play()
-                    else -> start(home?.id, SessionKind.MORNING, resume = true, fade = false, morningRule(state, now)?.repeat)
+                    else -> start(home?.id, SessionKind.MORNING, resume = true, fade = false, homeRule?.repeat)
                 }
             }
             IconButton(onClick = { skip(1) }, modifier = Modifier.size(56.dp)) {
@@ -189,7 +191,6 @@ fun HomeScreen(state: AppState, player: PlayerConnection, pad: PaddingValues, na
                 Icon(Icons.Rounded.Bedtime, "Sleep timer", tint = if (sleep != null) p.gold else p.muted)
             }
         }
-        Text("Repeat: ${Format.repeat(state.repeat)}", style = MaterialTheme.typography.labelMedium, color = p.muted)
 
         // Volume
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {

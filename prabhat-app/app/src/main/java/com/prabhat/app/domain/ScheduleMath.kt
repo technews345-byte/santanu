@@ -35,6 +35,14 @@ object ScheduleMath {
             .filter { !it.at.isAfter(now) }
             .maxByOrNull { it.at.toInstant() }
 
+    /**
+     * Today's most recent session that is already due but not yet listened to, or null. A session counts as listened
+     * to when any morning session finished after its time ([lastCompletedAt], epoch ms), so finishing the 6:30 mantra
+     * does not hide a missed 7:00 one.
+     */
+    fun pendingToday(rules: List<ScheduleRule>, now: ZonedDateTime, lastCompletedAt: Long): Occurrence? =
+        lastToday(rules, now)?.takeIf { lastCompletedAt < it.at.toInstant().toEpochMilli() }
+
     fun daysLabel(days: Set<Int>): String = when {
         days.size == 7 -> "Every day"
         days.isEmpty() -> "No days"

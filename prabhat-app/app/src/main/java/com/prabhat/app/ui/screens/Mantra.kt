@@ -154,7 +154,8 @@ fun MantraScreen(state: AppState, player: PlayerConnection, pad: PaddingValues, 
             confirmButton = {
                 TextButton(onClick = {
                     dialog = null
-                    if (ui.mantraId == m.id) player.pause()
+                    // The player's queue holds the whole library: empty it so the deleted file is never played.
+                    if (ui.loaded) player.send(PlaybackHub.Command.Stop)
                     Library.delete(m.id)
                 }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
             },

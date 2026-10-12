@@ -19,6 +19,8 @@ object PlaybackHub {
         data class Skip(val delta: Int) : Command
         /** Minutes until playback pauses; [END_OF_MANTRA] or [CANCEL]. */
         data class Sleep(val minutes: Int) : Command
+        /** Stops and empties the player (e.g. the loaded mantra was deleted). */
+        data object Stop : Command
     }
 
     const val END_OF_MANTRA = -1

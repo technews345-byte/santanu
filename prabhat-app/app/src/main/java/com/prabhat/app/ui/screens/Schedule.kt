@@ -16,6 +16,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material3.Icon
+import androidx.compose.runtime.remember
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -49,6 +52,7 @@ fun ScheduleScreen(state: AppState, pad: PaddingValues, presetMantra: String?) {
     // Opened from a mantra's "Schedule" button: start a new time for that mantra (once).
     var editing by rememberSaveable { mutableStateOf<String?>(if (presetMantra != null) NEW else null) }
     var presetUsed by rememberSaveable { mutableStateOf(false) }
+    var deleting by remember { mutableStateOf<ScheduleRule?>(null) }
     val next = if (state.scheduleOn) ScheduleMath.next(state.schedules, now) else null
 
     Column(
@@ -82,8 +86,8 @@ fun ScheduleScreen(state: AppState, pad: PaddingValues, presetMantra: String?) {
             }
         }
 
-        state.schedules.forEach { rule ->
-            RuleCard(state, rule, onEdit = { editing = rule.id })
+        state.schedules.sortedBy { it.hour * 60 + it.minute }.forEach { rule ->
+            RuleCard(state, rule, onEdit = { editing = rule.id }, onDelete = { deleting = rule })
         }
 
         OutlinedButton(onClick = { editing = NEW }, modifier = Modifier.fillMaxWidth().height(52.dp)) {
@@ -105,6 +109,21 @@ fun ScheduleScreen(state: AppState, pad: PaddingValues, presetMantra: String?) {
         }
     }
 
+    deleting?.let { rule ->
+        AlertDialog(
+            onDismissRequest = { deleting = null },
+            title = { Text("Delete ${Format.time(rule.hour, rule.minute)}?") },
+            text = { Text("${state.mantraFor(rule)?.name ?: "The mantra"} will no longer play at this time.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    Store.update { s -> s.copy(schedules = s.schedules.filter { it.id != rule.id }) }
+                    deleting = null
+                }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = { TextButton(onClick = { deleting = null }) { Text("Cancel") } },
+        )
+    }
+
     editing?.let { id ->
         val rule = state.schedules.firstOrNull { it.id == id }
         val preset = if (id == NEW && !presetUsed) presetMantra else null
@@ -115,7 +134,7 @@ fun ScheduleScreen(state: AppState, pad: PaddingValues, presetMantra: String?) {
 private const val NEW = "new"
 
 @Composable
-private fun RuleCard(state: AppState, rule: ScheduleRule, onEdit: () -> Unit) {
+private fun RuleCard(state: AppState, rule: ScheduleRule, onEdit: () -> Unit, onDelete: () -> Unit) {
     val p = LocalPalette.current
     val active = state.scheduleOn && rule.enabled
     GlassCard(Modifier.fillMaxWidth(), onClick = onEdit) {
@@ -141,7 +160,7 @@ private fun RuleCard(state: AppState, rule: ScheduleRule, onEdit: () -> Unit) {
                     },
                     colors = SwitchDefaults.colors(checkedTrackColor = p.gold),
                 )
-                IconButton(onClick = { Store.update { s -> s.copy(schedules = s.schedules.filter { it.id != rule.id }) } }) {
+                IconButton(onClick = onDelete) {
                     Icon(Icons.Rounded.DeleteOutline, "Delete this time", tint = p.muted)
                 }
             }
