@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, LayoutChangeEvent, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Animated, Easing, LayoutChangeEvent, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../../theme/type';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -17,23 +17,36 @@ import { GlassSurface } from './GlassSurface';
  * see-through shelf let the list run visibly through its labels, and a
  * control that is hard to read is not worth the effect.
  *
- * The selected destination is its own small pane — brighter glass tinted
- * with the accent, lit on its edge and glowing faintly — that glides between
- * tabs. The icon being left settles as the one being entered rises, so the two
- * trade weight rather than one blinking off and another on.
+ * The selected destination sits under a lens: a rounded pane of brighter
+ * glass, tinted with the accent and lit on its edge, inset evenly inside its
+ * tab. Moving to another tab it glides across and, like a drop of liquid
+ * glass, stretches a little along the way and settles back into shape. The
+ * icon being left settles as the one being entered rises, so the two trade
+ * weight rather than one blinking off and another on.
  */
 export function GlassTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const [width, setWidth] = useState(0);
   const travel = useRef(new Animated.Value(state.index)).current;
+  // 0 at rest, 1 at full stretch mid-glide.
+  const stretch = useRef(new Animated.Value(0)).current;
+  const first = useRef(true);
 
   useEffect(() => {
-    Animated.spring(travel, {
-      toValue: state.index,
-      useNativeDriver: true,
-      ...motion.glide,
-    }).start();
+    const glide = Animated.spring(travel, { toValue: state.index, useNativeDriver: true, ...motion.glide });
+    if (first.current) {
+      first.current = false;
+      glide.start();
+      return;
+    }
+    Animated.parallel([
+      glide,
+      Animated.sequence([
+        Animated.timing(stretch, { toValue: 1, duration: 110, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+        Animated.spring(stretch, { toValue: 0, useNativeDriver: true, damping: 14, stiffness: 220, mass: 0.8 }),
+      ]),
+    ]).start();
   }, [state.index]);
 
   const count = state.routes.length;
@@ -46,6 +59,8 @@ export function GlassTabBar({ state, descriptors, navigation }: BottomTabBarProp
           extrapolate: 'clamp',
         })
       : 0;
+  const scaleX = stretch.interpolate({ inputRange: [0, 1], outputRange: [1, 1.22] });
+  const scaleY = stretch.interpolate({ inputRange: [0, 1], outputRange: [1, 0.9] });
 
   return (
     <View
@@ -63,8 +78,8 @@ export function GlassTabBar({ state, descriptors, navigation }: BottomTabBarProp
               style={[
                 styles.pill,
                 {
-                  width: slot,
-                  transform: [{ translateX }],
+                  width: slot - LENS_INSET * 2,
+                  transform: [{ translateX }, { scaleX }, { scaleY }],
                   shadowColor: theme.tint,
                   shadowOpacity: theme.mode === 'dark' ? 0.45 : 0.18,
                 },
@@ -73,11 +88,11 @@ export function GlassTabBar({ state, descriptors, navigation }: BottomTabBarProp
               <GlassSurface
                 level="control"
                 blur={false}
-                borderRadius={radius.pill}
+                borderRadius={LENS_RADIUS}
                 style={styles.pillGlass}
                 contentStyle={styles.pillFill}
-                tint={withAlpha(theme.tint, theme.mode === 'dark' ? 0.2 : 0.1)}
-                tintBorder={withAlpha(theme.tint, theme.mode === 'dark' ? 0.4 : 0.28)}
+                tint={withAlpha(theme.tint, theme.mode === 'dark' ? 0.26 : 0.13)}
+                tintBorder={withAlpha(theme.tint, theme.mode === 'dark' ? 0.5 : 0.32)}
               />
             </Animated.View>
           )}
@@ -133,23 +148,46 @@ function TabItem({
     Animated.spring(lift, { toValue: focused ? 1 : 0, useNativeDriver: true, ...motion.glide }).start();
   }, [focused]);
 
-  const scale = lift.interpolate({ inputRange: [0, 1], outputRange: [1, 1.12] });
-  const rise = lift.interpolate({ inputRange: [0, 1], outputRange: [0, -2] });
+  // Dips under the finger and springs back when it lifts.
+  const press = useRef(new Animated.Value(0)).current;
+  const pressTo = (toValue: number) =>
+    Animated.spring(press, { toValue, useNativeDriver: true, ...motion.press }).start();
+
+  const scale = Animated.multiply(
+    lift.interpolate({ inputRange: [0, 1], outputRange: [1, 1.1] }),
+    press.interpolate({ inputRange: [0, 1], outputRange: [1, 0.86] })
+  );
+  const rise = lift.interpolate({ inputRange: [0, 1], outputRange: [0, -1] });
   // The active icon is lifted toward white on dark, so it reads as lit by the
-  // pane beneath it rather than as the accent printed on glass.
-  const color = focused ? (theme.mode === 'dark' ? shade(theme.tint, 0.45) : theme.tint) : theme.textTertiary;
+  // lens beneath it rather than as the accent printed on glass.
+  const color = focused ? (theme.mode === 'dark' ? shade(theme.tint, 0.5) : theme.tint) : theme.textSecondary;
 
   return (
-    <Pressable onPress={onPress} style={styles.item} hitSlop={4}>
-      <Animated.View style={{ transform: [{ scale }, { translateY: rise }] }}>
-        {icon?.({ focused, color, size: 22 })}
+    <Pressable
+      onPress={onPress}
+      onPressIn={() => pressTo(1)}
+      onPressOut={() => pressTo(0)}
+      style={styles.item}
+      hitSlop={4}
+      accessibilityRole="tab"
+      accessibilityState={{ selected: focused }}
+      accessibilityLabel={label}
+    >
+      <Animated.View style={[styles.itemInner, { transform: [{ scale }, { translateY: rise }] }]}>
+        {icon?.({ focused, color, size: 23 })}
+        <Text numberOfLines={1} style={[styles.label, { color, fontWeight: focused ? '700' : '600' }]}>
+          {label}
+        </Text>
       </Animated.View>
-      <Text numberOfLines={1} style={[styles.label, { color }]}>
-        {label}
-      </Text>
     </Pressable>
   );
 }
+
+// The lens sits this far inside its tab on each side, and is rounded to suit
+// a tab-sized pane rather than drawn as a full capsule, which on a tall,
+// narrow tab came out as an egg.
+const LENS_INSET = 3;
+const LENS_RADIUS = 20;
 
 const styles = StyleSheet.create({
   dock: {
@@ -163,15 +201,16 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', paddingHorizontal: spacing.xs, paddingVertical: 6 },
   pill: {
     position: 'absolute',
-    top: 4,
-    bottom: 4,
-    left: spacing.xs,
-    borderRadius: radius.pill,
+    top: 6,
+    bottom: 6,
+    left: spacing.xs + LENS_INSET,
+    borderRadius: LENS_RADIUS,
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 4 },
   },
   pillGlass: { flex: 1 },
   pillFill: { flex: 1 },
-  item: { flex: 1, alignItems: 'center', gap: 2, paddingVertical: 6 },
-  label: { fontSize: 10, fontWeight: '700' },
+  item: { flex: 1, alignItems: 'center', paddingVertical: 7 },
+  itemInner: { alignItems: 'center', gap: 3 },
+  label: { fontSize: 10.5, letterSpacing: 0.1 },
 });
