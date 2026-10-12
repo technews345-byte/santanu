@@ -9,6 +9,8 @@ import { useTheme } from '../theme/ThemeContext';
 import { fontSizes, motion, radius, spacing } from '../theme/tokens';
 import { shade, withAlpha } from '../theme/color';
 import { GlassSurface } from './glass/GlassSurface';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { TAB_BAR_HEIGHT } from './glass/GlassTabBar';
 
 /**
  * The button opens into its own choices rather than jumping straight to a
@@ -21,6 +23,7 @@ import { GlassSurface } from './glass/GlassSurface';
  */
 export function QuickAddFab() {
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
   const [open, setOpen] = useState(false);
   const reveal = useRef(new Animated.Value(0)).current;
@@ -55,7 +58,8 @@ export function QuickAddFab() {
         </Pressable>
       )}
 
-      <View style={styles.dock} pointerEvents="box-none">
+      {/* Clear of the tab bar, wherever the phone's own navigation puts it. */}
+      <View style={[styles.dock, { bottom: Math.max(insets.bottom, spacing.sm) + TAB_BAR_HEIGHT + 12 }]} pointerEvents="box-none">
         <Action
           label="Scan Receipt"
           icon="scan"
@@ -177,7 +181,7 @@ function Action({
 }
 
 const styles = StyleSheet.create({
-  dock: { position: 'absolute', right: spacing.lg, bottom: 96, alignItems: 'flex-end' },
+  dock: { position: 'absolute', right: spacing.lg, alignItems: 'flex-end' },
   action: { position: 'absolute', right: 0, bottom: 4 },
   actionInner: {
     flexDirection: 'row',

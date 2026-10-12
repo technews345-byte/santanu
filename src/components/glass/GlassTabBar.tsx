@@ -1,28 +1,48 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
-import { Animated, Easing, Image, LayoutChangeEvent, Platform, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Animated, Image, LayoutChangeEvent, Platform, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import Svg, { Defs, Ellipse, RadialGradient, Stop } from 'react-native-svg';
 import { Text } from '../../theme/type';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
 import { motion, radius, spacing } from '../../theme/tokens';
-import { shade, withAlpha } from '../../theme/color';
 import { useReducedMotion } from '../../theme/useReducedMotion';
 import { GlassSurface } from './GlassSurface';
 import { ROOM } from './Aurora';
-import Svg, { Defs, Ellipse, RadialGradient, Stop } from 'react-native-svg';
-import { ActivityIcon, BudgetIcon, GlassIconPalette, HomeIcon, InsightsIcon, SettingsIcon } from './TabIcons';
+import {
+  ActivityGlyph,
+  BudgetGlyph,
+  GLYPH_SIZE,
+  HomeGlyph,
+  InsightsGlyph,
+  Orb,
+  ORB_SIZE,
+  OrbColors,
+  SettingsGlyph,
+} from './TabIcons';
 
-const ICONS: Record<string, typeof HomeIcon> = {
-  Dashboard: HomeIcon,
-  Transactions: ActivityIcon,
-  Budgets: BudgetIcon,
-  Analytics: InsightsIcon,
-  Settings: SettingsIcon,
+// Bright, luminous glass, as in the reference design: vivid colour with a
+// pale lit spot, and edges that stay in the colour rather than going dark.
+const BLUE: OrbColors = { light: '#C2EBFF', base: '#2F9BFF', edge: '#1569F5', glow: '#3AA0FF' };
+const VIOLET: OrbColors = { light: '#FFD0F6', base: '#C468FF', edge: '#6F5CFF', glow: '#B96CFF' };
+const GREEN: OrbColors = { light: '#C2FFD2', base: '#36D978', edge: '#17A84D', glow: '#36D978' };
+const GRAPHITE_DARK: OrbColors = { light: '#B9C1D1', base: '#6A7386', edge: '#454C5C', glow: '#9AA6C0' };
+const GRAPHITE_LIGHT: OrbColors = { light: '#FFFFFF', base: '#CDD3DF', edge: '#9AA3B6', glow: '#8C98B5', glyph: '#4E5669' };
+
+type TabLook = { colors: (dark: boolean) => OrbColors; Glyph: typeof HomeGlyph; spin?: boolean };
+
+const TABS: Record<string, TabLook> = {
+  Dashboard: { colors: () => BLUE, Glyph: HomeGlyph },
+  Transactions: { colors: (dark) => (dark ? GRAPHITE_DARK : GRAPHITE_LIGHT), Glyph: ActivityGlyph },
+  Budgets: { colors: () => VIOLET, Glyph: BudgetGlyph },
+  Analytics: { colors: () => GREEN, Glyph: InsightsGlyph },
+  Settings: { colors: (dark) => (dark ? GRAPHITE_DARK : GRAPHITE_LIGHT), Glyph: SettingsGlyph, spin: true },
 };
 
 /**
- * A capsule of clear glass floating above the content.
+ * A capsule of clear glass floating above the content, holding a row of
+ * glossy coloured orbs.
  *
  * It is see-through: the backdrop shows through it, frosted. It carries its
  * own copy of the backdrop, blurred once and lined up with the real one
@@ -30,18 +50,15 @@ const ICONS: Record<string, typeof HomeIcon> = {
  * per frame. A live blur of whatever is behind would let the list scrolling
  * under it run through its labels; this keeps them clean.
  *
- * The selected tab sits on a lens: a capsule of brighter glass tinted with
- * the accent. Moving to another tab it glides across and, like a drop of
- * liquid glass, stretches a little along the way and settles back. Each icon
- * answers the finger: it dips when pressed, and pops into place (the gear
- * spins) as it becomes the selected one.
- *
- * The icons float: each hovers a little above its own soft shadow, and the
- * selected one drifts gently up and down — its shadow shrinking and fading
- * as it rises — the way an object hangs in the air in a spatial interface.
+ * Each tab is an orb of its own colour. The selected one grows a little and
+ * glows, its label turns bold, and a short bar of its colour sits beneath it,
+ * gliding to the next tab as you move. Orbs dip under the finger and pop
+ * into place when chosen — the gear spins in — and the glow flares as it
+ * lights up.
  */
 export function GlassTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const { theme } = useTheme();
+  const dark = theme.mode === 'dark';
   const insets = useSafeAreaInsets();
   const window = useWindowDimensions();
   const [width, setWidth] = useState(0);
@@ -49,24 +66,9 @@ export function GlassTabBar({ state, descriptors, navigation }: BottomTabBarProp
   const [origin, setOrigin] = useState<{ x: number; y: number } | null>(null);
   const shell = useRef<View>(null);
   const travel = useRef(new Animated.Value(state.index)).current;
-  // 0 at rest, 1 at full stretch mid-glide.
-  const stretch = useRef(new Animated.Value(0)).current;
-  const first = useRef(true);
 
   useEffect(() => {
-    const glide = Animated.spring(travel, { toValue: state.index, useNativeDriver: true, ...motion.glide });
-    if (first.current) {
-      first.current = false;
-      glide.start();
-      return;
-    }
-    Animated.parallel([
-      glide,
-      Animated.sequence([
-        Animated.timing(stretch, { toValue: 1, duration: 110, easing: Easing.out(Easing.quad), useNativeDriver: true }),
-        Animated.spring(stretch, { toValue: 0, useNativeDriver: true, damping: 14, stiffness: 220, mass: 0.8 }),
-      ]),
-    ]).start();
+    Animated.spring(travel, { toValue: state.index, useNativeDriver: true, ...motion.glide }).start();
   }, [state.index]);
 
   const count = state.routes.length;
@@ -79,8 +81,7 @@ export function GlassTabBar({ state, descriptors, navigation }: BottomTabBarProp
           extrapolate: 'clamp',
         })
       : 0;
-  const scaleX = stretch.interpolate({ inputRange: [0, 1], outputRange: [1, 1.22] });
-  const scaleY = stretch.interpolate({ inputRange: [0, 1], outputRange: [1, 0.9] });
+  const selected = TABS[state.routes[state.index]?.name] ?? TABS.Dashboard;
 
   return (
     <View
@@ -99,7 +100,7 @@ export function GlassTabBar({ state, descriptors, navigation }: BottomTabBarProp
         {origin && (
           <View style={[StyleSheet.absoluteFill, styles.backdropClip]} pointerEvents="none">
             <Image
-              source={theme.mode === 'dark' ? ROOM.dark : ROOM.light}
+              source={dark ? ROOM.dark : ROOM.light}
               blurRadius={18}
               fadeDuration={0}
               resizeMode="cover"
@@ -110,43 +111,20 @@ export function GlassTabBar({ state, descriptors, navigation }: BottomTabBarProp
 
         <GlassSurface level="raised" blur={false} borderRadius={radius.pill}>
           <View style={styles.row} onLayout={(e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width)}>
-            {slot > 0 && (
-              <Animated.View
-                pointerEvents="none"
-                style={[
-                  styles.lens,
-                  {
-                    width: slot - LENS_INSET * 2,
-                    transform: [{ translateX }, { scaleX }, { scaleY }],
-                    shadowColor: theme.tint,
-                    shadowOpacity: theme.mode === 'dark' ? 0.5 : 0.22,
-                  },
-                ]}
-              >
-                <GlassSurface
-                  level="control"
-                  blur={false}
-                  borderRadius={radius.pill}
-                  style={styles.lensGlass}
-                  contentStyle={styles.lensFill}
-                  tint={withAlpha(theme.tint, theme.mode === 'dark' ? 0.3 : 0.16)}
-                  tintBorder={withAlpha(theme.tint, theme.mode === 'dark' ? 0.55 : 0.36)}
-                />
-              </Animated.View>
-            )}
-
             {state.routes.map((route, index) => {
               const focused = state.index === index;
               const { options } = descriptors[route.key];
               const label = typeof options.tabBarLabel === 'string' ? options.tabBarLabel : route.name;
+              const look = TABS[route.name] ?? TABS.Dashboard;
 
               return (
                 <TabItem
                   key={route.key}
                   focused={focused}
                   label={label}
-                  Icon={ICONS[route.name] ?? HomeIcon}
-                  spin={route.name === 'Settings'}
+                  colors={look.colors(dark)}
+                  Glyph={look.Glyph}
+                  spin={!!look.spin}
                   onPress={() => {
                     const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
                     if (focused || event.defaultPrevented) return;
@@ -156,6 +134,21 @@ export function GlassTabBar({ state, descriptors, navigation }: BottomTabBarProp
                 />
               );
             })}
+
+            {slot > 0 && (
+              <Animated.View
+                pointerEvents="none"
+                style={[
+                  styles.indicator,
+                  {
+                    left: spacing.xs + slot / 2 - INDICATOR_WIDTH / 2,
+                    backgroundColor: selected.colors(dark).glow,
+                    shadowColor: selected.colors(dark).glow,
+                    transform: [{ translateX }],
+                  },
+                ]}
+              />
+            )}
           </View>
         </GlassSurface>
       </View>
@@ -166,42 +159,31 @@ export function GlassTabBar({ state, descriptors, navigation }: BottomTabBarProp
 function TabItem({
   focused,
   label,
-  Icon,
+  colors,
+  Glyph,
   spin,
   onPress,
 }: {
   focused: boolean;
   label: string;
-  Icon: typeof HomeIcon;
+  colors: OrbColors;
+  Glyph: typeof HomeGlyph;
   spin: boolean;
   onPress: () => void;
 }) {
   const { theme } = useTheme();
+  const dark = theme.mode === 'dark';
   const reduced = useReducedMotion();
   // Dips under the finger and springs back when it lifts.
   const press = useRef(new Animated.Value(0)).current;
   // 0 → 1 each time the tab becomes the selected one: a springy pop.
   const pop = useRef(new Animated.Value(1)).current;
-  // 0 → 1 → 0, looping while selected: the slow hover.
-  const float = useRef(new Animated.Value(0)).current;
+  // How selected the tab is, eased: grows the orb and lights its halo.
+  const chosen = useRef(new Animated.Value(focused ? 1 : 0)).current;
   const mounted = useRef(false);
 
   useEffect(() => {
-    if (!focused || reduced) {
-      Animated.timing(float, { toValue: 0, duration: 220, useNativeDriver: true }).start();
-      return;
-    }
-    const hover = Animated.loop(
-      Animated.sequence([
-        Animated.timing(float, { toValue: 1, duration: 1400, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-        Animated.timing(float, { toValue: 0, duration: 1400, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-      ])
-    );
-    hover.start();
-    return () => hover.stop();
-  }, [focused, reduced]);
-
-  useEffect(() => {
+    Animated.spring(chosen, { toValue: focused ? 1 : 0, useNativeDriver: true, ...motion.glide }).start();
     if (!mounted.current) {
       mounted.current = true;
       return;
@@ -215,44 +197,23 @@ function TabItem({
     Animated.spring(press, { toValue, useNativeDriver: true, ...motion.press }).start();
 
   const scale = Animated.multiply(
-    pop.interpolate({ inputRange: [0, 1], outputRange: [0.72, 1] }),
-    press.interpolate({ inputRange: [0, 1], outputRange: [1, 0.84] })
+    Animated.multiply(
+      pop.interpolate({ inputRange: [0, 1], outputRange: [0.72, 1] }),
+      press.interpolate({ inputRange: [0, 1], outputRange: [1, 0.86] })
+    ),
+    chosen.interpolate({ inputRange: [0, 1], outputRange: [0.9, 1.04] })
   );
-  const rotate = pop.interpolate({ inputRange: [0, 1], outputRange: [spin ? '-120deg' : '-12deg', '0deg'] });
-  const hoverY = float.interpolate({ inputRange: [0, 1], outputRange: [0, -3.5] });
-  const shadowScale = float.interpolate({ inputRange: [0, 1], outputRange: [1, 0.74] });
-  const shadowOpacity = float.interpolate({ inputRange: [0, 1], outputRange: [1, 0.55] });
+  const spinGlyph = pop.interpolate({ inputRange: [0, 1], outputRange: [spin ? '-120deg' : '-14deg', '0deg'] });
+  // The glow flares as the orb is chosen, then settles.
+  const haloScale = pop.interpolate({ inputRange: [0, 1], outputRange: [1.25, 1] });
 
-  const dark = theme.mode === 'dark';
-  // Selected: solid accent glass with white details. Otherwise frosted glass
-  // that still reads clearly against the bar.
-  const palette: GlassIconPalette = focused
-    ? {
-        top: shade(theme.tint, 0.45),
-        bottom: shade(theme.tint, -0.1),
-        base: shade(theme.tint, -0.5),
-        detail: '#FFFFFF',
-        detailShadow: withAlpha(shade(theme.tint, -0.55), 0.55),
-        gloss: 0.6,
-      }
+  const labelColor = focused
+    ? dark
+      ? '#FFFFFF'
+      : theme.tint
     : dark
-      ? {
-          top: 'rgba(232, 237, 252, 0.78)',
-          bottom: 'rgba(150, 162, 198, 0.5)',
-          base: 'rgba(0, 0, 0, 0.4)',
-          detail: 'rgba(16, 20, 34, 0.62)',
-          detailShadow: 'rgba(255, 255, 255, 0.18)',
-          gloss: 0.5,
-        }
-      : {
-          top: '#D9DFEC',
-          bottom: '#8D97B0',
-          base: 'rgba(60, 70, 100, 0.45)',
-          detail: '#FFFFFF',
-          detailShadow: 'rgba(60, 70, 100, 0.3)',
-          gloss: 0.7,
-        };
-  const labelColor = focused ? (theme.mode === 'dark' ? shade(theme.tint, 0.5) : theme.tint) : theme.textSecondary;
+      ? 'rgba(236, 239, 246, 0.78)'
+      : theme.textSecondary;
 
   return (
     <Pressable
@@ -266,14 +227,14 @@ function TabItem({
       accessibilityLabel={label}
     >
       <View style={styles.stage}>
-        <Animated.View style={[styles.shadow, { opacity: shadowOpacity, transform: [{ scaleX: shadowScale }] }]}>
-          <FloatShadow
-            color={focused ? shade(theme.tint, -0.4) : dark ? '#000000' : '#323C64'}
-            strength={focused ? 0.6 : dark ? 0.6 : 0.32}
-          />
+        <Animated.View style={[styles.halo, { opacity: chosen, transform: [{ scale: haloScale }] }]} pointerEvents="none">
+          <Halo color={colors.glow} />
         </Animated.View>
-        <Animated.View style={{ transform: [{ translateY: hoverY }, { scale }, { rotate }] }}>
-          <Icon palette={palette} size={26} />
+        <Animated.View style={{ transform: [{ scale }] }}>
+          <Orb colors={colors} />
+          <Animated.View style={[styles.glyph, { transform: [{ rotate: spinGlyph }] }]}>
+            <Glyph color={colors.glyph ?? '#FFFFFF'} hole={colors.base} />
+          </Animated.View>
         </Animated.View>
       </View>
       <Text numberOfLines={1} style={[styles.label, { color: labelColor, fontWeight: focused ? '700' : '600' }]}>
@@ -283,24 +244,27 @@ function TabItem({
   );
 }
 
-/** A soft oval of shadow on the glass below an icon, so the icon hovers. */
-const FloatShadow = React.memo(function FloatShadow({ color, strength }: { color: string; strength: number }) {
-  const id = 'sh' + useId().replace(/[^a-zA-Z0-9]/g, '');
+/** The selected orb's glow: its own colour spilling softly onto the glass. */
+const Halo = React.memo(function Halo({ color }: { color: string }) {
+  const id = 'halo' + useId().replace(/[^a-zA-Z0-9]/g, '');
   return (
-    <Svg width={26} height={7} viewBox="0 0 26 7">
+    <Svg width={HALO_SIZE} height={HALO_SIZE} viewBox="0 0 64 64">
       <Defs>
         <RadialGradient id={id} cx="50%" cy="50%" rx="50%" ry="50%">
-          <Stop offset="0" stopColor={color} stopOpacity={strength} />
+          <Stop offset="0.55" stopColor={color} stopOpacity={0.32} />
           <Stop offset="1" stopColor={color} stopOpacity={0} />
         </RadialGradient>
       </Defs>
-      <Ellipse cx={13} cy={3.5} rx={13} ry={3.5} fill={`url(#${id})`} />
+      <Ellipse cx={32} cy={32} rx={32} ry={32} fill={`url(#${id})`} />
     </Svg>
   );
 });
 
-// The lens sits this far inside its tab on each side.
-const LENS_INSET = 3;
+const HALO_SIZE = 64;
+const STAGE_HEIGHT = 46;
+/** The bar's height above the phone's own bottom inset, for things that float above it. */
+export const TAB_BAR_HEIGHT = 80;
+const INDICATOR_WIDTH = 22;
 
 const styles = StyleSheet.create({
   dock: {
@@ -308,25 +272,28 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
   },
   shell: { alignSelf: 'stretch', borderRadius: radius.pill },
   backdropClip: { borderRadius: radius.pill, overflow: 'hidden' },
-  row: { flexDirection: 'row', paddingHorizontal: spacing.xs, paddingVertical: 5 },
-  lens: {
+  row: { flexDirection: 'row', paddingHorizontal: spacing.xs, paddingTop: 7, paddingBottom: 13, height: TAB_BAR_HEIGHT },
+  item: { flex: 1, alignItems: 'center' },
+  stage: { width: HALO_SIZE, height: STAGE_HEIGHT, alignItems: 'center' },
+  halo: { position: 'absolute', top: ORB_SIZE / 2 - HALO_SIZE / 2 + 1, left: 0 },
+  glyph: {
     position: 'absolute',
-    top: 6,
-    bottom: 6,
-    left: spacing.xs + LENS_INSET,
-    borderRadius: radius.pill,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 4 },
+    top: (ORB_SIZE - GLYPH_SIZE) / 2,
+    left: (ORB_SIZE - GLYPH_SIZE) / 2,
   },
-  lensGlass: { flex: 1 },
-  lensFill: { flex: 1 },
-  item: { flex: 1, alignItems: 'center', gap: 1, paddingVertical: 5 },
-  // Room for the icon to hover above its shadow.
-  stage: { width: 30, height: 34, alignItems: 'center', justifyContent: 'flex-start', paddingTop: 1 },
-  shadow: { position: 'absolute', bottom: 0 },
-  label: { fontSize: 10.5, letterSpacing: 0.1 },
+  label: { fontSize: 11, letterSpacing: 0.1, marginTop: -1 },
+  indicator: {
+    position: 'absolute',
+    bottom: 6,
+    width: INDICATOR_WIDTH,
+    height: 4,
+    borderRadius: 2,
+    shadowOpacity: 0.35,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 0 },
+  },
 });
