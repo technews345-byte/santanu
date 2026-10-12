@@ -52,7 +52,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
-import android.provider.Settings
 import androidx.compose.ui.Modifier
 import androidx.compose.runtime.mutableFloatStateOf
 import coil.request.ImageRequest
@@ -150,10 +149,9 @@ fun GlassCard(
 @Composable
 fun MantraArt(mantra: Mantra?, size: Dp, playing: Boolean = false, glow: Boolean = true) {
     val p = LocalPalette.current
-    // Breathes only while playing, applied in the draw phase (no recomposition), and not at all with reduced motion.
-    val breathe = playing && !rememberReducedMotion()
-    val amount = animateFloatAsState(if (breathe) 1f else 0f, tween(1200), label = "amount")
-    val pulse: State<Float> = if (breathe || amount.value > 0f) {
+    // Breathes only while playing, applied in the draw phase (no recomposition).
+    val amount = animateFloatAsState(if (playing) 1f else 0f, tween(1200), label = "amount")
+    val pulse: State<Float> = if (playing || amount.value > 0f) {
         rememberInfiniteTransition(label = "breath").animateFloat(
             0f, 1f, infiniteRepeatable(tween(4200, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "pulse",
         )
@@ -279,13 +277,6 @@ fun ActionRow(icon: ImageVector?, title: String, subtitle: String? = null, onCli
         }
         Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = LocalPalette.current.muted)
     }
-}
-
-/** True when the user turned animations off in Android's accessibility or developer settings. */
-@Composable
-private fun rememberReducedMotion(): Boolean {
-    val context = LocalContext.current
-    return remember { Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f }
 }
 
 /** The current time, refreshed every [periodMs]. */

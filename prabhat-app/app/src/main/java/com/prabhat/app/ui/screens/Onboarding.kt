@@ -140,7 +140,7 @@ fun OnboardingScreen(state: AppState, player: PlayerConnection) {
                         if (step == 2) saveTime()
                         if (step < STEPS - 1) step++ else Store.update { it.copy(onboarded = true) }
                     },
-                    enabled = !(step == 1 && state.mantras.isEmpty()) && !(step == 2 && days.isEmpty())
+                    enabled = !(step == 1 && state.mantras.isEmpty()) && !(step == 2 && days.isEmpty()),
                     contentPadding = PaddingValues(horizontal = 28.dp, vertical = 14.dp),
                 ) { Text(when (step) { 0 -> "Begin"; STEPS - 1 -> "Start my mornings"; else -> "Continue" }) }
             }
