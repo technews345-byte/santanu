@@ -18,6 +18,10 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # Read by app.config.js. Kept out of the repository: set it under
+    # Settings → Secrets and variables → Actions.
+    env:
+      FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
 
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
