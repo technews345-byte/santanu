@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import { Animated, Easing, Image, LayoutChangeEvent, Platform, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { Text } from '../../theme/type';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
@@ -10,7 +10,8 @@ import { shade, withAlpha } from '../../theme/color';
 import { useReducedMotion } from '../../theme/useReducedMotion';
 import { GlassSurface } from './GlassSurface';
 import { ROOM } from './Aurora';
-import { ActivityIcon, BudgetIcon, HomeIcon, InsightsIcon, SettingsIcon } from './TabIcons';
+import Svg, { Defs, Ellipse, RadialGradient, Stop } from 'react-native-svg';
+import { ActivityIcon, BudgetIcon, GlassIconPalette, HomeIcon, InsightsIcon, SettingsIcon } from './TabIcons';
 
 const ICONS: Record<string, typeof HomeIcon> = {
   Dashboard: HomeIcon,
@@ -34,6 +35,10 @@ const ICONS: Record<string, typeof HomeIcon> = {
  * liquid glass, stretches a little along the way and settles back. Each icon
  * answers the finger: it dips when pressed, and pops into place (the gear
  * spins) as it becomes the selected one.
+ *
+ * The icons float: each hovers a little above its own soft shadow, and the
+ * selected one drifts gently up and down — its shadow shrinking and fading
+ * as it rises — the way an object hangs in the air in a spatial interface.
  */
 export function GlassTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const { theme } = useTheme();
@@ -177,7 +182,24 @@ function TabItem({
   const press = useRef(new Animated.Value(0)).current;
   // 0 → 1 each time the tab becomes the selected one: a springy pop.
   const pop = useRef(new Animated.Value(1)).current;
+  // 0 → 1 → 0, looping while selected: the slow hover.
+  const float = useRef(new Animated.Value(0)).current;
   const mounted = useRef(false);
+
+  useEffect(() => {
+    if (!focused || reduced) {
+      Animated.timing(float, { toValue: 0, duration: 220, useNativeDriver: true }).start();
+      return;
+    }
+    const hover = Animated.loop(
+      Animated.sequence([
+        Animated.timing(float, { toValue: 1, duration: 1400, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(float, { toValue: 0, duration: 1400, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      ])
+    );
+    hover.start();
+    return () => hover.stop();
+  }, [focused, reduced]);
 
   useEffect(() => {
     if (!mounted.current) {
@@ -197,8 +219,39 @@ function TabItem({
     press.interpolate({ inputRange: [0, 1], outputRange: [1, 0.84] })
   );
   const rotate = pop.interpolate({ inputRange: [0, 1], outputRange: [spin ? '-120deg' : '-12deg', '0deg'] });
+  const hoverY = float.interpolate({ inputRange: [0, 1], outputRange: [0, -3.5] });
+  const shadowScale = float.interpolate({ inputRange: [0, 1], outputRange: [1, 0.74] });
+  const shadowOpacity = float.interpolate({ inputRange: [0, 1], outputRange: [1, 0.55] });
 
-  const iconColor = focused ? theme.tint : theme.textSecondary;
+  const dark = theme.mode === 'dark';
+  // Selected: solid accent glass with white details. Otherwise frosted glass
+  // that still reads clearly against the bar.
+  const palette: GlassIconPalette = focused
+    ? {
+        top: shade(theme.tint, 0.45),
+        bottom: shade(theme.tint, -0.1),
+        base: shade(theme.tint, -0.5),
+        detail: '#FFFFFF',
+        detailShadow: withAlpha(shade(theme.tint, -0.55), 0.55),
+        gloss: 0.6,
+      }
+    : dark
+      ? {
+          top: 'rgba(232, 237, 252, 0.78)',
+          bottom: 'rgba(150, 162, 198, 0.5)',
+          base: 'rgba(0, 0, 0, 0.4)',
+          detail: 'rgba(16, 20, 34, 0.62)',
+          detailShadow: 'rgba(255, 255, 255, 0.18)',
+          gloss: 0.5,
+        }
+      : {
+          top: '#D9DFEC',
+          bottom: '#8D97B0',
+          base: 'rgba(60, 70, 100, 0.45)',
+          detail: '#FFFFFF',
+          detailShadow: 'rgba(60, 70, 100, 0.3)',
+          gloss: 0.7,
+        };
   const labelColor = focused ? (theme.mode === 'dark' ? shade(theme.tint, 0.5) : theme.tint) : theme.textSecondary;
 
   return (
@@ -212,15 +265,39 @@ function TabItem({
       accessibilityState={{ selected: focused }}
       accessibilityLabel={label}
     >
-      <Animated.View style={{ transform: [{ scale }, { rotate }] }}>
-        <Icon color={iconColor} active={focused} size={24} />
-      </Animated.View>
+      <View style={styles.stage}>
+        <Animated.View style={[styles.shadow, { opacity: shadowOpacity, transform: [{ scaleX: shadowScale }] }]}>
+          <FloatShadow
+            color={focused ? shade(theme.tint, -0.4) : dark ? '#000000' : '#323C64'}
+            strength={focused ? 0.6 : dark ? 0.6 : 0.32}
+          />
+        </Animated.View>
+        <Animated.View style={{ transform: [{ translateY: hoverY }, { scale }, { rotate }] }}>
+          <Icon palette={palette} size={26} />
+        </Animated.View>
+      </View>
       <Text numberOfLines={1} style={[styles.label, { color: labelColor, fontWeight: focused ? '700' : '600' }]}>
         {label}
       </Text>
     </Pressable>
   );
 }
+
+/** A soft oval of shadow on the glass below an icon, so the icon hovers. */
+const FloatShadow = React.memo(function FloatShadow({ color, strength }: { color: string; strength: number }) {
+  const id = 'sh' + useId().replace(/[^a-zA-Z0-9]/g, '');
+  return (
+    <Svg width={26} height={7} viewBox="0 0 26 7">
+      <Defs>
+        <RadialGradient id={id} cx="50%" cy="50%" rx="50%" ry="50%">
+          <Stop offset="0" stopColor={color} stopOpacity={strength} />
+          <Stop offset="1" stopColor={color} stopOpacity={0} />
+        </RadialGradient>
+      </Defs>
+      <Ellipse cx={13} cy={3.5} rx={13} ry={3.5} fill={`url(#${id})`} />
+    </Svg>
+  );
+});
 
 // The lens sits this far inside its tab on each side.
 const LENS_INSET = 3;
@@ -247,6 +324,9 @@ const styles = StyleSheet.create({
   },
   lensGlass: { flex: 1 },
   lensFill: { flex: 1 },
-  item: { flex: 1, alignItems: 'center', gap: 3, paddingVertical: 7 },
+  item: { flex: 1, alignItems: 'center', gap: 1, paddingVertical: 5 },
+  // Room for the icon to hover above its shadow.
+  stage: { width: 30, height: 34, alignItems: 'center', justifyContent: 'flex-start', paddingTop: 1 },
+  shadow: { position: 'absolute', bottom: 0 },
   label: { fontSize: 10.5, letterSpacing: 0.1 },
 });
