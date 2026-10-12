@@ -3,7 +3,6 @@
 package com.prabhat.app.ui.components
 
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
@@ -36,13 +35,11 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -55,6 +52,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
+import android.provider.Settings
 import androidx.compose.ui.Modifier
 import androidx.compose.runtime.mutableFloatStateOf
 import coil.request.ImageRequest
@@ -87,19 +85,15 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.random.Random
 
-/** Soft sunrise gradient with a faint glow from above and slowly drifting motes of light. */
+/** Soft sunrise gradient with a faint glow from above and motes of light. Static: drawn once per size and theme. */
 @Composable
 fun SunriseBackground(modifier: Modifier = Modifier, content: @Composable BoxScope.() -> Unit) {
     val p = LocalPalette.current
-    val drift = rememberInfiniteTransition(label = "drift")
-    // Read only while drawing (never during composition), so the motion costs one cheap redraw per frame.
-    val t = drift.animateFloat(0f, 1f, infiniteRepeatable(tween(90_000, easing = LinearEasing)), label = "t")
     val motes = remember { List(18) { Triple(Random.nextFloat(), Random.nextFloat(), 0.4f + Random.nextFloat()) } }
     Box(
         modifier
             .fillMaxSize()
             .drawWithCache {
-                // Gradients and rays are built once per size and theme, then reused every frame.
                 val sky = Brush.verticalGradient(listOf(p.skyTop, p.skyMid, p.skyBottom, p.skyBottom))
                 val top = Offset(size.width / 2, -size.height * 0.05f)
                 val glowRadius = size.width * 0.95f
@@ -115,14 +109,11 @@ fun SunriseBackground(modifier: Modifier = Modifier, content: @Composable BoxSco
                     drawRect(sky)
                     drawCircle(glow, radius = glowRadius, center = top)
                     rays.forEach { (end, brush) -> drawLine(brush, top, end, strokeWidth = size.width * 0.06f) }
-                    val tt = t.value
-                    motes.forEachIndexed { i, (x, y, speed) ->
-                        val yy = ((y - tt * speed * 1.5f) % 1f + 1f) % 1f
-                        val twinkle = 0.5f + 0.5f * sin((tt * 40 * speed + i) * PI).toFloat()
+                    motes.forEach { (x, y, s) ->
                         drawCircle(
-                            p.particle.copy(alpha = moteAlpha * twinkle * (0.3f + yy * 0.7f)),
-                            radius = (1.2f + speed * 1.6f) * density,
-                            center = Offset(x * size.width + sin((tt * 6 + i) * PI).toFloat() * 8 * density, yy * size.height),
+                            p.particle.copy(alpha = moteAlpha * (0.3f + y * 0.7f) * (0.5f + s / 3)),
+                            radius = (1.2f + s * 1.6f) * density,
+                            center = Offset(x * size.width, y * size.height),
                         )
                     }
                 }
@@ -159,9 +150,10 @@ fun GlassCard(
 @Composable
 fun MantraArt(mantra: Mantra?, size: Dp, playing: Boolean = false, glow: Boolean = true) {
     val p = LocalPalette.current
-    val amount = animateFloatAsState(if (playing) 1f else 0f, tween(1200), label = "amount")
-    // The breathing animation only runs while it is visible, and is applied in the draw phase (no recomposition).
-    val pulse: State<Float> = if (playing || amount.value > 0f) {
+    // Breathes only while playing, applied in the draw phase (no recomposition), and not at all with reduced motion.
+    val breathe = playing && !rememberReducedMotion()
+    val amount = animateFloatAsState(if (breathe) 1f else 0f, tween(1200), label = "amount")
+    val pulse: State<Float> = if (breathe || amount.value > 0f) {
         rememberInfiniteTransition(label = "breath").animateFloat(
             0f, 1f, infiniteRepeatable(tween(4200, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "pulse",
         )
@@ -246,10 +238,6 @@ fun <T> OptionChips(options: List<T>, selected: T?, label: (T) -> String, onSele
                 onClick = { onSelect(o) },
                 label = { Text(label(o), modifier = Modifier.padding(vertical = 8.dp)) },
                 shape = RoundedCornerShape(50),
-                colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = LocalPalette.current.gold.copy(alpha = 0.18f),
-                    selectedLabelColor = MaterialTheme.colorScheme.onSurface,
-                ),
             )
         }
     }
@@ -271,7 +259,6 @@ fun ToggleRow(title: String, subtitle: String? = null, checked: Boolean, enabled
         Spacer(Modifier.width(12.dp))
         Switch(
             checked = checked, onCheckedChange = onChange, enabled = enabled,
-            colors = SwitchDefaults.colors(checkedTrackColor = LocalPalette.current.gold),
         )
     }
 }
@@ -292,6 +279,13 @@ fun ActionRow(icon: ImageVector?, title: String, subtitle: String? = null, onCli
         }
         Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = LocalPalette.current.muted)
     }
+}
+
+/** True when the user turned animations off in Android's accessibility or developer settings. */
+@Composable
+private fun rememberReducedMotion(): Boolean {
+    val context = LocalContext.current
+    return remember { Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f }
 }
 
 /** The current time, refreshed every [periodMs]. */

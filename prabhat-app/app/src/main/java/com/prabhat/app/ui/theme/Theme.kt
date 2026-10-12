@@ -98,7 +98,10 @@ fun PrabhatTheme(mode: ThemeMode, content: @Composable () -> Unit) {
             background = p.skyBottom, onBackground = p.text,
             surface = Color(0xFF12183A), onSurface = p.text,
             surfaceVariant = Color(0xFF1C2350), onSurfaceVariant = p.muted,
-            surfaceContainerHigh = Color(0xFF161D44), surfaceContainer = Color(0xFF12183A),
+            surfaceContainerHigh = Color(0xFF161D44), surfaceContainer = Color(0xFF12183A), surfaceContainerHighest = Color(0xFF232A57),
+            primaryContainer = Color(0xFF4A3B17), onPrimaryContainer = p.gold,
+            secondaryContainer = Color(0xFF3A3220), onSecondaryContainer = p.gold,
+            tertiaryContainer = Color(0xFF3A3220), onTertiaryContainer = p.gold,
             outline = Color(0x33FFFFFF), outlineVariant = Color(0x1FFFFFFF),
             error = Color(0xFFFFB4A8),
         )
@@ -109,7 +112,10 @@ fun PrabhatTheme(mode: ThemeMode, content: @Composable () -> Unit) {
             background = p.skyBottom, onBackground = p.text,
             surface = Color(0xFFFFFBF5), onSurface = p.text,
             surfaceVariant = Color(0xFFF4E9DC), onSurfaceVariant = p.muted,
-            surfaceContainerHigh = Color(0xFFFBF1E6), surfaceContainer = Color(0xFFFFF8F0),
+            surfaceContainerHigh = Color(0xFFFBF1E6), surfaceContainer = Color(0xFFFFF8F0), surfaceContainerHighest = Color(0xFFF1E6D8),
+            primaryContainer = Color(0xFFF6E2B8), onPrimaryContainer = p.text,
+            secondaryContainer = Color(0xFFF3E3C4), onSecondaryContainer = p.text,
+            tertiaryContainer = Color(0xFFF3E3C4), onTertiaryContainer = p.text,
             outline = Color(0x332B2230), outlineVariant = Color(0x1A2B2230),
             error = Color(0xFFB3261E),
         )

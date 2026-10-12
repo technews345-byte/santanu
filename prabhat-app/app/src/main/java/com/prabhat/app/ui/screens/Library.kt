@@ -24,7 +24,6 @@ import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -110,7 +109,7 @@ fun LibraryScreen(state: AppState, player: PlayerConnection, pad: PaddingValues,
                             style = MaterialTheme.typography.bodyMedium, color = p.muted,
                         )
                     }
-                    Button(onClick = pick, enabled = !busy, colors = ButtonDefaults.buttonColors(containerColor = p.gold)) {
+                    Button(onClick = pick, enabled = !busy) {
                         if (busy) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
                         else Icon(Icons.Rounded.Add, null, Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
@@ -130,7 +129,7 @@ fun LibraryScreen(state: AppState, player: PlayerConnection, pad: PaddingValues,
                                 style = MaterialTheme.typography.bodyMedium, color = p.muted, textAlign = TextAlign.Center,
                             )
                             Spacer(Modifier.height(12.dp))
-                            Button(onClick = pick, colors = ButtonDefaults.buttonColors(containerColor = p.gold)) { Text("Add mantra") }
+                            Button(onClick = pick) { Text("Add mantra") }
                         }
                     }
                 }

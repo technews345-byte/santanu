@@ -31,7 +31,6 @@ import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -42,7 +41,6 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimeInput
-import androidx.compose.material3.TimePickerDefaults
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -109,13 +107,7 @@ fun OnboardingScreen(state: AppState, player: PlayerConnection) {
                             Heading("Step 2", "Choose your morning time", "Prabhat will play your mantra automatically at this time.")
                             GlassCard(Modifier.fillMaxWidth()) {
                                 Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                                    TimeInput(
-                                        state = time,
-                                        colors = TimePickerDefaults.colors(
-                                            timeSelectorSelectedContainerColor = p.gold.copy(alpha = 0.2f),
-                                            periodSelectorSelectedContainerColor = p.gold.copy(alpha = 0.2f),
-                                        ),
-                                    )
+                                    TimeInput(state = time)
                                 }
                                 Spacer(Modifier.height(8.dp))
                                 Text("Days", style = MaterialTheme.typography.titleSmall)
@@ -148,8 +140,7 @@ fun OnboardingScreen(state: AppState, player: PlayerConnection) {
                         if (step == 2) saveTime()
                         if (step < STEPS - 1) step++ else Store.update { it.copy(onboarded = true) }
                     },
-                    enabled = !(step == 1 && state.mantras.isEmpty()) && !(step == 2 && days.isEmpty()),
-                    colors = ButtonDefaults.buttonColors(containerColor = p.gold),
+                    enabled = !(step == 1 && state.mantras.isEmpty()) && !(step == 2 && days.isEmpty())
                     contentPadding = PaddingValues(horizontal = 28.dp, vertical = 14.dp),
                 ) { Text(when (step) { 0 -> "Begin"; STEPS - 1 -> "Start my mornings"; else -> "Continue" }) }
             }

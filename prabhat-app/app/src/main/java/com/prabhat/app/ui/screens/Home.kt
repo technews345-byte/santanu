@@ -33,15 +33,12 @@ import androidx.compose.material.icons.rounded.RepeatOne
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -71,7 +68,6 @@ import com.prabhat.app.ui.components.Eyebrow
 import com.prabhat.app.ui.components.GlassCard
 import com.prabhat.app.ui.components.MantraArt
 import com.prabhat.app.ui.components.rememberNow
-import com.prabhat.app.ui.morningMantra
 import com.prabhat.app.ui.morningRule
 import com.prabhat.app.ui.tab
 import com.prabhat.app.ui.theme.LocalPalette
@@ -87,14 +83,14 @@ fun HomeScreen(state: AppState, player: PlayerConnection, pad: PaddingValues, na
     var editTime by remember { mutableStateOf(false) }
 
     val next = if (state.scheduleOn) ScheduleMath.next(state.schedules, now) else null
-    val home = morningMantra(state, now)
+    val homeRule = next?.rule ?: morningRule(state, now)
+    val home = state.mantraFor(homeRule)
     val mantra = (if (ui.loaded) state.mantra(ui.mantraId) else null) ?: home
     val (greeting, subtitle) = Format.greeting(now.hour)
     val due = if (state.scheduleOn) ScheduleMath.lastToday(state.schedules, now) else null
     val pending = if (state.scheduleOn) ScheduleMath.pendingToday(state.schedules, now, state.lastCompletedAt) else null
     val doneToday = due != null && pending == null
     val missed = pending?.takeIf { !ui.isPlaying }
-    val homeRule = morningRule(state, now)
 
     fun start(id: String?, kind: SessionKind, resume: Boolean, fade: Boolean, repeat: Int? = null) =
         player.send(PlaybackHub.Command.Start(id, kind, resume, fade, repeat))
@@ -134,8 +130,7 @@ fun HomeScreen(state: AppState, player: PlayerConnection, pad: PaddingValues, na
                 )
                 Spacer(Modifier.height(12.dp))
                 Button(
-                    onClick = { start(state.mantraFor(missed?.rule)?.id, SessionKind.MORNING, resume = false, fade = true, missed?.rule?.repeat) },
-                    colors = ButtonDefaults.buttonColors(containerColor = p.gold),
+                    onClick = { start(state.mantraFor(missed?.rule)?.id, SessionKind.MORNING, resume = false, fade = true, missed?.rule?.repeat) }
                 ) { Text("Play Now") }
             }
         }
@@ -198,7 +193,6 @@ fun HomeScreen(state: AppState, player: PlayerConnection, pad: PaddingValues, na
             Slider(
                 value = state.volume,
                 onValueChange = { v -> Store.update { it.copy(volume = v) } },
-                colors = SliderDefaults.colors(thumbColor = p.gold, activeTrackColor = p.gold, inactiveTrackColor = p.gold.copy(alpha = 0.2f)),
                 modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
             )
             Icon(Icons.AutoMirrored.Rounded.VolumeUp, null, tint = p.muted)
@@ -240,7 +234,6 @@ private fun ProgressBar(player: PlayerConnection, ui: PlayerUi, duration: Long) 
         onValueChange = { dragging = true; dragValue = it },
         onValueChangeFinished = { dragging = false; if (ui.loaded) player.seekTo((dragValue * duration).toLong()) },
         enabled = ui.loaded,
-        colors = SliderDefaults.colors(thumbColor = p.gold, activeTrackColor = p.gold, inactiveTrackColor = p.gold.copy(alpha = 0.2f)),
         modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
     )
     Row(Modifier.fillMaxWidth()) {
@@ -282,7 +275,6 @@ private fun NextSessionCard(
                 Switch(
                     checked = state.scheduleOn,
                     onCheckedChange = { on -> Store.update { it.copy(scheduleOn = on) } },
-                    colors = SwitchDefaults.colors(checkedTrackColor = p.gold),
                 )
                 Text(if (state.scheduleOn) "Scheduled" else "Off", style = MaterialTheme.typography.labelMedium, color = if (state.scheduleOn) p.gold else p.muted)
             }

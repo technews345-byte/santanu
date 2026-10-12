@@ -23,7 +23,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -80,7 +79,6 @@ fun ScheduleScreen(state: AppState, pad: PaddingValues, presetMantra: String?) {
                 Switch(
                     checked = state.scheduleOn,
                     onCheckedChange = { on -> Store.update { it.copy(scheduleOn = on) } },
-                    colors = SwitchDefaults.colors(checkedTrackColor = p.gold),
                     modifier = Modifier.padding(start = 12.dp),
                 )
             }
@@ -158,7 +156,6 @@ private fun RuleCard(state: AppState, rule: ScheduleRule, onEdit: () -> Unit, on
                     onCheckedChange = { on ->
                         Store.update { s -> s.copy(schedules = s.schedules.map { if (it.id == rule.id) it.copy(enabled = on) else it }) }
                     },
-                    colors = SwitchDefaults.colors(checkedTrackColor = p.gold),
                 )
                 IconButton(onClick = onDelete) {
                     Icon(Icons.Rounded.DeleteOutline, "Delete this time", tint = p.muted)

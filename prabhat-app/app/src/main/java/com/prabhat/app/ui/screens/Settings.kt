@@ -20,7 +20,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -77,7 +76,6 @@ fun SettingsScreen(state: AppState, pad: PaddingValues, nav: NavHostController) 
             Slider(
                 value = state.volume,
                 onValueChange = { v -> Store.update { it.copy(volume = v) } },
-                colors = SliderDefaults.colors(thumbColor = p.gold, activeTrackColor = p.gold, inactiveTrackColor = p.gold.copy(alpha = 0.2f)),
             )
             Label("Gentle fade-in")
             OptionChips(AppState.FADE_OPTIONS, state.fadeInSeconds, Format::fade) { f -> Store.update { it.copy(fadeInSeconds = f) } }

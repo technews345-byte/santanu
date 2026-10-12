@@ -23,7 +23,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
-import androidx.compose.material3.TimePickerDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
@@ -152,20 +151,12 @@ fun ScheduleEditor(state: AppState, rule: ScheduleRule?, presetMantra: String? =
     var days by remember { mutableStateOf(base.days) }
     var mantraId by remember { mutableStateOf(base.mantraId) }
     var repeat by remember { mutableStateOf(base.repeat) }
-    val p = LocalPalette.current
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (rule == null) "New morning time" else "Change time") },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                TimePicker(
-                    state = time,
-                    colors = TimePickerDefaults.colors(
-                        selectorColor = p.gold,
-                        timeSelectorSelectedContainerColor = p.gold.copy(alpha = 0.2f),
-                        periodSelectorSelectedContainerColor = p.gold.copy(alpha = 0.2f),
-                    ),
-                )
+                TimePicker(state = time)
                 Text("Days", style = MaterialTheme.typography.titleSmall)
                 DayPicker(days) { days = it }
                 if (state.mantras.size > 1) {
