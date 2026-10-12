@@ -2,69 +2,81 @@ import React, { useId } from 'react';
 import Svg, { Circle, Defs, Ellipse, G, LinearGradient, Path, RadialGradient, Rect, Stop } from 'react-native-svg';
 
 /**
- * Spendly's tab icons: glossy orbs of coloured glass with a white symbol
- * inside, each tab in its own colour.
+ * Spendly's tab icons, in the manner of Apple's 3D app icons: a perfect
+ * circle of glossy gradient glass with a white symbol.
  *
- * An orb is lit from the upper left: a bright spot there, its colour
- * deepening toward the far edge, a sheet of gloss over the top, a lit rim,
- * and light gathered again inside the lower edge, where it comes back
- * through the glass. The symbol is a separate layer so it can move on its
- * own (the gear spins) without the lighting turning with it.
+ * Built in layers, back to front: a soft outer shadow beneath; the body, its
+ * gradient running from the upper left; an inner shadow gathering toward the
+ * rim; a bevel of light just inside the edge; a glossy reflection over the
+ * top; light refracted back up inside the lower edge; and a fine outer edge.
+ * The symbol is a separate layer on top.
  *
  * Flat fills and gradients only — no filters or masks, which phones draw
- * slowly — and an orb redraws only when its tab changes.
+ * slowly — and an icon redraws only when its tab changes.
  */
-export type OrbColors = {
-  /** The lit spot, upper left. */
-  light: string;
-  /** The orb's own colour. */
-  base: string;
-  /** Its colour at the far edge, away from the light. */
-  edge: string;
-  /** The halo when selected, and the indicator under the label. */
-  glow: string;
-  /** The symbol's colour, where white would not show (silver glass). */
-  glyph?: string;
-};
-
 export const ORB_SIZE = 44;
+/** The drawing extends this far past the orb on every side, for its shadow. */
+const BLEED = 6;
 
-export function Orb({ colors }: { colors: OrbColors }) {
+export function Orb({ gradient }: { gradient: string[] }) {
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
+  const stops = gradient.length > 1 ? gradient : [gradient[0], gradient[0]];
+  const canvas = ORB_SIZE + BLEED * 2;
   return (
-    <Svg width={ORB_SIZE} height={ORB_SIZE} viewBox="0 0 44 44">
+    <Svg
+      width={canvas}
+      height={canvas}
+      viewBox={`${-BLEED} ${-BLEED} ${canvas} ${canvas}`}
+      style={{ margin: -BLEED }}
+    >
       <Defs>
-        <RadialGradient id={`${uid}b`} cx="34%" cy="28%" rx="78%" ry="78%" fx="34%" fy="28%">
-          <Stop offset="0" stopColor={colors.light} />
-          <Stop offset="0.52" stopColor={colors.base} />
-          <Stop offset="1" stopColor={colors.edge} />
+        <LinearGradient id={`${uid}b`} x1="0.15" y1="0" x2="0.85" y2="1">
+          {stops.map((c, i) => (
+            <Stop key={i} offset={i / (stops.length - 1)} stopColor={c} />
+          ))}
+        </LinearGradient>
+        <RadialGradient id={`${uid}s`} cx="50%" cy="50%" rx="50%" ry="50%">
+          <Stop offset="0.72" stopColor="#000000" stopOpacity={0.25} />
+          <Stop offset="1" stopColor="#000000" stopOpacity={0} />
         </RadialGradient>
+        <RadialGradient id={`${uid}i`} cx="50%" cy="40%" rx="62%" ry="62%">
+          <Stop offset="0.68" stopColor="#000000" stopOpacity={0} />
+          <Stop offset="1" stopColor="#000000" stopOpacity={0.3} />
+        </RadialGradient>
+        <LinearGradient id={`${uid}v`} x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0" stopColor="#FFFFFF" stopOpacity={0.6} />
+          <Stop offset="0.45" stopColor="#FFFFFF" stopOpacity={0} />
+          <Stop offset="1" stopColor="#FFFFFF" stopOpacity={0.28} />
+        </LinearGradient>
         <LinearGradient id={`${uid}g`} x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0" stopColor="#FFFFFF" stopOpacity={0.62} />
+          <Stop offset="0" stopColor="#FFFFFF" stopOpacity={0.65} />
           <Stop offset="1" stopColor="#FFFFFF" stopOpacity={0} />
         </LinearGradient>
-        <LinearGradient id={`${uid}r`} x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0" stopColor="#FFFFFF" stopOpacity={0.8} />
-          <Stop offset="0.55" stopColor="#FFFFFF" stopOpacity={0.05} />
-          <Stop offset="1" stopColor="#FFFFFF" stopOpacity={0.35} />
-        </LinearGradient>
-        <RadialGradient id={`${uid}c`} cx="50%" cy="50%" rx="50%" ry="50%">
-          <Stop offset="0" stopColor={colors.light} stopOpacity={0.75} />
-          <Stop offset="1" stopColor={colors.light} stopOpacity={0} />
+        <RadialGradient id={`${uid}r`} cx="50%" cy="50%" rx="50%" ry="50%">
+          <Stop offset="0" stopColor="#FFFFFF" stopOpacity={0.32} />
+          <Stop offset="1" stopColor="#FFFFFF" stopOpacity={0} />
         </RadialGradient>
       </Defs>
-      <Circle cx={22} cy={22} r={20} fill={`url(#${uid}b)`} />
-      {/* Light returning through the glass, gathered inside the lower edge */}
-      <Ellipse cx={22} cy={34.5} rx={11} ry={4.2} fill={`url(#${uid}c)`} />
-      {/* Gloss over the top */}
-      <Ellipse cx={20.5} cy={12.5} rx={13} ry={8} fill={`url(#${uid}g)`} />
-      <Circle cx={22} cy={22} r={19.5} stroke={`url(#${uid}r)`} strokeWidth={1} fill="none" />
+      {/* Outer shadow */}
+      <Ellipse cx={22} cy={25.5} rx={25} ry={24} fill={`url(#${uid}s)`} />
+      {/* Body */}
+      <Circle cx={22} cy={22} r={22} fill={`url(#${uid}b)`} />
+      {/* Inner shadow toward the rim */}
+      <Circle cx={22} cy={22} r={22} fill={`url(#${uid}i)`} />
+      {/* Light refracted back up inside the lower edge */}
+      <Ellipse cx={22} cy={36.5} rx={12} ry={4.2} fill={`url(#${uid}r)`} />
+      {/* Bevel just inside the edge */}
+      <Circle cx={22} cy={22} r={20.6} stroke={`url(#${uid}v)`} strokeWidth={1.2} fill="none" />
+      {/* Glossy top reflection */}
+      <Ellipse cx={22} cy={11.6} rx={15} ry={8.4} fill={`url(#${uid}g)`} />
+      {/* Fine outer edge */}
+      <Circle cx={22} cy={22} r={21.5} stroke="rgba(255, 255, 255, 0.3)" strokeWidth={1} fill="none" />
     </Svg>
   );
 }
 
 /** Symbols are drawn in a 24-unit box and shown at this size, centred on the orb. */
-export const GLYPH_SIZE = 24;
+export const GLYPH_SIZE = 23;
 
 type GlyphProps = { color?: string; hole?: string };
 
@@ -82,6 +94,7 @@ function Glyph({ children }: { children: React.ReactNode }) {
   );
 }
 
+/** house.fill */
 export function HomeGlyph({ color = '#FFFFFF' }: GlyphProps) {
   return (
     <Glyph>
@@ -93,6 +106,7 @@ export function HomeGlyph({ color = '#FFFFFF' }: GlyphProps) {
   );
 }
 
+/** list.bullet */
 export function ActivityGlyph({ color = '#FFFFFF' }: GlyphProps) {
   return (
     <Glyph>
@@ -106,6 +120,7 @@ export function ActivityGlyph({ color = '#FFFFFF' }: GlyphProps) {
   );
 }
 
+/** chart.pie.fill */
 export function BudgetGlyph({ color = '#FFFFFF' }: GlyphProps) {
   return (
     <Glyph>
@@ -115,6 +130,7 @@ export function BudgetGlyph({ color = '#FFFFFF' }: GlyphProps) {
   );
 }
 
+/** chart.bar.fill */
 export function InsightsGlyph({ color = '#FFFFFF' }: GlyphProps) {
   return (
     <Glyph>
@@ -125,8 +141,8 @@ export function InsightsGlyph({ color = '#FFFFFF' }: GlyphProps) {
   );
 }
 
-// A gear with soft, rounded teeth: a circle whose radius swells eight times
-// around, so every tooth is a smooth lobe rather than a sharp notch.
+// gearshape.fill: a gear with soft, rounded teeth — a circle whose radius
+// swells eight times around, so every tooth is a smooth lobe.
 const GEAR = (() => {
   const steps = 144;
   const points: string[] = [];
@@ -138,7 +154,7 @@ const GEAR = (() => {
   return `M${points.join('L')}Z`;
 })();
 
-export function SettingsGlyph({ color = '#FFFFFF', hole = '#4A5263' }: GlyphProps) {
+export function SettingsGlyph({ color = '#FFFFFF', hole = '#273247' }: GlyphProps) {
   return (
     <Svg width={GLYPH_SIZE} height={GLYPH_SIZE} viewBox="0 0 24 24">
       <G transform="translate(0 0.8)" opacity={0.22}>

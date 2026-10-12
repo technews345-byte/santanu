@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Animated, Image, Platform, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { Text } from '../theme/type';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -11,6 +11,7 @@ import { shade, withAlpha } from '../theme/color';
 import { GlassSurface } from './glass/GlassSurface';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TAB_BAR_HEIGHT } from './glass/GlassTabBar';
+import { ROOM } from './glass/Aurora';
 
 /**
  * The button opens into its own choices rather than jumping straight to a
@@ -28,6 +29,14 @@ export function QuickAddFab() {
   const [open, setOpen] = useState(false);
   const reveal = useRef(new Animated.Value(0)).current;
   const press = useRef(new Animated.Value(0)).current;
+  const window = useWindowDimensions();
+  const dark = theme.mode === 'dark';
+  const dockBottom = Math.max(insets.bottom, spacing.sm) + TAB_BAR_HEIGHT + 12;
+  // Where the button sits in the window, so its copy of the backdrop lines
+  // up. Worked out from where it is placed rather than measured: a screen
+  // still sliding in when the button first lays out would give a position
+  // that is wrong once it lands.
+  const origin = { x: window.width - spacing.lg - FAB_SIZE, y: window.height - dockBottom - FAB_SIZE };
 
   useEffect(() => {
     Animated.spring(reveal, {
@@ -59,7 +68,7 @@ export function QuickAddFab() {
       )}
 
       {/* Clear of the tab bar, wherever the phone's own navigation puts it. */}
-      <View style={[styles.dock, { bottom: Math.max(insets.bottom, spacing.sm) + TAB_BAR_HEIGHT + 12 }]} pointerEvents="box-none">
+      <View style={[styles.dock, { bottom: dockBottom }]} pointerEvents="box-none">
         <Action
           label="Scan Receipt"
           icon="scan"
@@ -105,28 +114,46 @@ export function QuickAddFab() {
             setOpen((v) => !v);
           }}
         >
-          <Animated.View style={[styles.fabWrap, { shadowColor: theme.tint, transform: [{ scale }] }]}>
-            {/* Accent glass rather than a painted disc: the colour is in the
-                glass, the rim catches it brighter, and a hard specular spot
-                sits where the room's light strikes — the sharper highlight a
-                denser, more reflective material gets. */}
+          <Animated.View style={[styles.fabWrap, { transform: [{ scale }] }]}>
+            {/* Clear glass: the backdrop seen through it, frosted. The button
+                carries its own copy of the backdrop, blurred once and lined up
+                with the real one, so it costs nothing per frame. */}
+            <View style={[StyleSheet.absoluteFill, styles.fabClip]} pointerEvents="none">
+              <Image
+                source={dark ? ROOM.dark : ROOM.light}
+                blurRadius={16}
+                fadeDuration={0}
+                resizeMode="cover"
+                style={{ position: 'absolute', left: -origin.x, top: -origin.y, width: window.width, height: window.height }}
+              />
+            </View>
             <GlassSurface
               level="control"
               blur={false}
               borderRadius={radius.pill}
               contentStyle={styles.fab}
-              tint={withAlpha(theme.tint, theme.mode === 'dark' ? 0.62 : 0.88)}
-              tintBorder={withAlpha(shade(theme.tint, 0.45), 0.85)}
+              tint={withAlpha(theme.tint, dark ? 0.24 : 0.2)}
+              tintBorder={dark ? 'rgba(235, 242, 255, 0.55)' : 'rgba(255, 255, 255, 0.95)'}
             >
+              {/* Light gathered inside the lower edge, where it comes back
+                  through the glass tinted with its colour. */}
               <LinearGradient
-                colors={['rgba(255, 255, 255, 0.42)', 'rgba(255, 255, 255, 0)']}
-                start={{ x: 0.2, y: 0 }}
-                end={{ x: 0.55, y: 0.6 }}
+                colors={['transparent', withAlpha(shade(theme.tint, 0.2), dark ? 0.45 : 0.35)]}
+                start={{ x: 0.5, y: 0.45 }}
+                end={{ x: 0.5, y: 1 }}
+                style={StyleSheet.absoluteFill}
+                pointerEvents="none"
+              />
+              {/* Gloss over the top */}
+              <LinearGradient
+                colors={['rgba(255, 255, 255, 0.55)', 'rgba(255, 255, 255, 0)']}
+                start={{ x: 0.5, y: 0 }}
+                end={{ x: 0.5, y: 1 }}
                 style={styles.specular}
                 pointerEvents="none"
               />
               <Animated.View style={{ transform: [{ rotate }] }}>
-                <Ionicons name="add" size={30} color="#FFFFFF" />
+                <Ionicons name="add" size={32} color={dark ? '#FFFFFF' : theme.tint} style={styles.plus} />
               </Animated.View>
             </GlassSurface>
           </Animated.View>
@@ -180,6 +207,8 @@ function Action({
   );
 }
 
+const FAB_SIZE = 62;
+
 const styles = StyleSheet.create({
   dock: { position: 'absolute', right: spacing.lg, alignItems: 'flex-end' },
   action: { position: 'absolute', right: 0, bottom: 4 },
@@ -193,17 +222,20 @@ const styles = StyleSheet.create({
   actionLabel: { fontSize: fontSizes.sm, fontWeight: '700' },
   fabWrap: {
     borderRadius: radius.pill,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.45,
+    shadowOpacity: 0.3,
     shadowRadius: 16,
     // No Android elevation: the button is tinted glass, and the shadow would
     // show through it as a dark shape inside.
   },
   fab: {
-    width: 62,
-    height: 62,
+    width: FAB_SIZE,
+    height: FAB_SIZE,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  specular: { position: 'absolute', top: 3, left: 8, width: 34, height: 22, borderRadius: 17 },
+  fabClip: { borderRadius: radius.pill, overflow: 'hidden' },
+  specular: { position: 'absolute', top: 2, left: 9, right: 9, height: 26, borderRadius: 13 },
+  plus: { textShadowColor: 'rgba(0, 0, 0, 0.25)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 },
 });
