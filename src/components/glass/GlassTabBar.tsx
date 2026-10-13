@@ -2,7 +2,6 @@ import React, { useEffect, useId, useRef, useState } from 'react';
 import { Animated, Image, LayoutChangeEvent, Platform, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import Svg, { Defs, Ellipse, RadialGradient, Stop } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Text } from '../../theme/type';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
@@ -13,70 +12,39 @@ import { ROOM } from './Aurora';
 import { ActivityGlyph, BudgetGlyph, GLYPH_SIZE, HomeGlyph, InsightsGlyph, Orb, ORB_SIZE, SettingsGlyph } from './TabIcons';
 
 /**
- * "Apple Inspired 3D Glass Navigation" — the tab bar to the design spec.
+ * The tab bar: a capsule of frosted glass (the backdrop blurred 24 under a
+ * gradient at 88% in dark, 84% in light) with a 1-point border, a lit top
+ * edge, an inner glow and a soft shadow, holding a row of icons without
+ * labels — each tab is named for screen readers instead.
  *
- * Bar: 76 high, corners of 40, 16 in from each side, frosted glass (the
- * backdrop blurred 24 under a gradient at 88% in dark, 84% in light) with a
- * 1-point border, a lit top edge and an inner glow, and a shadow of 22 blur,
- * 9 down, 22%.
- *
- * Icons: 44-point circles of glossy gradient glass with white symbols.
- * Selected, an icon springs to 1.12× (0.35 s, damping 0.75), glows in its
- * colour, its label turns bold, and a 25×4 capsule in its colour sits under it.
+ * Icons are round, in the style of iOS 27. Selected, an icon springs to 1.12×
+ * (0.35 s, damping 0.75), glows softly in its colour, and a 25×4 capsule in
+ * its colour sits under it.
  */
 const SPEC = {
-  barHeight: 76,
-  barRadius: 40,
+  barHeight: 66,
+  barRadius: 34,
   margin: 16,
   backdropBlur: 24,
-  iconLabelSpacing: 5,
   activeScale: 1.12,
   indicator: { width: 25, height: 4, radius: 2 },
   // A spring of about 0.35 s with a damping ratio of 0.75.
   spring: { stiffness: 320, damping: 27, mass: 1 },
 };
 
-type ModeColors = { active: string; glow: string; indicator: string };
 type TabSpec = {
   gradient: string[];
   Glyph: typeof HomeGlyph;
-  dark: ModeColors;
-  light: ModeColors;
+  /** The glow when selected, and the indicator under the icon. */
+  accent: string;
 };
 
 const TABS: Record<string, TabSpec> = {
-  Dashboard: {
-    gradient: ['#00C6FF', '#0055FF'],
-    Glyph: HomeGlyph,
-    dark: { active: '#007AFF', glow: '#008CFF', indicator: '#55CCFF' },
-    light: { active: '#005BFF', glow: '#72B8FF', indicator: '#005BFF' },
-  },
-  Transactions: {
-    gradient: ['#66758F', '#202B40'],
-    Glyph: ActivityGlyph,
-    // Not in the spec: graphite to match the icon.
-    dark: { active: '#8FA2C8', glow: '#8FA2C8', indicator: '#B8C6E8' },
-    light: { active: '#3A4766', glow: '#A9B6D3', indicator: '#3A4766' },
-  },
-  Budgets: {
-    gradient: ['#FF53B8', '#8B35FF', '#315BFF'],
-    Glyph: BudgetGlyph,
-    dark: { active: '#9747FF', glow: '#B447FF', indicator: '#D77CFF' },
-    light: { active: '#7035FF', glow: '#C78AFF', indicator: '#7035FF' },
-  },
-  Analytics: {
-    gradient: ['#57F9A2', '#00B96B'],
-    Glyph: InsightsGlyph,
-    dark: { active: '#00D978', glow: '#00FF91', indicator: '#80FFC0' },
-    light: { active: '#00A96B', glow: '#75F5BC', indicator: '#00B96B' },
-  },
-  Settings: {
-    gradient: ['#7B8BA8', '#273247'],
-    Glyph: SettingsGlyph,
-    // Not in the spec: graphite to match the icon.
-    dark: { active: '#9AABCB', glow: '#9AABCB', indicator: '#C3CFE6' },
-    light: { active: '#3A4766', glow: '#A9B6D3', indicator: '#3A4766' },
-  },
+  Dashboard: { gradient: ['#45ADFF', '#0A6CFF'], Glyph: HomeGlyph, accent: '#2F8CFF' },
+  Transactions: { gradient: ['#FFFFFF', '#E3E7EE'], Glyph: ActivityGlyph, accent: '#8E9AB3' },
+  Budgets: { gradient: ['#FF8A8A', '#FF4757'], Glyph: BudgetGlyph, accent: '#FF5A64' },
+  Analytics: { gradient: ['#5FE37E', '#1FAE4B'], Glyph: InsightsGlyph, accent: '#34C759' },
+  Settings: { gradient: ['#B9BEC8', '#7E848F'], Glyph: SettingsGlyph, accent: '#9AA0AB' },
 };
 
 const MODE = {
@@ -84,15 +52,11 @@ const MODE = {
     bar: ['#353D55', '#171C2D'],
     barOpacity: 0.88,
     border: '#A5B8FF',
-    text: '#E8EDFF',
-    inactiveText: '#C1C9DC',
   },
   light: {
     bar: ['#FFFFFF', '#F3EAFB'],
     barOpacity: 0.84,
     border: '#FFFFFF',
-    text: '#303950',
-    inactiveText: '#596176',
   },
 };
 
@@ -126,7 +90,7 @@ export function GlassTabBar({ state, descriptors, navigation }: BottomTabBarProp
         })
       : 0;
   const selected = TABS[state.routes[state.index]?.name] ?? TABS.Dashboard;
-  const indicatorColor = (dark ? selected.dark : selected.light).indicator;
+  const indicatorColor = selected.accent;
 
   return (
     <View
@@ -145,7 +109,7 @@ export function GlassTabBar({ state, descriptors, navigation }: BottomTabBarProp
         {/* Frosted glass: the backdrop seen through the bar, blurred. The bar
             carries its own copy of the backdrop, blurred once and lined up
             with the real one, so it costs nothing per frame and the list
-            scrolling under it never runs through the labels. */}
+            scrolling under it never shows through. */}
         <View style={[StyleSheet.absoluteFill, styles.clip]} pointerEvents="none">
           {origin && (
             <Image
@@ -194,7 +158,6 @@ export function GlassTabBar({ state, descriptors, navigation }: BottomTabBarProp
                 focused={focused}
                 label={label}
                 tab={tab}
-                dark={dark}
                 onPress={() => {
                   const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
                   if (focused || event.defaultPrevented) return;
@@ -229,17 +192,13 @@ function TabItem({
   focused,
   label,
   tab,
-  dark,
   onPress,
 }: {
   focused: boolean;
   label: string;
   tab: TabSpec;
-  dark: boolean;
   onPress: () => void;
 }) {
-  const mode = dark ? MODE.dark : MODE.light;
-  const colors = dark ? tab.dark : tab.light;
   // Dips under the finger and springs back when it lifts.
   const press = useRef(new Animated.Value(0)).current;
   // How selected the tab is: scales the icon and lights its glow.
@@ -256,7 +215,6 @@ function TabItem({
     chosen.interpolate({ inputRange: [0, 1], outputRange: [1, SPEC.activeScale] }),
     press.interpolate({ inputRange: [0, 1], outputRange: [1, 0.9] })
   );
-  const labelColor = focused ? (dark ? mode.text : colors.active) : mode.inactiveText;
   const { Glyph } = tab;
 
   return (
@@ -272,7 +230,7 @@ function TabItem({
     >
       <View style={styles.stage}>
         <Animated.View style={[styles.halo, { opacity: chosen, transform: [{ scale }] }]} pointerEvents="none">
-          <Halo color={colors.glow} />
+          <Halo color={tab.accent} />
         </Animated.View>
         <Animated.View style={{ transform: [{ scale }] }}>
           <Orb gradient={tab.gradient} />
@@ -281,9 +239,6 @@ function TabItem({
           </View>
         </Animated.View>
       </View>
-      <Text numberOfLines={1} style={[styles.label, { color: labelColor, fontWeight: focused ? '700' : '500' }]}>
-        {label}
-      </Text>
     </Pressable>
   );
 }
@@ -325,7 +280,7 @@ const styles = StyleSheet.create({
   clip: { borderRadius: SPEC.barRadius, overflow: 'hidden' },
   border: { borderRadius: SPEC.barRadius, borderWidth: 1 },
   edge: { position: 'absolute', top: 0, left: '12%', right: '12%', height: 1 },
-  row: { flex: 1, flexDirection: 'row', paddingTop: 7 },
+  row: { flex: 1, flexDirection: 'row', paddingTop: 8 },
   item: { flex: 1, alignItems: 'center' },
   stage: { width: HALO_SIZE, height: ORB_SIZE, alignItems: 'center' },
   halo: { position: 'absolute', top: ORB_SIZE / 2 - HALO_SIZE / 2, left: 0 },
@@ -334,10 +289,9 @@ const styles = StyleSheet.create({
     top: (ORB_SIZE - GLYPH_SIZE) / 2,
     left: (ORB_SIZE - GLYPH_SIZE) / 2,
   },
-  label: { fontSize: 11, lineHeight: 13, letterSpacing: 0.1, marginTop: SPEC.iconLabelSpacing },
   indicator: {
     position: 'absolute',
-    bottom: 1,
+    bottom: 4,
     width: SPEC.indicator.width,
     height: SPEC.indicator.height,
     borderRadius: SPEC.indicator.radius,
