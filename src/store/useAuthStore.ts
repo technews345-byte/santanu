@@ -8,15 +8,24 @@ import { isCloudConfigured } from '../services/cloudConfig';
 import type { AuthUser } from '../services/auth';
 import type { SyncState } from '../sync/engine';
 import { countPending, getMeta, setMeta } from '../db/syncStore';
+import { OWNER_KEY } from '../sync/engine';
 
 const GUEST_ACK_KEY = 'auth:guestAcknowledged';
 const LAST_SYNC_KEY = 'sync:lastCompletedAt';
+// Who was signed in when the app last ran, so a returning user can be let in
+// at once instead of waiting on Firebase to check the session over the network.
+const LAST_UID_KEY = 'auth:lastUid';
+// Whose data is on this device; an account switch blocks the screen only when
+// a different account signs in.
+let ownerUid: string | null = null;
 let syncTask: Promise<void> | null = null;
 let sessionGeneration = 0;
 let deletingAccount = false;
 
 interface AuthStoreState {
   ready: boolean;
+  /** A session from the last run is still being confirmed by Firebase. */
+  restoring: boolean;
   switchingAccount: boolean;
   user: AuthUser | null;
   /** True once the person has chosen to keep using the app without an account. */
@@ -37,6 +46,7 @@ interface AuthStoreState {
 
 export const useAuthStore = create<AuthStoreState>((set, get) => ({
   ready: false,
+  restoring: false,
   switchingAccount: false,
   user: null,
   guestAcknowledged: false,
@@ -47,12 +57,17 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
 
   init: async () => {
     try {
-      const [ack, lastSynced, pending] = await Promise.all([
+      const [ack, lastSynced, pending, lastUid, owner] = await Promise.all([
         AsyncStorage.getItem(GUEST_ACK_KEY),
         getMeta(LAST_SYNC_KEY),
         countPending(),
+        AsyncStorage.getItem(LAST_UID_KEY),
+        getMeta(OWNER_KEY),
       ]);
+      ownerUid = owner || null;
       set({ guestAcknowledged: ack === 'true', lastSyncedAt: lastSynced, pendingCount: pending });
+      // Signed in last time: open now and let Firebase confirm in the background.
+      if (lastUid && isCloudConfigured) set({ ready: true, restoring: true });
     } catch {
       // Defaults stand: a reader that fails should not decide whether the app opens.
     }
@@ -65,14 +80,15 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
     // The app waits on this before it draws, so nothing here may leave it
     // waiting for ever: if Firebase neither answers nor throws, carry on
     // signed out. A later answer still arrives and is honoured.
-    const giveUpWaiting = setTimeout(() => set({ ready: true }), 5000);
+    const giveUpWaiting = setTimeout(() => set({ ready: true, restoring: false }), 5000);
 
     try {
       const { subscribeToAuth } = require('../services/auth') as typeof import('../services/auth');
       subscribeToAuth((user) => {
         clearTimeout(giveUpWaiting);
         if (get().user?.uid !== user?.uid) sessionGeneration++;
-        set({ user, ready: true, switchingAccount: !!user });
+        set({ user, ready: true, restoring: false, switchingAccount: !!user && !!ownerUid && ownerUid !== user.uid });
+        (user ? AsyncStorage.setItem(LAST_UID_KEY, user.uid) : AsyncStorage.removeItem(LAST_UID_KEY)).catch(() => {});
         if (user) {
           // A new account waits for old work to finish before claiming SQLite.
           void (async () => {
@@ -123,6 +139,7 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
         const { createFirestoreAdapter } = require('../sync/firestoreAdapter') as typeof import('../sync/firestoreAdapter');
         if (!current()) return;
         await claimLocalDataFor(user.uid);
+        ownerUid = user.uid;
         if (!current()) return;
         // Refresh before network access: an offline failure must not leave
         // another account's records visible under this account's identity.

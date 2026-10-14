@@ -18,7 +18,7 @@ export interface RemoteAdapter {
 
 export type SyncState = 'idle' | 'syncing' | 'offline' | 'error';
 
-const OWNER_KEY = 'sync:ownerUid';
+export const OWNER_KEY = 'sync:ownerUid';
 
 export type OwnerTransition = 'first-sign-in' | 'same-account' | 'switched-account';
 

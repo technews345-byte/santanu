@@ -12,8 +12,8 @@ const LOGO = require('../../assets/brand-mark.webp');
 const LOGO_WIDTH = 190;
 const LOGO_ASPECT = 1072 / 1039; // the supplied mark, very slightly wider than tall
 
-const SETTLE_MS = 120;
-const FADE_OUT_MS = 360;
+const SETTLE_MS = 0;
+const FADE_OUT_MS = 240;
 const BREATH_MS = 2200;
 
 // A single decelerating curve, used everywhere the app moves, so nothing

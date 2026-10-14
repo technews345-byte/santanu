@@ -39,6 +39,7 @@ export function RootNavigator() {
   };
   useEffect(() => onReminderTapped(openEntry), []);
   const ready = useAuthStore((s) => s.ready);
+  const restoring = useAuthStore((s) => s.restoring);
   const user = useAuthStore((s) => s.user);
   const switchingAccount = useAuthStore((s) => s.switchingAccount);
   const syncError = useAuthStore((s) => s.syncError);
@@ -47,7 +48,7 @@ export function RootNavigator() {
   // Someone opening Spendly for the first time is offered the choice up front:
   // sign in, or carry on without an account. Once either is answered the screen
   // steps aside and never asks again.
-  const askToSignIn = ready && !user && !guestAcknowledged;
+  const askToSignIn = ready && !restoring && !user && !guestAcknowledged;
 
   const navTheme = {
     ...(theme.mode === 'dark' ? DarkTheme : DefaultTheme),
