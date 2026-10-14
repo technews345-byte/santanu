@@ -200,7 +200,9 @@ function Action({
       <Pressable onPress={onPress}>
         <GlassSurface level="control" blur={false} opaque borderRadius={radius.pill} contentStyle={styles.actionInner}>
           <Ionicons name={icon} size={20} color={color} />
-          <Text style={[styles.actionLabel, { color: theme.text }]}>{label}</Text>
+          <Text numberOfLines={1} maxFontSizeMultiplier={1.2} style={[styles.actionLabel, { color: theme.text }]}>
+            {label}
+          </Text>
         </GlassSurface>
       </Pressable>
     </Animated.View>
@@ -210,7 +212,9 @@ function Action({
 const FAB_SIZE = 62;
 
 const styles = StyleSheet.create({
-  dock: { position: 'absolute', right: spacing.lg, alignItems: 'flex-end' },
+  // Wide enough for the actions' labels: an absolute child is measured within
+  // its parent, and the button alone left them room for a few letters a line.
+  dock: { position: 'absolute', right: spacing.lg, width: 220, alignItems: 'flex-end' },
   action: { position: 'absolute', right: 0, bottom: 4 },
   actionInner: {
     flexDirection: 'row',
@@ -219,7 +223,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },
-  actionLabel: { fontSize: fontSizes.sm, fontWeight: '700' },
+  actionLabel: { fontSize: fontSizes.xs, fontWeight: '700' },
   fabWrap: {
     borderRadius: radius.pill,
     shadowColor: '#000',
