@@ -1,3 +1,4 @@
+import { useShallow } from 'zustand/react/shallow';
 import React, { useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text, TextInput } from '../theme/type';
@@ -21,7 +22,7 @@ export default function AccountFormScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const { accountId } = route.params ?? {};
-  const { accounts, addAccount, updateAccount, removeAccount } = useStore();
+  const { accounts, addAccount, updateAccount, removeAccount } = useStore(useShallow((s) => ({ accounts: s.accounts, addAccount: s.addAccount, updateAccount: s.updateAccount, removeAccount: s.removeAccount })));
   const existing = accounts.find((a) => a.id === accountId);
 
   const [name, setName] = useState(existing?.name ?? '');

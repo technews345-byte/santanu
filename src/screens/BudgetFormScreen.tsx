@@ -1,3 +1,4 @@
+import { useShallow } from 'zustand/react/shallow';
 import React, { useState } from 'react';
 import { Alert, Pressable, StyleSheet, Switch, View } from 'react-native';
 import { Text, TextInput } from '../theme/type';
@@ -16,7 +17,7 @@ export default function BudgetFormScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const { categoryId } = route.params;
-  const { categories, budgets, setBudget, removeBudget } = useStore();
+  const { categories, budgets, setBudget, removeBudget } = useStore(useShallow((s) => ({ categories: s.categories, budgets: s.budgets, setBudget: s.setBudget, removeBudget: s.removeBudget })));
 
   const category = categories.find((c) => c.id === categoryId);
   const monthKey = monthKeyFor();

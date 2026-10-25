@@ -5,6 +5,7 @@ import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
 import { shade, withAlpha } from '../../theme/color';
 import { fontSizes, motion, radius, spacing } from '../../theme/tokens';
+import { useReducedMotion } from '../../theme/useReducedMotion';
 import { GlassSurface } from './GlassSurface';
 
 export interface TabOption<T extends string> {
@@ -32,14 +33,18 @@ export function GlassTabs<T extends string>({
   onChange: (value: T) => void;
 }) {
   const { theme } = useTheme();
+  const reduced = useReducedMotion();
   const dark = theme.mode === 'dark';
   const [width, setWidth] = useState(0);
   const index = Math.max(0, options.findIndex((o) => o.key === value));
   const travel = useRef(new Animated.Value(index)).current;
 
   useEffect(() => {
-    Animated.spring(travel, { toValue: index, useNativeDriver: true, ...motion.glide }).start();
-  }, [index]);
+    if (reduced) { travel.stopAnimation(); travel.setValue(index); return; }
+    const animation = Animated.spring(travel, { toValue: index, useNativeDriver: true, ...motion.glide });
+    animation.start();
+    return () => animation.stop();
+  }, [index, reduced, travel]);
 
   // The row reports its outer width; the pill travels inside the padding.
   const slot = width > 0 ? (width - 8) / options.length : 0;

@@ -1,3 +1,4 @@
+import { useShallow } from 'zustand/react/shallow';
 import React, { useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../theme/type';
@@ -24,7 +25,7 @@ import { budgetRows, budgetTotals } from '../utils/insights';
 export default function BudgetsScreen() {
   const { theme } = useTheme();
   const navigation = useNavigation<any>();
-  const { categories, transactions, budgets, activeAccountId } = useStore();
+  const { categories, transactions, budgets, activeAccountId } = useStore(useShallow((s) => ({ categories: s.categories, transactions: s.transactions, budgets: s.budgets, activeAccountId: s.activeAccountId })));
   const [anchor, setAnchor] = useState(new Date());
 
   const monthKey = monthKeyFor(anchor);
@@ -32,7 +33,7 @@ export default function BudgetsScreen() {
     () => (activeAccountId ? transactions.filter((t) => t.accountId === activeAccountId) : transactions),
     [transactions, activeAccountId]
   );
-  const { start, end } = periodInterval('month', anchor);
+  const { start, end } = useMemo(() => periodInterval('month', anchor), [anchor]);
   const monthTxns = useMemo(() => transactionsInRange(scoped, start, end), [scoped, start, end]);
 
   // Shared with the dashboard's budget tile, so the two always agree.

@@ -1,3 +1,4 @@
+import { useShallow } from 'zustand/react/shallow';
 import React, { useId, useMemo, useState } from 'react';
 import { Image, Platform, Pressable, SectionList, StyleSheet, View } from 'react-native';
 import { Text } from '../theme/type';
@@ -66,7 +67,7 @@ export default function DashboardScreen() {
     setActiveAccountId,
     balanceVisible,
     toggleBalanceVisible,
-  } = useStore();
+  } = useStore(useShallow((s) => ({ accounts: s.accounts, categories: s.categories, transactions: s.transactions, activeAccountId: s.activeAccountId, setActiveAccountId: s.setActiveAccountId, balanceVisible: s.balanceVisible, toggleBalanceVisible: s.toggleBalanceVisible })));
 
   const user = useAuthStore((s) => s.user);
   const [period, setPeriod] = useState<PeriodKey>('month');
@@ -87,13 +88,14 @@ export default function DashboardScreen() {
     return totalBalance(accounts, transactions);
   }, [activeAccount, accounts, transactions]);
 
-  const { start, end } = periodInterval(period);
+  const today = format(new Date(), 'yyyy-MM-dd');
+  const { start, end } = useMemo(() => periodInterval(period), [period, today]);
   const periodTxns = useMemo(() => transactionsInRange(scoped, start, end), [scoped, start, end]);
-  const { income, expense, investment, net } = summarize(periodTxns);
+  const { income, expense, investment, net } = useMemo(() => summarize(periodTxns), [periodTxns]);
 
   const recentSections = useMemo(() => groupByRelativeDate(scoped.slice(0, 60)), [scoped]);
-  const categoryById = (id: string | null) => categories.find((c) => c.id === id);
-  const accountById = (id: string) => accounts.find((a) => a.id === id);
+  const categoryMap = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
+  const accountMap = useMemo(() => new Map(accounts.map((a) => [a.id, a])), [accounts]);
 
   return (
     <Screen>
@@ -176,12 +178,14 @@ export default function DashboardScreen() {
           <Text style={[styles.dateHeader, { color: theme.textTertiary }]}>{section.title}</Text>
         )}
         renderItem={({ item }) => {
-          const cat = categoryById(item.categoryId);
-          const account = accountById(item.accountId);
-          const toAccount = item.toAccountId ? accountById(item.toAccountId) : null;
+          const cat = categoryMap.get(item.categoryId ?? '');
+          const account = accountMap.get(item.accountId);
+          const toAccount = item.toAccountId ? accountMap.get(item.toAccountId) : null;
           return (
             <GlassPressable
               level="row"
+              feedback="press"
+              blur={false}
               borderRadius={radius.lg}
               style={styles.txnRowOuter}
               contentStyle={styles.txnRow}
@@ -375,7 +379,7 @@ function SummaryFigure({ label, value, color, visible }: { label: string; value:
 function SpendingBento({ transactions }: { transactions: Transaction[] }) {
   const { theme } = useTheme();
   const navigation = useNavigation<any>();
-  const { categories, budgets } = useStore();
+  const { categories, budgets } = useStore(useShallow((s) => ({ categories: s.categories, budgets: s.budgets })));
 
   const now = new Date();
   const pace = useMemo(() => spendingPace(transactions, now), [transactions]);
@@ -750,7 +754,7 @@ const styles = StyleSheet.create({
 
   quickActions: { flexDirection: 'row', gap: spacing.xs, marginTop: spacing.md },
   quickAction: { flex: 1 },
-  quickActionInner: { alignItems: 'center', gap: spacing.xs, paddingVertical: spacing.md, paddingHorizontal: 4, minHeight: 100, justifyContent: 'center' },
+  quickActionInner: { alignItems: 'center', gap: spacing.xs, paddingVertical: spacing.md, paddingHorizontal: 4, minHeight: 88, justifyContent: 'center' },
   quickActionLabel: { fontSize: fontSizes.xs, fontWeight: '700', textAlign: 'center', lineHeight: 15 },
 
   overline: {

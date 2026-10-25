@@ -4,6 +4,7 @@ import React, { useEffect, useRef } from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { NavigationContainer, DefaultTheme, DarkTheme, createNavigationContainerRef } from '@react-navigation/native';
 import { useTheme } from '../theme/ThemeContext';
+import { useReducedMotion } from '../theme/useReducedMotion';
 import { TabNavigator } from './TabNavigator';
 import TransactionEntryScreen from '../screens/TransactionEntryScreen';
 import ScanReceiptScreen from '../screens/ScanReceiptScreen';
@@ -23,6 +24,7 @@ const navigationRef = createNavigationContainerRef<RootStackParamList>();
 
 export function RootNavigator() {
   const { theme } = useTheme();
+  const reduced = useReducedMotion();
 
   // A tapped reminder opens straight onto a new expense — the thing it was
   // asking for. If it arrives before navigation is ready (it opened the app)
@@ -84,8 +86,8 @@ export function RootNavigator() {
       <Stack.Navigator
         screenOptions={{
           headerShown: false,
-          animation: 'slide_from_right',
-          animationDuration: 260,
+          animation: reduced ? 'none' : 'slide_from_right',
+          animationDuration: reduced ? 0 : 260,
         }}
       >
         {askToSignIn ? (

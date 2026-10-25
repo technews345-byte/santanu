@@ -1,3 +1,4 @@
+import { useShallow } from 'zustand/react/shallow';
 import React, { useState } from 'react';
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
 import { Text } from '../theme/type';
@@ -34,7 +35,7 @@ export default function SettingsScreen() {
     setBiometricLockEnabled,
     supportCount,
     recordSupport,
-  } = useStore();
+  } = useStore(useShallow((s) => ({ accounts: s.accounts, categories: s.categories, transactions: s.transactions, biometricLockEnabled: s.biometricLockEnabled, setBiometricLockEnabled: s.setBiometricLockEnabled, supportCount: s.supportCount, recordSupport: s.recordSupport })));
   const user = useAuthStore((s) => s.user);
   const pendingCount = useAuthStore((s) => s.pendingCount);
   const [exporting, setExporting] = useState(false);

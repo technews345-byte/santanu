@@ -1,9 +1,11 @@
+import { useShallow } from 'zustand/react/shallow';
 import { nextOccurrence } from '../utils/recurrence';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, Image, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text, TextInput } from '../theme/type';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Screen } from '../components/Screen';
@@ -51,7 +53,7 @@ export default function TransactionEntryScreen() {
   const route = useRoute<any>();
   const { transactionId, initialType, prefill } = route.params ?? {};
 
-  const { accounts, categories, transactions, addTransaction, updateTransaction, removeTransaction, activeAccountId } = useStore();
+  const { accounts, categories, transactions, addTransaction, updateTransaction, removeTransaction, activeAccountId } = useStore(useShallow((s) => ({ accounts: s.accounts, categories: s.categories, transactions: s.transactions, addTransaction: s.addTransaction, updateTransaction: s.updateTransaction, removeTransaction: s.removeTransaction, activeAccountId: s.activeAccountId })));
   const existing = transactionId ? transactions.find((t) => t.id === transactionId) : undefined;
 
   const [type, setType] = useState<TransactionType>(existing?.type ?? initialType ?? 'expense');
@@ -97,6 +99,7 @@ export default function TransactionEntryScreen() {
   const selectedToAccount = accounts.find((a) => a.id === toAccountId);
 
   const saving = useRef(false);
+  const [isSaving, setIsSaving] = useState(false);
   const amount = evaluateExpression(expression);
   const typeColor = TYPE_CONFIG[type].color(theme);
 
@@ -174,12 +177,14 @@ export default function TransactionEntryScreen() {
     };
 
     saving.current = true;
+    setIsSaving(true);
     try {
       if (existing) {
         await updateTransaction(existing.id, payload);
       } else {
         await addTransaction(payload);
       }
+      if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       navigation.goBack();
 
       const reminders = useReminderStore.getState();
@@ -197,9 +202,11 @@ export default function TransactionEntryScreen() {
         );
       }
     } catch {
+      if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
       Alert.alert('Could not save', 'Your entry is still here. Please try again.');
     } finally {
       saving.current = false;
+      setIsSaving(false);
     }
   };
 
@@ -387,7 +394,8 @@ export default function TransactionEntryScreen() {
         <Keypad onKeyPress={onKeyPress} />
 
         <GlassButton
-          label={existing ? 'Save Changes' : 'Save Transaction'}
+          label={isSaving ? 'Saving…' : existing ? 'Save Changes' : 'Save Transaction'}
+          loading={isSaving}
           color={typeColor}
           onPress={handleSave}
           style={styles.saveButtonWrap}
@@ -399,7 +407,10 @@ export default function TransactionEntryScreen() {
           {relevantCategories.map((c) => (
             <Pressable
               key={c.id}
-              style={styles.categoryItem}
+              accessibilityRole="button"
+              accessibilityLabel={c.name}
+              accessibilityState={{ selected: categoryId === c.id }}
+              style={[styles.categoryItem, { backgroundColor: categoryId === c.id ? theme.tintMuted : 'transparent', borderRadius: radius.md }]}
               onPress={() => {
                 setCategoryId(c.id);
                 setCategorySheetOpen(false);
@@ -418,6 +429,9 @@ export default function TransactionEntryScreen() {
         {accounts.map((a) => (
           <Pressable
             key={a.id}
+            accessibilityRole="button"
+            accessibilityLabel={a.name}
+            accessibilityState={{ selected: accountId === a.id }}
             style={styles.accountOption}
             onPress={() => {
               setAccountId(a.id);

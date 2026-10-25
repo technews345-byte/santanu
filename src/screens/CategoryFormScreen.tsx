@@ -1,3 +1,4 @@
+import { useShallow } from 'zustand/react/shallow';
 import React, { useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text, TextInput } from '../theme/type';
@@ -17,7 +18,7 @@ export default function CategoryFormScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const { categoryId, type } = route.params;
-  const { categories, addCategory, updateCategory } = useStore();
+  const { categories, addCategory, updateCategory } = useStore(useShallow((s) => ({ categories: s.categories, addCategory: s.addCategory, updateCategory: s.updateCategory })));
   const existing = categoryId ? categories.find((c) => c.id === categoryId) : undefined;
 
   const [name, setName] = useState(existing?.name ?? '');

@@ -1,3 +1,4 @@
+import { useShallow } from 'zustand/react/shallow';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, AppStateStatus, Pressable, StyleSheet, View } from 'react-native';
 import { fontAssets, Text } from './src/theme/type';
@@ -27,7 +28,7 @@ SplashScreen.preventAutoHideAsync().catch(() => {});
 
 function AppContent() {
   const { theme } = useTheme();
-  const { hydrated, hydrationError, hydrate, biometricLockEnabled, transactions, categories } = useStore();
+  const { hydrated, hydrationError, hydrate, biometricLockEnabled, transactions, categories } = useStore(useShallow((s) => ({ hydrated: s.hydrated, hydrationError: s.hydrationError, hydrate: s.hydrate, biometricLockEnabled: s.biometricLockEnabled, transactions: s.transactions, categories: s.categories })));
   const reminders = useReminderStore();
   const initAuth = useAuthStore((s) => s.init);
   const authReady = useAuthStore((s) => s.ready);

@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
+import React, { useDeferredValue, useMemo, useState } from 'react';
 import { Alert, FlatList, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text, TextInput } from '../theme/type';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -43,12 +44,16 @@ const SORT_OPTIONS: { key: SortKey; label: string }[] = [
 export default function TransactionsScreen() {
   const { theme } = useTheme();
   const navigation = useNavigation<any>();
-  const { transactions, categories, accounts, activeAccountId, removeTransaction, updateTransaction } = useStore();
+  const { transactions, categories, accounts, activeAccountId, removeTransaction, updateTransaction } = useStore(useShallow((s) => ({ transactions: s.transactions, categories: s.categories, accounts: s.accounts, activeAccountId: s.activeAccountId, removeTransaction: s.removeTransaction, updateTransaction: s.updateTransaction })));
 
   const [tab, setTab] = useState<IntervalTab>('all');
   const [filterOpen, setFilterOpen] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
   const [search, setSearch] = useState('');
+  const deferredSearch = useDeferredValue(search);
+  const searchPending = search !== deferredSearch;
+  const categoryById = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
+  const accountById = useMemo(() => new Map(accounts.map((a) => [a.id, a])), [accounts]);
   // Lights the search field's border while it holds focus.
   const [searchFocused, setSearchFocused] = useState(false);
   const [sort, setSort] = useState<SortKey>('date_desc');
@@ -77,12 +82,12 @@ export default function TransactionsScreen() {
     if (typeFilters.length) result = result.filter((t) => typeFilters.includes(t.type));
     if (categoryFilters.length) result = result.filter((t) => t.categoryId && categoryFilters.includes(t.categoryId));
     if (accountFilters.length) result = result.filter((t) => accountFilters.includes(t.accountId) || (t.toAccountId && accountFilters.includes(t.toAccountId)));
-    if (search.trim()) {
-      const q = search.trim().toLowerCase();
-      result = result.filter((t) => t.note.toLowerCase().includes(q) || categories.find((c) => c.id === t.categoryId)?.name.toLowerCase().includes(q));
+    if (deferredSearch.trim()) {
+      const q = deferredSearch.trim().toLowerCase();
+      result = result.filter((t) => t.note.toLowerCase().includes(q) || categoryById.get(t.categoryId ?? '')?.name.toLowerCase().includes(q));
     }
     return result;
-  }, [intervalFiltered, typeFilters, categoryFilters, accountFilters, search, categories]);
+  }, [intervalFiltered, typeFilters, categoryFilters, accountFilters, deferredSearch, categoryById]);
 
   const sorted = useMemo(() => {
     const arr = [...filtered];
@@ -95,15 +100,15 @@ export default function TransactionsScreen() {
         return arr.sort((a, b) => a.amount - b.amount);
       case 'category_az':
         return arr.sort((a, b) => {
-          const an = categories.find((c) => c.id === a.categoryId)?.name ?? 'zzz';
-          const bn = categories.find((c) => c.id === b.categoryId)?.name ?? 'zzz';
+          const an = categoryById.get(a.categoryId ?? '')?.name ?? 'zzz';
+          const bn = categoryById.get(b.categoryId ?? '')?.name ?? 'zzz';
           return an.localeCompare(bn);
         });
       case 'date_desc':
       default:
         return arr.sort((a, b) => (a.date < b.date ? 1 : -1));
     }
-  }, [filtered, sort, categories]);
+  }, [filtered, sort, categoryById]);
 
   const activeFilterCount = typeFilters.length + categoryFilters.length + accountFilters.length;
 
@@ -162,13 +167,13 @@ export default function TransactionsScreen() {
         <View style={styles.header}>
           <Text style={[styles.title, { color: theme.text }]}>Transactions</Text>
           <View style={styles.headerActions}>
-            <Pressable onPress={() => setSortOpen(true)} hitSlop={8}>
-              <GlassSurface level="raised" borderRadius={radius.pill} contentStyle={styles.roundBtn}>
+            <Pressable onPress={() => setSortOpen(true)} hitSlop={8} accessibilityRole="button" accessibilityLabel="Sort transactions">
+              <GlassSurface level="control" blur={false} borderRadius={radius.pill} contentStyle={styles.roundBtn}>
                 <Ionicons name="swap-vertical-outline" size={19} color={theme.text} />
               </GlassSurface>
             </Pressable>
-            <Pressable onPress={() => setFilterOpen(true)} hitSlop={8} style={{ marginLeft: spacing.xs }}>
-              <GlassSurface level="raised" borderRadius={radius.pill} contentStyle={styles.roundBtn}>
+            <Pressable onPress={() => setFilterOpen(true)} hitSlop={8} accessibilityRole="button" accessibilityLabel={`Filter transactions, ${activeFilterCount} active filters`} style={{ marginLeft: spacing.xs }}>
+              <GlassSurface level="control" blur={false} borderRadius={radius.pill} contentStyle={styles.roundBtn}>
                 <Ionicons name="options-outline" size={19} color={theme.text} />
               </GlassSurface>
               {activeFilterCount > 0 && (
@@ -185,6 +190,7 @@ export default function TransactionsScreen() {
           <TextInput
             value={search}
             onChangeText={setSearch}
+            accessibilityLabel="Search transactions"
             placeholder="Search transactions..."
             placeholderTextColor={theme.textTertiary}
             onFocus={() => setSearchFocused(true)}
@@ -192,7 +198,7 @@ export default function TransactionsScreen() {
             style={[styles.searchInput, { color: theme.text }]}
           />
           {search.length > 0 && (
-            <Pressable onPress={() => setSearch('')} hitSlop={8}>
+            <Pressable onPress={() => setSearch('')} hitSlop={8} accessibilityRole="button" accessibilityLabel="Clear search">
               <Ionicons name="close-circle" size={16} color={theme.textTertiary} />
             </Pressable>
           )}
@@ -211,6 +217,9 @@ export default function TransactionsScreen() {
 
         <FlatList
           data={sorted}
+          accessibilityState={{ busy: searchPending }}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           keyExtractor={(item) => item.id}
           // Enough rows to fill the screen at once, then the rest in small
           // batches, so the first frame is quick and scrolling never waits.
@@ -218,13 +227,14 @@ export default function TransactionsScreen() {
           maxToRenderPerBatch={8}
           windowSize={9}
           contentContainerStyle={{ paddingHorizontal: spacing.md, paddingBottom: 168 }}
-          ListEmptyComponent={<EmptyState icon="filter-outline" title="No matching transactions" subtitle="Try adjusting your filters" />}
+          ListEmptyComponent={<EmptyState icon="filter-outline" title={searchPending ? "Updating results…" : "No matching transactions"} subtitle="Try another search or adjust your filters" />}
           renderItem={({ item }) => {
-            const cat = categories.find((c) => c.id === item.categoryId);
-            const account = accounts.find((a) => a.id === item.accountId);
-            const toAccount = item.toAccountId ? accounts.find((a) => a.id === item.toAccountId) : null;
+            const cat = categoryById.get(item.categoryId ?? '');
+            const account = accountById.get(item.accountId);
+            const toAccount = item.toAccountId ? accountById.get(item.toAccountId) : null;
             const row = (
               <GlassPressable
+                feedback="press"
                 level="row"
                 blur={false}
                 // The delete and edit panels live behind this row; translucent

@@ -1,6 +1,6 @@
 {
   "name": "santanu",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "main": "index.ts",
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",
@@ -64,7 +64,8 @@
     "web": "expo start --web",
     "test": "node --test tests/regressions.cjs",
     "typecheck": "tsc --noEmit",
-    "test:rules": "node --test tests/firestore-rules.cjs"
+    "test:rules": "node --test tests/firestore-rules.cjs",
+    "test:ui": "node --test tests/ui.cjs"
   },
   "private": true,
   "overrides": {
