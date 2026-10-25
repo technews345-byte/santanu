@@ -1,3 +1,5 @@
+> **Spendly — Expense & Budget Manager:** [App details and features](SPENDLY.md) · [Complete UI guide](SPENDLY-UI-GUIDE.md) · [Detailed latest updates](SPENDLY-UPDATES.md) · [APK and source release](https://github.com/technews345-byte/santanu/releases/tag/spendly-ui-v1.0.1)
+
 # Prabhat — Your Morning Mantra
 
 **Begin your day with devotional listening, at a time you choose.**
