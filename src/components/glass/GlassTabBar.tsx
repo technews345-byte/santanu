@@ -5,8 +5,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
+import { Text } from '../../theme/type';
+import { useReducedMotion } from '../../theme/useReducedMotion';
 import { useTheme } from '../../theme/ThemeContext';
-import { motion, spacing } from '../../theme/tokens';
+import { fontSizes, motion, spacing } from '../../theme/tokens';
 import { withAlpha } from '../../theme/color';
 import { ROOM } from './Aurora';
 import { ActivityGlyph, BudgetGlyph, GLYPH_SIZE, HomeGlyph, InsightsGlyph, Orb, ORB_SIZE, SettingsGlyph } from './TabIcons';
@@ -14,15 +16,14 @@ import { ActivityGlyph, BudgetGlyph, GLYPH_SIZE, HomeGlyph, InsightsGlyph, Orb, 
 /**
  * The tab bar: a capsule of frosted glass (the backdrop blurred 24 under a
  * gradient at 88% in dark, 84% in light) with a 1-point border, a lit top
- * edge, an inner glow and a soft shadow, holding a row of icons without
- * labels — each tab is named for screen readers instead.
+ * edge, an inner glow and a soft shadow, holding labelled icons that are also named for screen readers.
  *
  * Icons are round, in the style of iOS 27. Selected, an icon springs to 1.12×
  * (0.35 s, damping 0.75), glows softly in its colour, and a 25×4 capsule in
  * its colour sits under it.
  */
 const SPEC = {
-  barHeight: 66,
+  barHeight: 82,
   barRadius: 34,
   margin: 16,
   backdropBlur: 24,
@@ -65,6 +66,7 @@ export const TAB_BAR_HEIGHT = SPEC.barHeight;
 
 export function GlassTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const { theme } = useTheme();
+  const reduced = useReducedMotion();
   const dark = theme.mode === 'dark';
   const mode = dark ? MODE.dark : MODE.light;
   const insets = useSafeAreaInsets();
@@ -76,8 +78,11 @@ export function GlassTabBar({ state, descriptors, navigation }: BottomTabBarProp
   const travel = useRef(new Animated.Value(state.index)).current;
 
   useEffect(() => {
-    Animated.spring(travel, { toValue: state.index, useNativeDriver: true, ...SPEC.spring }).start();
-  }, [state.index]);
+    if (reduced) { travel.stopAnimation(); travel.setValue(state.index); return; }
+    const animation = Animated.spring(travel, { toValue: state.index, useNativeDriver: true, ...SPEC.spring });
+    animation.start();
+    return () => animation.stop();
+  }, [state.index, reduced, travel]);
 
   const count = state.routes.length;
   const slot = width > 0 ? width / count : 0;
@@ -158,6 +163,8 @@ export function GlassTabBar({ state, descriptors, navigation }: BottomTabBarProp
                 focused={focused}
                 label={label}
                 tab={tab}
+                accessibilityLabel={options.tabBarAccessibilityLabel ?? label}
+                onLongPress={() => navigation.emit({ type: 'tabLongPress', target: route.key })}
                 onPress={() => {
                   const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
                   if (focused || event.defaultPrevented) return;
@@ -193,23 +200,32 @@ function TabItem({
   label,
   tab,
   onPress,
+  onLongPress,
+  accessibilityLabel,
 }: {
   focused: boolean;
   label: string;
   tab: TabSpec;
   onPress: () => void;
+  onLongPress: () => void;
+  accessibilityLabel: string;
 }) {
+  const { theme } = useTheme();
+  const reduced = useReducedMotion();
   // Dips under the finger and springs back when it lifts.
   const press = useRef(new Animated.Value(0)).current;
   // How selected the tab is: scales the icon and lights its glow.
   const chosen = useRef(new Animated.Value(focused ? 1 : 0)).current;
 
   useEffect(() => {
-    Animated.spring(chosen, { toValue: focused ? 1 : 0, useNativeDriver: true, ...SPEC.spring }).start();
-  }, [focused]);
+    if (reduced) { chosen.stopAnimation(); chosen.setValue(focused ? 1 : 0); return; }
+    const animation = Animated.spring(chosen, { toValue: focused ? 1 : 0, useNativeDriver: true, ...SPEC.spring });
+    animation.start();
+    return () => animation.stop();
+  }, [focused, reduced, chosen]);
 
   const pressTo = (toValue: number) =>
-    Animated.spring(press, { toValue, useNativeDriver: true, ...motion.press }).start();
+    reduced ? press.setValue(toValue) : Animated.spring(press, { toValue, useNativeDriver: true, ...motion.press }).start();
 
   const scale = Animated.multiply(
     chosen.interpolate({ inputRange: [0, 1], outputRange: [1, SPEC.activeScale] }),
@@ -220,25 +236,27 @@ function TabItem({
   return (
     <Pressable
       onPress={onPress}
+      onLongPress={onLongPress}
       onPressIn={() => pressTo(1)}
       onPressOut={() => pressTo(0)}
       style={styles.item}
       hitSlop={4}
       accessibilityRole="tab"
       accessibilityState={{ selected: focused }}
-      accessibilityLabel={label}
+      accessibilityLabel={accessibilityLabel}
     >
       <View style={styles.stage}>
-        <Animated.View style={[styles.halo, { opacity: chosen, transform: [{ scale }] }]} pointerEvents="none">
+        <Animated.View style={[styles.halo, { opacity: chosen, transform: [{ scale: reduced ? 1 : scale }] }]} pointerEvents="none">
           <Halo color={tab.accent} />
         </Animated.View>
-        <Animated.View style={{ transform: [{ scale }] }}>
+        <Animated.View style={{ transform: [{ scale: reduced ? 1 : scale }] }}>
           <Orb gradient={tab.gradient} />
           <View style={styles.glyph}>
             <Glyph hole={tab.gradient[tab.gradient.length - 1]} />
           </View>
         </Animated.View>
       </View>
+      <Text numberOfLines={1} style={[styles.label, { color: focused ? theme.text : theme.textSecondary }]}>{label}</Text>
     </Pressable>
   );
 }
@@ -281,7 +299,8 @@ const styles = StyleSheet.create({
   border: { borderRadius: SPEC.barRadius, borderWidth: 1 },
   edge: { position: 'absolute', top: 0, left: '12%', right: '12%', height: 1 },
   row: { flex: 1, flexDirection: 'row', paddingTop: 8 },
-  item: { flex: 1, alignItems: 'center' },
+  item: { flex: 1, minHeight: 64, alignItems: 'center' },
+  label: { fontSize: fontSizes.xs, fontWeight: '700', marginTop: 3 },
   stage: { width: HALO_SIZE, height: ORB_SIZE, alignItems: 'center' },
   halo: { position: 'absolute', top: ORB_SIZE / 2 - HALO_SIZE / 2, left: 0 },
   glyph: {

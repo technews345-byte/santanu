@@ -1,3 +1,4 @@
+import { useShallow } from 'zustand/react/shallow';
 import React, { useMemo } from 'react';
 import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../theme/type';
@@ -20,7 +21,7 @@ export default function CategoryDetailScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const { categoryId } = route.params;
-  const { transactions, categories, accounts } = useStore();
+  const { transactions, categories, accounts } = useStore(useShallow((s) => ({ transactions: s.transactions, categories: s.categories, accounts: s.accounts })));
 
   const category = categories.find((c) => c.id === categoryId);
   const items = useMemo(

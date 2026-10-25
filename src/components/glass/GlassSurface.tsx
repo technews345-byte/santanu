@@ -111,7 +111,7 @@ export function GlassSurface({
   // work surfaces like the keypad — and the rest are tinted glass, which
   // scrolls for free. The web preview follows Android, so it shows what the
   // phone does.
-  const wantsBlur = blur && !opaque && (Platform.OS === 'ios' || level === 'raised' || solidWithoutBlur);
+  const wantsBlur = blur && level !== 'row' && !opaque && (Platform.OS === 'ios' || level === 'raised' || solidWithoutBlur);
   const method: BlurMethod | null = !wantsBlur
     ? null
     : Platform.OS === 'ios'
@@ -145,7 +145,7 @@ export function GlassSurface({
         {
           borderRadius,
           shadowColor: dark ? '#000' : theme.shadow,
-          shadowOpacity: dark ? 0.5 : 1,
+          shadowOpacity: level === 'row' ? 0 : dark ? 0.5 : 1,
           shadowRadius: d.shadowRadius,
           shadowOffset: { width: 0, height: d.shadowY },
           // Android casts an elevation shadow under the whole pane, and
@@ -217,12 +217,12 @@ export function GlassSurface({
 
         {/* Light caught on the top edge, and a shorter run down the left.
             The rounded clip trims both at the corners, as a real bevel would. */}
-        <LinearGradient
+        {light && <LinearGradient
           colors={[theme.glassEdge, 'transparent']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={[styles.edgeTop, { opacity: d.edge }]}
-        />
+        />}
         {light && (
           <LinearGradient
             colors={[theme.glassEdge, 'transparent']}

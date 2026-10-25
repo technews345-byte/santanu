@@ -47,6 +47,7 @@ export function GlassPressable({
   onPress,
   onLongPress,
   disabled,
+  busy = false,
   level = 'panel',
   blur = true,
   opaque = false,
@@ -63,6 +64,7 @@ export function GlassPressable({
   onPress?: () => void;
   onLongPress?: () => void;
   disabled?: boolean;
+  busy?: boolean;
   level?: GlassLevel;
   blur?: boolean;
   opaque?: boolean;
@@ -121,10 +123,10 @@ export function GlassPressable({
     if (disabled) return;
     pressing.current = true;
     const size = sizeRef.current;
-    if (!armed && !reduced) setArmed(true);
+    if (!armed && !reduced && level !== 'row') setArmed(true);
     const moves: Animated.CompositeAnimation[] = [springTo(press, 1)];
 
-    if (!reduced) {
+    if (!reduced && level !== 'row') {
       if (feedback === 'lift' && size.width > 0 && size.height > 0) {
         // Where the finger landed, from -1 to 1 across each axis. The pane
         // tips away from that point: pressed on the right, the right edge
@@ -147,7 +149,7 @@ export function GlassPressable({
 
     Animated.parallel(moves).start();
 
-    if (!reduced) {
+    if (!reduced && level !== 'row') {
       const { pageX, pageY, locationX, locationY } = event.nativeEvent;
       glowX.setValue(locationX - GLOW_SIZE / 2);
       glowY.setValue(locationY - GLOW_SIZE / 2);
@@ -171,8 +173,8 @@ export function GlassPressable({
       ? [
           { perspective: 900 },
           { scale: press.interpolate({ inputRange: [0, 1], outputRange: [1, moving ? motion.liftScale : 1] }) },
-          { rotateX: tiltX.interpolate({ inputRange: [-10, 10], outputRange: ['-10deg', '10deg'] }) },
-          { rotateY: tiltY.interpolate({ inputRange: [-10, 10], outputRange: ['-10deg', '10deg'] }) },
+          { rotateX: reduced ? '0deg' : tiltX.interpolate({ inputRange: [-10, 10], outputRange: ['-10deg', '10deg'] }) },
+          { rotateY: reduced ? '0deg' : tiltY.interpolate({ inputRange: [-10, 10], outputRange: ['-10deg', '10deg'] }) },
         ]
       : [
           { scale: press.interpolate({ inputRange: [0, 1], outputRange: [1, moving ? motion.pressScale : 1] }) },
@@ -194,7 +196,7 @@ export function GlassPressable({
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       onTouchMove={(e) => {
-        if (pressing.current && !reduced) aim(e.nativeEvent.pageX, e.nativeEvent.pageY);
+        if (pressing.current && !reduced && level !== 'row') aim(e.nativeEvent.pageX, e.nativeEvent.pageY);
       }}
       onLayout={(e) => {
         sizeRef.current = e.nativeEvent.layout;
@@ -208,7 +210,7 @@ export function GlassPressable({
       onLongPress={onLongPress}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
-      accessibilityState={{ disabled: !!disabled }}
+      accessibilityState={{ disabled: !!disabled, busy }}
       style={style}
     >
       <Animated.View style={{ transform }}>
@@ -255,7 +257,7 @@ export function GlassPressable({
               ]}
             />
           )}
-          {armed && paneWidth > 0 && (
+          {armed && !reduced && paneWidth > 0 && (
             <Animated.View
               style={[
                 styles.band,

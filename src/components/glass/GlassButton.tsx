@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
+import { ActivityIndicator, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 import { Text } from '../../theme/type';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '../../theme/ThemeContext';
@@ -26,6 +26,7 @@ export function GlassButton({
   color,
   icon,
   disabled,
+  loading = false,
   style,
 }: {
   label: string;
@@ -35,6 +36,7 @@ export function GlassButton({
   color?: string;
   icon?: keyof typeof Ionicons.glyphMap;
   disabled?: boolean;
+  loading?: boolean;
   style?: StyleProp<ViewStyle>;
 }) {
   const { theme } = useTheme();
@@ -61,14 +63,16 @@ export function GlassButton({
         feedback="press"
         level="control"
         borderRadius={radius.lg}
-        disabled={disabled}
+        disabled={disabled || loading}
+        busy={loading}
         onPress={onPress}
         accessibilityLabel={label}
         tint={primary ? withAlpha(accent, dark ? 0.3 : 0.14) : undefined}
         tintBorder={primary ? withAlpha(accent, dark ? 0.55 : 0.4) : undefined}
         contentStyle={styles.inner}
       >
-        {icon && <Ionicons name={icon} size={18} color={labelColor} />}
+        {loading && <ActivityIndicator size="small" color={labelColor} />}
+        {!loading && icon && <Ionicons name={icon} size={18} color={labelColor} />}
         <Text style={[styles.label, { color: labelColor }]}>{label}</Text>
       </GlassPressable>
     </View>

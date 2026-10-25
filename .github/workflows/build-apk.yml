@@ -1,10 +1,11 @@
-name: Build Android APK
+name: Spendly UI APK
 
 on:
   workflow_dispatch:
   push:
     branches:
       - claude/expense-budget-app-vdww3s
+      - codex/spendly-ui-20261025
 
 permissions:
   contents: write
@@ -12,7 +13,7 @@ permissions:
 # The release tag is shared, so an older run finishing late would publish a
 # stale APK over a newer one.
 concurrency:
-  group: build-apk
+  group: spendly-ui-apk-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -44,6 +45,9 @@ jobs:
       # the same reason — a moved tag can't change what runs here.
       - name: Install dependencies
         run: npm ci --legacy-peer-deps
+
+      - name: Validate source
+        run: npm run typecheck && npm test && npm run test:ui
 
       - name: Generate native Android project
         run: npx expo prebuild --platform android --no-install
@@ -141,21 +145,40 @@ jobs:
         if: always()
         run: rm -f "$RUNNER_TEMP/release.keystore"
 
-      - name: Upload APK as workflow artifact
+      - name: Package APK and matching source
+        run: |
+          mkdir -p dist
+          cp android/app/build/outputs/apk/release/app-release.apk dist/Spendly-1.0.1.apk
+          git archive --format=zip --prefix=Spendly-source/ -o "$RUNNER_TEMP/spendly-source.zip" HEAD
+          python3 - <<'PYCODE'
+          import hashlib, os, pathlib, zipfile
+          out = pathlib.Path('dist')
+          apk = out / 'Spendly-1.0.1.apk'
+          checksum = hashlib.sha256(apk.read_bytes()).hexdigest()
+          (out / 'SHA256SUMS.txt').write_text(f'{checksum}  {apk.name}\n')
+          with zipfile.ZipFile(out / 'Spendly-1.0.1-APK-and-Source.zip', 'w', zipfile.ZIP_DEFLATED) as bundle:
+              with zipfile.ZipFile(pathlib.Path(os.environ['RUNNER_TEMP']) / 'spendly-source.zip') as source:
+                  for item in source.infolist():
+                      bundle.writestr(item, source.read(item.filename))
+              bundle.write(apk, apk.name)
+              bundle.write(out / 'SHA256SUMS.txt', 'SHA256SUMS.txt')
+              bundle.write('docs/UI-UPDATE-1.0.1.md', 'README.md')
+          PYCODE
+
+      - name: Upload APK and source as workflow artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: spendly-apk
-          path: android/app/build/outputs/apk/release/*.apk
+          name: spendly-1.0.1-apk-and-source
+          path: dist/*
+          if-no-files-found: error
 
       - name: Publish APK to a release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release delete android-apk --yes || true
-          git push --delete origin android-apk || true
-          gh release create android-apk \
-            android/app/build/outputs/apk/release/app-release.apk \
-            --title "Spendly — Android APK" \
-            --notes "Install on Android: tap the .apk below, then allow installation from unknown sources. Built from ${GITHUB_SHA}." \
+          gh release create spendly-ui-v1.0.1 \
+            dist/Spendly-1.0.1.apk dist/Spendly-1.0.1-APK-and-Source.zip dist/SHA256SUMS.txt \
+            --title "Spendly 1.0.1 — UI and responsiveness update" \
+            --notes "Spendly with updated glass UI, readable navigation labels, scrollable pickers, more responsive search, reduced-motion support and save feedback. Built from ${GITHUB_SHA}." \
             --prerelease \
             --target "${GITHUB_SHA}"

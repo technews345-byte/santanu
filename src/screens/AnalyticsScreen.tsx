@@ -1,3 +1,4 @@
+import { useShallow } from 'zustand/react/shallow';
 import React, { useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../theme/type';
@@ -32,7 +33,7 @@ const PERIODS: { key: PeriodKey; label: string }[] = [
 export default function AnalyticsScreen() {
   const { theme } = useTheme();
   const navigation = useNavigation<any>();
-  const { transactions, categories, activeAccountId } = useStore();
+  const { transactions, categories, activeAccountId } = useStore(useShallow((s) => ({ transactions: s.transactions, categories: s.categories, activeAccountId: s.activeAccountId })));
   const [period, setPeriod] = useState<PeriodKey>('month');
   const [anchor, setAnchor] = useState(new Date());
   const [viewType, setViewType] = useState<'expense' | 'income' | 'investment'>('expense');
@@ -42,7 +43,7 @@ export default function AnalyticsScreen() {
     [transactions, activeAccountId]
   );
 
-  const { start, end } = periodInterval(period, anchor);
+  const { start, end } = useMemo(() => periodInterval(period, anchor), [period, anchor]);
   const periodTxns = useMemo(() => transactionsInRange(scoped, start, end), [scoped, start, end]);
   const { income, expense } = summarize(periodTxns);
 

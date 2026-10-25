@@ -5,6 +5,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
+import { useReducedMotion } from '../theme/useReducedMotion';
 import { useTheme } from '../theme/ThemeContext';
 import { fontSizes, motion, radius, spacing } from '../theme/tokens';
 import { shade, withAlpha } from '../theme/color';
@@ -26,6 +27,7 @@ export function QuickAddFab() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
+  const reduced = useReducedMotion();
   const [open, setOpen] = useState(false);
   const reveal = useRef(new Animated.Value(0)).current;
   const press = useRef(new Animated.Value(0)).current;
@@ -39,12 +41,15 @@ export function QuickAddFab() {
   const origin = { x: window.width - spacing.lg - FAB_SIZE, y: window.height - dockBottom - FAB_SIZE };
 
   useEffect(() => {
-    Animated.spring(reveal, {
+    if (reduced) { reveal.stopAnimation(); reveal.setValue(open ? 1 : 0); return; }
+    const animation = Animated.spring(reveal, {
       toValue: open ? 1 : 0,
       useNativeDriver: true,
       ...motion.glide,
-    }).start();
-  }, [open]);
+    });
+    animation.start();
+    return () => animation.stop();
+  }, [open, reduced, reveal]);
 
   const go = (initialType: 'expense' | 'income') => {
     setOpen(false);
@@ -74,6 +79,7 @@ export function QuickAddFab() {
           icon="scan"
           color={theme.teal}
           reveal={reveal}
+          open={open}
           distance={214}
           delay={0.24}
           onPress={() => {
@@ -86,6 +92,7 @@ export function QuickAddFab() {
           icon="arrow-down-circle"
           color={theme.success}
           reveal={reveal}
+          open={open}
           distance={148}
           delay={0.12}
           onPress={() => go('income')}
@@ -95,14 +102,18 @@ export function QuickAddFab() {
           icon="arrow-up-circle"
           color={theme.expense}
           reveal={reveal}
+          open={open}
           distance={82}
           delay={0}
           onPress={() => go('expense')}
         />
 
         <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={open ? "Close quick actions" : "Add transaction"}
+          accessibilityState={{ expanded: open }}
           onPressIn={() =>
-            Animated.spring(press, { toValue: 1, useNativeDriver: true, ...motion.press }).start()
+            Animated.spring(press, { toValue: reduced ? 0 : 1, useNativeDriver: true, ...motion.press }).start()
           }
           onPressOut={() =>
             Animated.spring(press, { toValue: 0, useNativeDriver: true, ...motion.press }).start()
@@ -114,7 +125,7 @@ export function QuickAddFab() {
             setOpen((v) => !v);
           }}
         >
-          <Animated.View style={[styles.fabWrap, { transform: [{ scale }] }]}>
+          <Animated.View style={[styles.fabWrap, { transform: [{ scale: reduced ? 1 : scale }] }]}>
             {/* Clear glass: the backdrop seen through it, frosted. The button
                 carries its own copy of the backdrop, blurred once and lined up
                 with the real one, so it costs nothing per frame. */}
@@ -168,6 +179,7 @@ function Action({
   icon,
   color,
   reveal,
+  open,
   distance,
   delay,
   onPress,
@@ -176,6 +188,7 @@ function Action({
   icon: keyof typeof Ionicons.glyphMap;
   color: string;
   reveal: Animated.Value;
+  open: boolean;
   distance: number;
   delay: number;
   onPress: () => void;
@@ -194,10 +207,12 @@ function Action({
 
   return (
     <Animated.View
-      pointerEvents="box-none"
+      pointerEvents={open ? 'box-none' : 'none'}
+      accessibilityElementsHidden={!open}
+      importantForAccessibility={open ? 'auto' : 'no-hide-descendants'}
       style={[styles.action, { opacity: progress, transform: [{ translateY }, { scale }] }]}
     >
-      <Pressable onPress={onPress}>
+      <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} style={({ pressed }) => ({ opacity: pressed ? 0.65 : 1 })}>
         <GlassSurface level="control" blur={false} opaque borderRadius={radius.pill} contentStyle={styles.actionInner}>
           <Ionicons name={icon} size={20} color={color} />
           <Text numberOfLines={1} maxFontSizeMultiplier={1.2} style={[styles.actionLabel, { color: theme.text }]}>

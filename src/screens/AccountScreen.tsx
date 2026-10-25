@@ -1,3 +1,4 @@
+import { useShallow } from 'zustand/react/shallow';
 import React, { useEffect, useState } from 'react';
 import { Alert, Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text } from '../theme/type';
@@ -26,7 +27,7 @@ export default function AccountScreen() {
   const { theme } = useTheme();
   const navigation = useNavigation<any>();
   const { user, syncState, pendingCount, lastSyncedAt, syncNow, signOut, refreshPending } = useAuthStore();
-  const { transactions, categories, accounts } = useStore();
+  const { transactions, categories, accounts } = useStore(useShallow((s) => ({ transactions: s.transactions, categories: s.categories, accounts: s.accounts })));
   const [working, setWorking] = useState(false);
 
   useEffect(() => {
