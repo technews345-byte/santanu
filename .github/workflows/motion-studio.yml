@@ -1,0 +1,38 @@
+name: Motion Studio CI
+on:
+  push:
+    paths: ["motion-studio/**", ".github/workflows/motion-studio.yml"]
+  pull_request:
+    paths: ["motion-studio/**", ".github/workflows/motion-studio.yml"]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: motion-studio
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: motion-studio/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - run: npm ci && npm run build && npm test
+      - run: pip install -r backend/requirements.txt
+      - run: python -m pytest backend/tests -q
+      - run: python scripts/check-secrets.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: motion-studio-frontend
+          path: motion-studio/dist
+  container:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t motion-studio:${{ github.sha }} motion-studio

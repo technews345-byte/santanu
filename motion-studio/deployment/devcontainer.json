@@ -1,0 +1,11 @@
+{
+  "name": "Motion Studio frontend + backend",
+  "image": "mcr.microsoft.com/devcontainers/python:1-3.11-bookworm",
+  "features": {"ghcr.io/devcontainers/features/node:1": {"version": "22"}},
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}/motion-studio",
+  "forwardPorts": [8000],
+  "portsAttributes": {"8000": {"label": "Motion Studio", "onAutoForward": "openPreview", "visibility": "private"}},
+  "postCreateCommand": "sudo apt-get update && sudo apt-get install -y ffmpeg && pip install -r backend/requirements.txt && npm ci && npm run samples && npm run build",
+  "postStartCommand": "uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --no-access-log > /tmp/motion-studio.log 2>&1 &",
+  "remoteEnv": {"MOTION_PROVIDER": "mock", "APP_ENV": "development"}
+}
