@@ -1,0 +1,12 @@
+import type {components} from './generated/fal';
+export type FalMotionInput=components['schemas']['KlingVideoV3ProMotionControlInput'];
+export interface Capabilities{supportsNegativePrompt:boolean;supportsElementBinding:boolean;supportsKeepSound:boolean;maxSecondsImageMode:number;maxSecondsVideoMode:number;minSeconds:number;maxPromptLength:number;elementReferences:number}
+export interface Config{provider:string;capabilities:Capabilities;prices:Record<string,number>;retentionDays:number;spendCap:number;mattingAvailable:boolean;outpaintingAvailable:boolean;identityScoringAvailable:boolean;etaSamples:{tier:string;duration:number;seconds:number}[];limits:{imageBytes:number;videoBytes:number}}
+export interface MediaMeta{duration?:number;fps?:number;frameCount?:number;width:number;height:number;rotation?:number;hasAudio?:boolean;variableFrameRate?:boolean;size?:number;people?:{id:number;box:number[]}[];previewId?:string;faces?:{items:{box:number[];warnings:string[];rank:number}[];warnings:string[];landmarkCheck?:string;occlusionCheck?:string}}
+export interface Asset{id:string;name:string;kind:string;url:string;metadata:MediaMeta}
+export interface Settings{imageId:string;videoId:string;referenceIds:string[];orientation:'image'|'video';tier:'720p'|'1080p';ratio:'9:16'|'16:9'|'1:1';environment:string;crop:{x:number;y:number};cleanBackground:boolean;copyCamera:boolean;keepSound:boolean;watermark:boolean;splitApproved:boolean;consent:boolean;personBox?:number[];mockFailure?:string}
+export interface FaceResult{label:'Pass'|'Review'|'Fail';available:boolean;reason?:string;minimum:number|null;mean:number|null;belowThresholdPercent:number|null;threshold:number;missingFrames:number[];weakFrames:{time:number;score:number;url?:string}[]}
+export interface Report{mock:boolean;outputUrl:string;face:FaceResult;comparison:{input:MediaMeta;output:MediaMeta;durationMatch:boolean;frameCountMatch:boolean;fpsMatch:boolean};warnings:string[];segments:number;prompt:string;bindingReference:string|null}
+export interface Job{id:string;state:string;settings:Settings;created:number;updated:number;estimatedCost:number;error?:string;report?:Report;thumbnail:string;elapsedSeconds:number}
+export const stages=['Validating','Preparing video','Preparing image','Uploading','Queued','Generating','Downloading','Checking face','Done'];
+export const terminal=(state:string)=>['Done','Failed','Cancelled','Needs review'].includes(state);

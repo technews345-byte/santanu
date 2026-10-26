@@ -1,0 +1,27 @@
+{
+  "name": "motion-studio",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc --noEmit && vite build",
+    "schema:types": "openapi-typescript provider-schema/fal-pro.json -o frontend/src/generated/fal.ts && openapi-typescript provider-schema/fal-standard.json -o frontend/src/generated/fal-standard.ts",
+    "test": "vitest run",
+    "samples": "node scripts/fetch-samples.mjs"
+  },
+  "dependencies": {
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "lucide-react": "^0.468.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "@vitejs/plugin-react": "^4.5.0",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5",
+    "vitest": "^3.2.0",
+    "openapi-typescript": "^7.8.0"
+  }
+}
