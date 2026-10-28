@@ -1,22 +1,24 @@
-<p align="center"><img src="assets/brand-mark.webp" width="96" alt="Spendly app mark"></p>
+<p align="center"><img src="assets/raahi-icon.png" width="96" alt="Raahi app mark"></p>
 
-# Spendly
+# Raahi (formerly Spendly)
 
 **Track. Plan. Save. Live Better.**
 
-Spendly is a personal expense and budget manager developed by **Santanu Bordoloi**. It brings a local-first financial ledger, monthly budgeting, spending analytics and receipt capture into a rounded, iOS-inspired glass interface.
+Raahi is a personal expense and budget manager developed by **Santanu Bordoloi**. It brings a local-first financial ledger, monthly budgeting, spending analytics and receipt capture into a rounded, iOS-inspired glass interface.
 
 Records are saved in local SQLite. Optional Google sign-in and Cloud Firestore synchronization can connect a configured build to the user's cloud account. The current user-facing currency is **Indian Rupees (INR / ₹)**.
 
 | Project detail | Value |
 | --- | --- |
-| Version | 1.0.1; Android version code 2 |
+| Version | 1.0.2; Android version code 3 |
 | Android application ID | `com.santanu.spendly` |
 | Source platforms | Android, iOS and web, with different native capabilities |
 | Application stack | Expo SDK 57, React Native 0.86.3, React 19.2.3, TypeScript and Zustand |
 | Local data | SQLite financial records; AsyncStorage preferences |
 | Optional cloud | Firebase Authentication and Cloud Firestore |
 | License | [MIT](LICENSE) |
+
+The Raahi rebrand and visual refinements are in source; previously published 1.0.1 APKs retain the Spendly name. Existing app identity and local data keys are retained for compatible updates.
 
 Read the [complete feature and UI guide](docs/FEATURES-AND-UI.md), [detailed latest updates](CHANGELOG.md), [1.0.1 build notes](docs/UI-UPDATE-1.0.1.md) and [security guidance](SECURITY.md).
 
@@ -69,7 +71,7 @@ Repeat transactions daily, weekly, monthly or yearly. Due entries are generated 
 | Appearance | Light, dark or system preference |
 | Biometric lock | Supported device authentication, with re-locking when the app backgrounds |
 | Google account | Optional sign-in, sync status, pending changes, last sync time, retry, export, sign out and account deletion |
-| Support | Optional rewarded Support Spendly ads; native app-open ads are also implemented |
+| Advertising | Native app-open ads remain implemented |
 
 Notifications need permission and depend on OS scheduling. Cloud, ads and native features depend on build configuration, network or hardware as appropriate. See the [feature guide](docs/FEATURES-AND-UI.md) for detailed workflows and limits.
 
@@ -80,7 +82,7 @@ Spendly uses rounded glass cards, a floating navigation capsule, pill controls, 
 | Element | Design |
 | --- | --- |
 | Five tabs | Home, Activity, Budgets, Analytics and Settings |
-| Typography | Manrope for large figures/headings; native interface styling on iOS and Inter on Android/web |
+| Typography | Native system text on iOS and Inter on Android/web |
 | Radius tokens | 12, 16, 22 and 28 logical pixels, plus fully rounded pills |
 | Spacing tokens | Shared 4–40 logical-pixel scale |
 | Color roles | Distinct income, expense, transfer, investment, warning and danger colors |

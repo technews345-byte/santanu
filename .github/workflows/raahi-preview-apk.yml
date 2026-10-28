@@ -1,0 +1,79 @@
+name: Raahi preview APK
+
+on:
+  pull_request:
+    branches:
+      - claude/expense-budget-app-vdww3s
+
+permissions:
+  contents: read
+
+concurrency:
+  group: raahi-preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    if: github.event.pull_request.head.ref == 'codex/raahi-rebrand-edge-to-edge' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Check Firebase configuration
+        run: '[ -n "$FIREBASE_API_KEY" ] || echo "::warning::FIREBASE_API_KEY secret is not set, so this APK has no Google sign-in or cloud sync."'
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+      - name: Validate source
+        run: npm run typecheck && npm test && npm run test:ui
+      - name: Generate native Android project
+        run: npx expo prebuild --platform android --no-install
+      - name: Verify the previous APK signing certificate
+        run: |
+          actual=$(keytool -exportcert -keystore android/app/debug.keystore -storepass android -alias androiddebugkey | sha256sum | cut -d ' ' -f 1)
+          test "$actual" = "fac61745dc0903786fb9ede62a962b399f7348f0bb6f899b8332667591033b9c"
+          echo "The generated debug key matches the previous preview APK certificate."
+      - name: Raise Gradle memory limits
+        run: |
+          mkdir -p ~/.gradle
+          echo 'org.gradle.jvmargs=-Xmx6144m -XX:MaxMetaspaceSize=2048m' >> ~/.gradle/gradle.properties
+      - name: Build release APK
+        working-directory: android
+        run: ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a
+      - name: Package APK
+        run: |
+          mkdir -p dist
+          cp android/app/build/outputs/apk/release/app-release.apk dist/Raahi-1.0.2.apk
+          (cd dist && sha256sum Raahi-1.0.2.apk > SHA256SUMS.txt)
+          git archive --format=zip -o "$RUNNER_TEMP/raahi-source.zip" HEAD
+          python3 - <<'PY'
+          import os, pathlib, zipfile
+          out = pathlib.Path('dist')
+          essential = {
+              'assets/raahi-icon.png', 'assets/raahi-notification.png',
+              'assets/raahi-splash.jpg', 'assets/space-dark.webp', 'assets/space-light.webp',
+          }
+          media = {'.png', '.jpg', '.jpeg', '.webp', '.gif', '.mp4', '.mov', '.webm'}
+          with zipfile.ZipFile(out / 'Raahi-1.0.2-APK-and-Source.zip', 'w', zipfile.ZIP_DEFLATED) as bundle:
+              with zipfile.ZipFile(pathlib.Path(os.environ['RUNNER_TEMP']) / 'raahi-source.zip') as source:
+                  for item in source.infolist():
+                      if pathlib.PurePosixPath(item.filename).suffix.lower() in media and item.filename not in essential:
+                          continue
+                      bundle.writestr('Raahi-source/' + item.filename, source.read(item.filename))
+              bundle.write(out / 'Raahi-1.0.2.apk', 'Raahi-1.0.2.apk')
+              bundle.write(out / 'SHA256SUMS.txt', 'SHA256SUMS.txt')
+          PY
+      - name: Upload preview APK
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: raahi-1.0.2-apk
+          path: dist/*
+          if-no-files-found: error

@@ -1,15 +1,15 @@
 {
   "expo": {
-    "name": "Spendly",
+    "name": "Raahi",
     "slug": "santanu",
     "scheme": [
       "spendly",
       "com.santanu.spendly"
     ],
-    "version": "1.0.1",
+    "version": "1.0.2",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
-    "userInterfaceStyle": "automatic",
+    "icon": "./assets/raahi-icon.png",
+    "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
@@ -17,16 +17,15 @@
       "infoPlist": {
         "NSCameraUsageDescription": "Allow capturing receipt photos to attach to transactions.",
         "NSPhotoLibraryUsageDescription": "Allow selecting receipt images to attach to transactions.",
-        "NSFaceIDUsageDescription": "Use Face ID to unlock Spendly."
-      }
+        "NSFaceIDUsageDescription": "Use Face ID to unlock Raahi."
+      },
+      "buildNumber": "3"
     },
     "android": {
       "package": "com.santanu.spendly",
       "adaptiveIcon": {
-        "backgroundColor": "#FFFFFF",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "backgroundColor": "#1703D5",
+        "foregroundImage": "./assets/raahi-icon.png"
       },
       "predictiveBackGestureEnabled": false,
       "permissions": [
@@ -42,10 +41,10 @@
         "android.permission.SYSTEM_ALERT_WINDOW",
         "android.permission.WRITE_EXTERNAL_STORAGE"
       ],
-      "versionCode": 2
+      "versionCode": 3
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/raahi-icon.png"
     },
     "plugins": [
       [
@@ -59,16 +58,16 @@
       [
         "expo-local-authentication",
         {
-          "faceIDPermission": "Use Face ID to unlock Spendly."
+          "faceIDPermission": "Use Face ID to unlock Raahi."
         }
       ],
       [
         "expo-splash-screen",
         {
-          "image": "./assets/splash-icon.png",
+          "image": "./assets/raahi-icon.png",
           "imageWidth": 190,
           "resizeMode": "contain",
-          "backgroundColor": "#0B0E14"
+          "backgroundColor": "#050B2E"
         }
       ],
       "expo-system-ui",
@@ -83,7 +82,7 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/notification-icon.png",
+          "icon": "./assets/raahi-notification.png",
           "color": "#8494FF"
         }
       ],

@@ -12,10 +12,8 @@ import { useAuthStore } from '../store/useAuthStore';
 import { cloudProviders, isCloudConfigured } from '../services/cloudConfig';
 import { useGoogleSignIn } from '../services/oauth';
 
-// Two lockups, because the wordmark is near-black in one and near-white in
-// the other: each is legible only on the background it was drawn for.
-const LOCKUP_LIGHT = require('../../assets/logo-lockup-light.webp');
-const LOCKUP_DARK = require('../../assets/logo-lockup-dark.webp');
+// The same R mark used by the launcher.
+const RAAHI_MARK = require('../../assets/raahi-icon.png');
 
 export default function LoginScreen() {
   // No ad may land on top of signing in: the flow deliberately leaves the
@@ -81,11 +79,10 @@ export default function LoginScreen() {
 
         <View style={styles.hero}>
           <Animated.View style={step(0)}>
-            <Image
-              source={theme.mode === 'dark' ? LOCKUP_DARK : LOCKUP_LIGHT}
-              style={styles.logo}
-              resizeMode="contain"
-            />
+            <View style={styles.brand}>
+              <Image source={RAAHI_MARK} style={styles.logo} resizeMode="cover" />
+              <Text style={[styles.brandName, { color: theme.text }]}>Raahi</Text>
+            </View>
           </Animated.View>
 
           <Animated.View style={[styles.headlineWrap, step(1)]}>
@@ -197,7 +194,9 @@ const styles = StyleSheet.create({
   container: { flex: 1, paddingHorizontal: spacing.lg, paddingBottom: spacing.lg },
   close: { alignSelf: 'flex-end', padding: spacing.xs },
   hero: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  logo: { width: 234, height: 268 },
+  brand: { alignItems: 'center', gap: spacing.sm },
+  logo: { width: 112, height: 112, borderRadius: 26 },
+  brandName: { fontSize: 30, fontWeight: '600', letterSpacing: -0.7 },
   headlineWrap: { alignItems: 'center', marginTop: spacing.lg },
   headline: { fontSize: fontSizes.xxl, fontWeight: '800', letterSpacing: -0.5, lineHeight: 38 },
   actions: { gap: spacing.sm },

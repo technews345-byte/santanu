@@ -25,7 +25,7 @@ export function Aurora({ ambient = true }: { ambient?: boolean }) {
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
       <LinearGradient colors={skin.background} style={StyleSheet.absoluteFill} />
-      <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ translateX: drift.interpolate({ inputRange: [0, 1], outputRange: [-12, 14] }) }, { translateY: drift.interpolate({ inputRange: [0, 1], outputRange: [0, 24] }) }] }]}>
+      <Animated.View style={[styles.overscan, { transform: [{ translateX: drift.interpolate({ inputRange: [0, 1], outputRange: [-12, 14] }) }, { translateY: drift.interpolate({ inputRange: [0, 1], outputRange: [0, 24] }) }] }]}>
         <Svg width="100%" height="100%" viewBox="0 0 393 852" preserveAspectRatio="none">
           <Defs>
             {[
@@ -42,3 +42,7 @@ export function Aurora({ ambient = true }: { ambient?: boolean }) {
     </View>
   );
 }
+
+// The light fields move within an oversized surface, so no unlit strip can
+// appear at the display edges as the glow drifts.
+const styles = StyleSheet.create({ overscan: { position: 'absolute', top: -40, right: -32, bottom: -40, left: -32 } });

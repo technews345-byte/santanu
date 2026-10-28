@@ -40,6 +40,7 @@ export function HeroTransitionContainer({ children, renderDetail }: {
     transform: [{ scale: reduced ? 1 : interpolate(progress.value, [0, 1], [1, 0.94]) }],
   }), [reduced]);
   return <HeroContext.Provider value={{ open }}>
+    <View pointerEvents="none" style={StyleSheet.absoluteFill}><Aurora ambient={false} /></View>
     <Animated.View style={[styles.flex, sourceStyle]} accessibilityElementsHidden={!!card} importantForAccessibility={card ? 'no-hide-descendants' : 'auto'}>
       {children}
     </Animated.View>
@@ -129,7 +130,7 @@ function HeroOverlay({ card, progress, restore, renderDetail }: {
   </Modal>;
 }
 const styles = StyleSheet.create({
-  flex: { flex: 1 }, pane: { backgroundColor: '#050B2E', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)' },
+  flex: { flex: 1 }, pane: { backgroundColor: '#050B2E', overflow: 'hidden' },
   handle: { alignSelf: 'center', width: 36, height: 4, borderRadius: 2, opacity: 0.5, marginBottom: 16 },
   heading: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   close: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.08)' },

@@ -163,7 +163,7 @@ async function reschedule(
     await Notifications.scheduleNotificationAsync({
       identifier: PREFIX + format(at, 'yyyy-MM-dd'),
       content: {
-        title: 'Spendly',
+        title: 'Raahi',
         body: reminderFor(dayNumber, pool),
         data: { action: ADD_EXPENSE_ACTION },
       },
@@ -181,7 +181,7 @@ export async function sendTestReminder(language: ReminderSettings['language']): 
   const pool = reminderPool(language, { groceries: true, shopping: true });
   await Notifications.scheduleNotificationAsync({
     content: {
-      title: 'Spendly',
+      title: 'Raahi',
       body: pool[Math.floor(Math.random() * pool.length)],
       data: { action: ADD_EXPENSE_ACTION },
     },
