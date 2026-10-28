@@ -86,8 +86,8 @@ export function RootNavigator() {
       <Stack.Navigator
         screenOptions={{
           headerShown: false,
-          animation: reduced ? 'none' : 'slide_from_right',
-          animationDuration: reduced ? 0 : 260,
+          animation: reduced ? 'fade' : 'slide_from_right',
+          animationDuration: reduced ? 200 : 450,
         }}
       >
         {askToSignIn ? (
@@ -97,7 +97,7 @@ export function RootNavigator() {
         ) : (
           <>
             <Stack.Screen name="Tabs" component={TabNavigator} />
-            <Stack.Group screenOptions={{ presentation: 'modal', animation: 'slide_from_bottom', animationDuration: 300 }}>
+            <Stack.Group screenOptions={{ presentation: 'modal', animation: reduced ? 'fade' : 'slide_from_bottom', animationDuration: reduced ? 200 : 450, gestureEnabled: true, fullScreenGestureEnabled: !reduced }}>
               <Stack.Screen name="TransactionEntry" component={TransactionEntryScreen} />
               <Stack.Screen name="ScanReceipt" component={ScanReceiptScreen} />
               <Stack.Screen name="AccountForm" component={AccountFormScreen} />

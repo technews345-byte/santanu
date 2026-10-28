@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Easing, Platform, StyleProp, TextStyle } from 'react-native';
+import { Animated, Platform, StyleProp, TextStyle } from 'react-native';
+import { motion } from '../theme/tokens';
 import { typeface } from '../theme/type';
 import { useReducedMotion } from '../theme/useReducedMotion';
 
@@ -22,6 +23,7 @@ export function Figure({
   hidden,
   mask = '••••••',
   fit,
+  countOnMount = false,
 }: {
   value: number;
   format: (n: number) => string;
@@ -32,16 +34,17 @@ export function Figure({
   mask?: string;
   /** Shrink to one line rather than wrap — for a figure that could run long. */
   fit?: boolean;
+  countOnMount?: boolean;
 }) {
   const reduced = useReducedMotion();
   // Figures start at their value. Counting up from zero as a screen opened
   // meant a re-render per figure per frame while the screen itself was
   // moving in; instead they fade and settle into place on the native driver.
-  const count = useRef(new Animated.Value(value)).current;
+  const count = useRef(new Animated.Value(countOnMount && !reduced ? 0 : value)).current;
   const glow = useRef(new Animated.Value(reduced ? 1 : 0)).current;
   const scale = useRef(new Animated.Value(1)).current;
   const lift = useRef(new Animated.Value(reduced ? 0 : 6)).current;
-  const [shown, setShown] = useState(value);
+  const [shown, setShown] = useState(countOnMount && !reduced ? 0 : value);
   const first = useRef(true);
   const lastText = useRef(format(value));
   const lastAt = useRef(0);
@@ -66,27 +69,32 @@ export function Figure({
   }, []);
 
   useEffect(() => {
+    if (reduced) {
+      first.current = false;
+      count.stopAnimation(); count.setValue(value);
+      glow.stopAnimation(); glow.setValue(1);
+      lift.stopAnimation(); lift.setValue(0);
+      scale.stopAnimation(); scale.setValue(1);
+      setShown(value);
+      return;
+    }
     if (first.current) {
       first.current = false;
       if (!reduced) {
+        if (countOnMount) Animated.spring(count, { toValue: value, ...motion.enter, overshootClamping: true, useNativeDriver: false }).start(({ finished }) => { if (finished) setShown(value); });
         Animated.parallel([
-          Animated.timing(glow, { toValue: 1, duration: 420, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+          Animated.spring(glow, { toValue: 1, ...motion.enter, useNativeDriver: true }),
           Animated.spring(lift, { toValue: 0, useNativeDriver: true, damping: 20, stiffness: 170 }),
         ]).start();
       }
       return;
     }
-    if (reduced) {
-      count.setValue(value);
-      setShown(value);
-      return;
-    }
     // A change counts from where the figure was to where it is going, and
     // lands with a brief lift in brightness and size.
-    Animated.timing(count, {
+    Animated.spring(count, {
       toValue: value,
-      duration,
-      easing: Easing.bezier(0.16, 1, 0.3, 1),
+      ...motion.enter,
+      overshootClamping: true,
       // Drives text content, which only the JS side can change.
       useNativeDriver: false,
     }).start(({ finished }) => {
@@ -97,7 +105,7 @@ export function Figure({
     glow.setValue(0.72);
     scale.setValue(1.025);
     Animated.parallel([
-      Animated.timing(glow, { toValue: 1, duration: 520, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      Animated.spring(glow, { toValue: 1, ...motion.enter, useNativeDriver: true }),
       Animated.spring(scale, { toValue: 1, useNativeDriver: true, damping: 18, stiffness: 180 }),
     ]).start();
   }, [value, reduced]);

@@ -1,0 +1,17 @@
+name: Spendly UI checks
+on:
+  pull_request:
+    branches: [claude/expense-budget-app-vdww3s]
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+      - run: npm ci --legacy-peer-deps
+      - run: npm run typecheck && npm test && npm run test:ui
+      - run: npx expo export --platform web

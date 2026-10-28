@@ -208,6 +208,7 @@ function Action({
   return (
     <Animated.View
       pointerEvents={open ? 'box-none' : 'none'}
+      aria-hidden={!open}
       accessibilityElementsHidden={!open}
       importantForAccessibility={open ? 'auto' : 'no-hide-descendants'}
       style={[styles.action, { opacity: progress, transform: [{ translateY }, { scale }] }]}

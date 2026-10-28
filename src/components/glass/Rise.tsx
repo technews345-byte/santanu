@@ -32,17 +32,12 @@ export function Rise({
   const t = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    if (reduced) {
-      t.setValue(1);
-      return;
-    }
-    const arrive = Animated.spring(t, { toValue: 1, delay: order * 60, useNativeDriver: true, ...motion.enter });
+    const arrive = reduced
+      ? Animated.timing(t, { toValue: 1, duration: 200, useNativeDriver: true })
+      : Animated.spring(t, { toValue: 1, delay: order * 60, useNativeDriver: true, ...motion.enter });
     arrive.start();
     return () => arrive.stop();
-    // Runs once: a pane arrives when it first appears, not on every change.
-  }, []);
-
-  if (reduced) return <Animated.View style={style}>{children}</Animated.View>;
+  }, [reduced, order, t]);
 
   return (
     <Animated.View
@@ -50,17 +45,7 @@ export function Rise({
         style,
         {
           opacity: t.interpolate({ inputRange: [0, 0.55], outputRange: [0, 1], extrapolate: 'clamp' }),
-          transform: flat
-            ? [
-                { translateY: t.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) },
-                { scale: t.interpolate({ inputRange: [0, 1], outputRange: [0.95, 1] }) },
-              ]
-            : [
-                { perspective: 1000 },
-                { translateY: t.interpolate({ inputRange: [0, 1], outputRange: [26, 0] }) },
-                { rotateX: t.interpolate({ inputRange: [0, 1], outputRange: ['12deg', '0deg'] }) },
-                { scale: t.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1] }) },
-              ],
+          transform: [{ translateY: reduced ? 0 : t.interpolate({ inputRange: [0, 1], outputRange: [24, 0] }) }],
         },
       ]}
     >

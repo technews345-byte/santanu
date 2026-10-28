@@ -24,8 +24,8 @@ export function TabNavigator() {
         // The incoming screen drifts a few points in the direction of travel
         // as it fades up, so moving between tabs has a direction — the same
         // way the selected pane glides along the shelf below.
-        animation: reduced ? 'none' : 'shift',
-        transitionSpec: { animation: 'timing', config: { duration: reduced ? 0 : 200 } },
+        animation: 'fade',
+        transitionSpec: reduced ? { animation: 'timing', config: { duration: 200 } } : { animation: 'spring', config: { stiffness: 220, damping: 24, mass: 1 } },
         // Icons and colours are drawn by GlassTabBar.
       }}
     >

@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../theme/ThemeContext';
+import { useReducedMotion } from '../theme/useReducedMotion';
 import { motion } from '../theme/tokens';
 
 /**
@@ -11,12 +12,16 @@ import { motion } from '../theme/tokens';
  */
 export function ProgressBar({ progress, height = 10 }: { progress: number; height?: number }) {
   const { theme } = useTheme();
+  const reduced = useReducedMotion();
   const clamped = Math.min(Math.max(progress, 0), 1);
   const grow = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.spring(grow, { toValue: clamped, useNativeDriver: true, ...motion.enter }).start();
-  }, [clamped]);
+    if (reduced) { grow.stopAnimation(); grow.setValue(clamped); return; }
+    const animation = Animated.spring(grow, { toValue: clamped, useNativeDriver: true, ...motion.enter });
+    animation.start();
+    return () => animation.stop();
+  }, [clamped, reduced, grow]);
 
   // Green while there is room, amber as it runs out, red once it is gone.
   const [from, to] =

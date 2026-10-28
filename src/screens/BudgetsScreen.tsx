@@ -9,7 +9,7 @@ import { format } from 'date-fns/format';
 import { subMonths } from 'date-fns/subMonths';
 import { Screen } from '../components/Screen';
 import { Card } from '../components/Card';
-import { IconBadge } from '../components/IconBadge';
+import { ProgressRing } from '../components/glass/ProgressRing';
 import { ProgressBar } from '../components/ProgressBar';
 import { GlassPressable } from '../components/glass/GlassPressable';
 import { EmptyState } from '../components/EmptyState';
@@ -99,7 +99,9 @@ export default function BudgetsScreen() {
               onPress={() => navigation.navigate('BudgetForm', { categoryId: category.id })}
             >
               <View style={styles.budgetTop}>
-                <IconBadge icon={category.icon as any} color={category.color} size={40} />
+                <ProgressRing progress={progress} color={overspent ? theme.danger : progress >= 0.85 ? theme.warning : theme.tint} size={56}>
+                  <Ionicons name={category.icon as any} color={theme.textSecondary} size={22} />
+                </ProgressRing>
                 <View style={styles.budgetMeta}>
                   <Text style={[styles.budgetName, { color: theme.text }]}>{category.name}</Text>
                   {hasBudget ? (
@@ -140,7 +142,7 @@ export default function BudgetsScreen() {
 
 const styles = StyleSheet.create({
   header: { paddingHorizontal: spacing.md, paddingTop: spacing.sm },
-  title: { fontSize: fontSizes.xl, fontWeight: '800' },
+  title: { fontSize: 26, fontWeight: '300' },
   anchorRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.md, marginTop: spacing.xs },
   anchorLabel: { fontSize: fontSizes.base, fontWeight: '700', minWidth: 140, textAlign: 'center' },
   summaryCard: { marginBottom: spacing.md },

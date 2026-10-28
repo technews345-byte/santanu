@@ -1,93 +1,39 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, Easing, Image, LayoutChangeEvent, StyleSheet } from 'react-native';
+import { Animated, Image, LayoutChangeEvent, StyleSheet } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
+import { useReducedMotion } from '../theme/useReducedMotion';
+import { skin } from '../theme/skin';
 
-// One transparent asset for both themes: the logo sits directly on the app's
-// own background, with no container or plate behind it.
 const LOGO = require('../../assets/brand-mark.webp');
-
-// The same size and place as the phone's own launch screen (the splash
-// plugin's imageWidth in app.json), so the handoff from it is invisible: the
-// logo is simply already there, and nothing jumps or cross-fades.
-const LOGO_WIDTH = 190;
-const LOGO_ASPECT = 1072 / 1039; // the supplied mark, very slightly wider than tall
-
-const SETTLE_MS = 0;
-const FADE_OUT_MS = 240;
-const BREATH_MS = 2200;
-
-// A single decelerating curve, used everywhere the app moves, so nothing
-// stops abruptly: fast to leave, long to settle.
-const GLIDE = Easing.bezier(0.22, 1, 0.36, 1);
-
-export function BrandSplash({
-  ready,
-  onFirstFrame,
-  onFinish,
-}: {
-  ready: boolean;
-  onFirstFrame: () => void;
-  onFinish: () => void;
+/** Finite spring launch; no permanent animation or added delay while data loads. */
+export function BrandSplash({ ready, onFirstFrame, onFinish }: {
+  ready: boolean; onFirstFrame: () => void; onFinish: () => void;
 }) {
   const { theme } = useTheme();
-  const lift = useRef(new Animated.Value(1)).current;
-  const breath = useRef(new Animated.Value(0)).current;
-  const overlay = useRef(new Animated.Value(1)).current;
-
+  const reduced = useReducedMotion();
+  const scale = useRef(new Animated.Value(reduced ? 1 : 0.84)).current;
+  const opacity = useRef(new Animated.Value(1)).current;
+  const finishRef = useRef(onFinish);
+  finishRef.current = onFinish;
   useEffect(() => {
-    // Barely-there breathing while waiting, so a slow start feels alive rather
-    // than frozen. Loops until the splash leaves.
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(breath, { toValue: 1, duration: BREATH_MS, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-        Animated.timing(breath, { toValue: 0, duration: BREATH_MS, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-      ])
-    );
-    loop.start();
-    return () => loop.stop();
-  }, []);
-
+    if (reduced) { scale.stopAnimation(); scale.setValue(1); return; }
+    const animation = Animated.spring(scale, { toValue: 1, useNativeDriver: true, ...skin.spring });
+    animation.start();
+    return () => animation.stop();
+  }, [reduced, scale]);
   useEffect(() => {
     if (!ready) return;
-    // On the way out the logo comes a touch toward you as everything fades,
-    // opening onto the app behind it.
-    const timer = setTimeout(() => {
-      Animated.parallel([
-        Animated.timing(overlay, { toValue: 0, duration: FADE_OUT_MS, easing: GLIDE, useNativeDriver: true }),
-        Animated.timing(lift, { toValue: 1.08, duration: FADE_OUT_MS, easing: GLIDE, useNativeDriver: true }),
-      ]).start(({ finished }) => {
-        if (finished) onFinish();
-      });
-    }, SETTLE_MS);
-    return () => clearTimeout(timer);
-  }, [ready]);
-
-  const breathScale = breath.interpolate({ inputRange: [0, 1], outputRange: [1, 1.022] });
-
-  return (
-    <Animated.View
-      pointerEvents="none"
-      onLayout={(_: LayoutChangeEvent) => onFirstFrame()}
-      style={[styles.fill, { backgroundColor: theme.bg, opacity: overlay }]}
-    >
-      <Animated.View style={{ transform: [{ scale: lift }, { scale: breathScale }] }}>
-        <Image source={LOGO} style={styles.logo} resizeMode="contain" fadeDuration={0} />
-      </Animated.View>
-    </Animated.View>
-  );
+    const animation = reduced
+      ? Animated.timing(opacity, { toValue: 0, duration: 200, useNativeDriver: true })
+      : Animated.spring(opacity, { toValue: 0, useNativeDriver: true, ...skin.spring, overshootClamping: true });
+    animation.start(({ finished }) => { if (finished) finishRef.current(); });
+    return () => animation.stop();
+  }, [ready, reduced, opacity]);
+  return <Animated.View pointerEvents="none" onLayout={(_: LayoutChangeEvent) => onFirstFrame()} style={[styles.fill, { backgroundColor: theme.bg, opacity }]}>
+    <Animated.View style={{ transform: [{ scale }] }}><Image source={LOGO} resizeMode="contain" fadeDuration={0} style={styles.logo} /></Animated.View>
+  </Animated.View>;
 }
-
 const styles = StyleSheet.create({
-  fill: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 10,
-  },
-  // Fixed aspect ratio, so the mark never stretches on any screen shape.
-  logo: { width: LOGO_WIDTH, height: LOGO_WIDTH / LOGO_ASPECT },
+  fill: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', zIndex: 10 },
+  logo: { width: 190, height: 190 / (1072 / 1039) },
 });

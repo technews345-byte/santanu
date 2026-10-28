@@ -1,17 +1,10 @@
-/**
- * Colour that carries meaning, one set per theme.
- *
- * Income and expense are the pair people compare most, so they were chosen to
- * stay apart for colour-blind readers as well as everyone else: a teal-green
- * and a coral, rather than the classic green and red, which collapse into the
- * same muddy tone under deuteranopia. Checked with the dataviz validator —
- * dark pair ΔE 12.0 for deutan vision against a target of 8 — and every one
- * of these clears WCAG AA 4.5:1 as text on the brightest glass it sits on.
- */
+import { skin } from './skin';
+
+// Semantic text is intentionally lighter than the decorative card glows.
 const semanticDark = {
-  success: '#22A99A',
+  success: '#70E6CD',
   successMuted: 'rgba(34, 169, 154, 0.16)',
-  expense: '#E36B4A',
+  expense: '#FFB3A3',
   expenseMuted: 'rgba(227, 107, 74, 0.16)',
   transfer: '#5EA2F2',
   transferMuted: 'rgba(94, 162, 242, 0.16)',
@@ -19,7 +12,7 @@ const semanticDark = {
   investmentMuted: 'rgba(166, 140, 245, 0.16)',
   warning: '#E8A93B',
   warningMuted: 'rgba(232, 169, 59, 0.16)',
-  danger: '#E5534B',
+  danger: '#FFADA8',
   dangerMuted: 'rgba(229, 83, 75, 0.16)',
 };
 
@@ -152,32 +145,32 @@ export const lightTheme: Theme = {
  */
 export const darkTheme: Theme = {
   mode: 'dark',
-  bg: '#0B0E14',
+  bg: '#050B2E',
   surface: 'rgba(160, 175, 210, 0.07)',
   surfaceAlt: 'rgba(160, 175, 210, 0.055)',
   surfaceRaised: 'rgba(170, 185, 225, 0.10)',
   border: 'rgba(200, 215, 255, 0.10)',
   borderSubtle: 'rgba(200, 215, 255, 0.07)',
-  text: '#ECEFF6',
-  textSecondary: '#A9B2C5',
-  textTertiary: '#8891A6',
+  text: '#F5F7FF',
+  textSecondary: '#C0CCE8',
+  textTertiary: '#B0BEDF',
   textInverted: '#0B0E14',
-  tint: '#8494FF',
-  tintMuted: 'rgba(132, 148, 255, 0.16)',
+  tint: '#80DFFF',
+  tintMuted: 'rgba(34, 211, 238, 0.12)',
   teal: '#2DC6B2',
   shadow: 'rgba(0, 0, 0, 0.55)',
   overlay: 'rgba(4, 6, 10, 0.72)',
-  surfaceSolid: '#161B26',
-  glass: 'rgba(160, 175, 210, 0.07)',
-  glassStrong: 'rgba(170, 185, 225, 0.10)',
+  surfaceSolid: '#0D163C',
+  glass: 'rgba(255, 255, 255, 0.08)',
+  glassStrong: 'rgba(255, 255, 255, 0.10)',
   glassControl: 'rgba(190, 205, 240, 0.13)',
-  glassBorder: 'rgba(200, 215, 255, 0.13)',
-  glassEdge: 'rgba(235, 242, 255, 0.5)',
+  glassBorder: 'rgba(218, 230, 255, 0.16)',
+  glassEdge: 'rgba(255, 255, 255, 0.45)',
   glassSheen: 'rgba(210, 222, 255, 0.07)',
   glassDepth: 'rgba(0, 0, 0, 0.32)',
   glassTint: 'dark',
-  blurIntensity: 42,
-  glassFrost: 'rgba(11, 14, 20, 0.26)',
+  blurIntensity: 30,
+  glassFrost: 'rgba(5, 11, 46, 0.32)',
   auroraOne: 'rgba(92, 106, 255, 0.30)',
   auroraTwo: 'rgba(45, 198, 178, 0.14)',
   auroraThree: 'rgba(110, 90, 240, 0.12)',
@@ -201,7 +194,7 @@ export const radius = {
   sm: 12,
   md: 16,
   lg: 22,
-  xl: 28,
+  xl: 30,
   pill: 999,
 };
 
@@ -213,17 +206,17 @@ export const radius = {
  */
 export const motion = {
   /** Finger-follows-glass: quick to depart, settles without wobbling. */
-  press: { damping: 24, stiffness: 340, mass: 0.7 },
+  press: skin.press,
   /** An indicator gliding to a new tab. */
-  glide: { damping: 22, stiffness: 190, mass: 0.9 },
+  glide: skin.spring,
   /** Something arriving on screen. */
-  enter: { damping: 20, stiffness: 150, mass: 1 },
+  enter: skin.spring,
   /** Buttons sink under the finger. */
-  pressScale: 0.97,
-  /** Cards rise toward it. */
-  liftScale: 1.02,
+  pressScale: 0.96,
+  /** Cards also settle under the finger. */
+  liftScale: 0.96,
   /** How far a card tips toward the point touched, in degrees. */
-  tilt: 3.2,
+  tilt: 0.8,
 };
 
 export const fontSizes = {

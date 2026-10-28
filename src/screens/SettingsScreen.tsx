@@ -11,7 +11,6 @@ import { IconBadge } from '../components/IconBadge';
 import { Pill } from '../components/Pill';
 import { ReminderSettings } from '../components/ReminderSettings';
 import { useTheme } from '../theme/ThemeContext';
-import { ThemePreference } from '../theme/ThemeContext';
 import { fontSizes, radius, spacing } from '../theme/tokens';
 import { useStore } from '../store/useStore';
 import { useAuthStore } from '../store/useAuthStore';
@@ -25,7 +24,7 @@ const LOGO = require('../../assets/brand-mark.webp');
 const APP_VERSION = Constants.expoConfig?.version ?? '1.0.0';
 
 export default function SettingsScreen() {
-  const { theme, preference, setPreference } = useTheme();
+  const { theme } = useTheme();
   const navigation = useNavigation<any>();
   const {
     accounts,
@@ -126,11 +125,7 @@ export default function SettingsScreen() {
         <Card>
           <View style={styles.row}>
             <Text style={[styles.rowLabel, { color: theme.text }]}>Theme</Text>
-            <View style={{ flexDirection: 'row' }}>
-              {(['system', 'light', 'dark'] as ThemePreference[]).map((p) => (
-                <Pill key={p} label={p.charAt(0).toUpperCase() + p.slice(1)} active={preference === p} onPress={() => setPreference(p)} />
-              ))}
-            </View>
+            <Text style={{ color: theme.textSecondary, fontSize: fontSizes.sm }}>Midnight Glass</Text>
           </View>
         </Card>
 

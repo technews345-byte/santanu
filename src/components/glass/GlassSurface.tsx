@@ -131,7 +131,7 @@ export function GlassSurface({
   // Every pane is frosted, blurred or not: over the room's bright spheres a
   // clear pane left text sitting straight on vivid orange or cyan.
   // Without a live blur to soften it, the room needs a heavier frost.
-  glass = over(glass, method ? theme.glassFrost : withAlpha(dark ? theme.bg : '#F5F8FD', dark ? 0.46 : 0.5));
+  glass = over(glass, method ? theme.glassFrost : withAlpha(dark ? theme.bg : '#F5F8FD', dark ? 0.28 : 0.5));
   const base = solid ? over(glass, theme.surfaceSolid) : glass;
 
   // The many small panes of a list keep only what reads at their size: the
@@ -144,8 +144,8 @@ export function GlassSurface({
         styles.outer,
         {
           borderRadius,
-          shadowColor: dark ? '#000' : theme.shadow,
-          shadowOpacity: level === 'row' ? 0 : dark ? 0.5 : 1,
+          shadowColor: dark ? '#020625' : theme.shadow,
+          shadowOpacity: level === 'row' ? 0 : dark ? 0.28 : 1,
           shadowRadius: d.shadowRadius,
           shadowOffset: { width: 0, height: d.shadowY },
           // Android casts an elevation shadow under the whole pane, and
@@ -184,7 +184,7 @@ export function GlassSurface({
             // the reduction factor the blur radius, in pixels: a light
             // overlay, and a radius wide enough to melt a sphere's edge.
             intensity={dark ? 36 : 30}
-            blurReductionFactor={0.62}
+            blurReductionFactor={1.2}
             tint={dark ? 'systemUltraThinMaterialDark' : 'systemUltraThinMaterialLight'}
             style={StyleSheet.absoluteFill}
           />
@@ -212,6 +212,13 @@ export function GlassSurface({
             start={{ x: 0, y: 0 }}
             end={{ x: 0.3, y: 1 }}
             style={[StyleSheet.absoluteFill, { opacity: d.sheen }]}
+          />
+        )}
+
+        {light && !opaque && (
+          <LinearGradient
+            colors={['transparent', level === 'raised' ? 'rgba(34,211,238,0.14)' : 'rgba(168,85,247,0.10)']}
+            style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 24 }}
           />
         )}
 
