@@ -44,7 +44,7 @@ import { PeriodKey, Transaction } from '../types';
 
 const AnimatedSectionList = Animated.createAnimatedComponent(SectionList<Transaction>);
 
-const MARK = require('../../assets/brand-mark.webp');
+const MARK = require('../../assets/raahi-icon.png');
 
 const PERIODS: { key: PeriodKey; label: string }[] = [
   { key: 'day', label: 'Day' },
@@ -122,7 +122,7 @@ export default function DashboardScreen() {
           <View style={{ marginBottom: spacing.xs }}>
             <View style={styles.header}>
               <ProfileChip />
-              <Text style={[styles.brandName, { color: theme.textSecondary }]}>Spendly</Text>
+              <Text style={[styles.brandName, { color: theme.textSecondary }]}>Raahi</Text>
               <GlassPressable level="control" blur={false} borderRadius={24} contentStyle={styles.headerBell}
                 accessibilityLabel="Reminder settings" onPress={() => navigation.navigate('Settings')}>
                 <Ionicons name="notifications-outline" size={21} color={theme.text} />
@@ -697,7 +697,7 @@ function DashboardDetail({ detail, close, transactions, balance, visible }: {
       const ratio = row.budget!.amount > 0 ? row.spent / row.budget!.amount : 0;
       const color = ratio >= 1 ? theme.danger : ratio >= 0.85 ? theme.warning : theme.tint;
       return <Card key={row.category.id} level="row"><View style={{ flexDirection: 'row', gap: 16, alignItems: 'center' }}>
-        <ProgressRing progress={ratio} color={color}><Ionicons name={row.category.icon as any} size={22} color={color} /></ProgressRing>
+        <ProgressRing progress={ratio} color={color} animate><Ionicons name={row.category.icon as any} size={22} color={color} /></ProgressRing>
         <View style={{ flex: 1 }}><Text style={{ color: theme.text, fontSize: 15 }}>{row.category.name}</Text>
           <Text style={{ color: theme.textSecondary, fontSize: 12, marginTop: 6 }}>{formatMoney(row.spent)} of {formatMoney(row.budget!.amount)}</Text>
           <Text style={{ color, fontSize: 12, marginTop: 6 }}>{ratio >= 1 ? 'Budget reached' : `${Math.round(ratio * 100)}% used`}</Text>
@@ -798,7 +798,7 @@ const styles = StyleSheet.create({
   balanceLabelGroup: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   overlineTight: { fontSize: 13, fontWeight: '400', letterSpacing: 0 },
   brandMark: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  brandImage: { width: 24, height: 24 },
+  brandImage: { width: 24, height: 24, borderRadius: 6 },
   brandName: { fontSize: fontSizes.sm, fontWeight: '500', letterSpacing: -0.2 },
   // The one hero figure on the screen: large, and in proportional figures,
   // which set a big standalone number tighter than tabular ones would.

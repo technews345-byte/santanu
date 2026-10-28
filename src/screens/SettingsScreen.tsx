@@ -8,18 +8,16 @@ import * as LocalAuthentication from 'expo-local-authentication';
 import { Screen } from '../components/Screen';
 import { Card } from '../components/Card';
 import { IconBadge } from '../components/IconBadge';
-import { Pill } from '../components/Pill';
 import { ReminderSettings } from '../components/ReminderSettings';
 import { useTheme } from '../theme/ThemeContext';
-import { fontSizes, radius, spacing } from '../theme/tokens';
+import { fontSizes, spacing } from '../theme/tokens';
 import { useStore } from '../store/useStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { CategoryType } from '../types';
 import { exportToPdf, exportToXlsx } from '../utils/export';
-import { adsSupported, showRewardedAd } from '../services/ads';
 import Constants from 'expo-constants';
 
-const LOGO = require('../../assets/brand-mark.webp');
+const LOGO = require('../../assets/raahi-icon.png');
 // Read from app.json, so the credit never drifts from what was shipped.
 const APP_VERSION = Constants.expoConfig?.version ?? '1.0.0';
 
@@ -32,14 +30,10 @@ export default function SettingsScreen() {
     transactions,
     biometricLockEnabled,
     setBiometricLockEnabled,
-    supportCount,
-    recordSupport,
-  } = useStore(useShallow((s) => ({ accounts: s.accounts, categories: s.categories, transactions: s.transactions, biometricLockEnabled: s.biometricLockEnabled, setBiometricLockEnabled: s.setBiometricLockEnabled, supportCount: s.supportCount, recordSupport: s.recordSupport })));
+  } = useStore(useShallow((s) => ({ accounts: s.accounts, categories: s.categories, transactions: s.transactions, biometricLockEnabled: s.biometricLockEnabled, setBiometricLockEnabled: s.setBiometricLockEnabled })));
   const user = useAuthStore((s) => s.user);
   const pendingCount = useAuthStore((s) => s.pendingCount);
   const [exporting, setExporting] = useState(false);
-  const [watchingAd, setWatchingAd] = useState(false);
-  const canShowAds = adsSupported();
 
   const activeCategories = categories.filter((c) => !c.archived);
   const countOf = (type: CategoryType) => activeCategories.filter((c) => c.type === type).length;
@@ -67,28 +61,6 @@ export default function SettingsScreen() {
       Alert.alert('Export failed', e?.message ?? 'Something went wrong');
     } finally {
       setExporting(false);
-    }
-  };
-
-  /**
-   * The one place Spendly shows an ad, and only when asked. The reward is a
-   * thank-you rather than access to anything: gating a feature people already
-   * have behind an ad would be taking something away.
-   */
-  const handleSupport = async () => {
-    setWatchingAd(true);
-    try {
-      const outcome = await showRewardedAd({ userId: user?.uid, customData: 'support' });
-      if (outcome.status === 'earned') {
-        recordSupport();
-        Alert.alert('Thank you!', 'That genuinely helps keep Spendly free.');
-      } else if (outcome.status === 'dismissed') {
-        Alert.alert('No reward earned', 'The ad closed early, so nothing was counted. Feel free to try again.');
-      } else {
-        Alert.alert('No ad available', outcome.reason);
-      }
-    } finally {
-      setWatchingAd(false);
     }
   };
 
@@ -121,14 +93,6 @@ export default function SettingsScreen() {
           </Pressable>
         </Card>
 
-        <SectionLabel label="Appearance" />
-        <Card>
-          <View style={styles.row}>
-            <Text style={[styles.rowLabel, { color: theme.text }]}>Theme</Text>
-            <Text style={{ color: theme.textSecondary, fontSize: fontSizes.sm }}>Midnight Glass</Text>
-          </View>
-        </Card>
-
         <SectionLabel label="Security" />
         <Card>
           <View style={styles.row}>
@@ -141,8 +105,7 @@ export default function SettingsScreen() {
           </View>
         </Card>
 
-        <SectionLabel label="Notifications" />
-        <ReminderSettings />
+        <View style={{ marginTop: spacing.lg }}><ReminderSettings /></View>
 
         <SectionLabel label="Accounts" action={{ label: 'Add', onPress: () => navigation.navigate('AccountForm', {}) }} />
         <Card padded={false}>
@@ -203,57 +166,15 @@ export default function SettingsScreen() {
           </Pressable>
         </Card>
 
-        <SectionLabel label="Support" />
-        <Card>
-          <View style={styles.supportHeader}>
-            <IconBadge icon="heart" color={theme.expense} size={40} />
-            <View style={styles.supportHeading}>
-              <Text style={[styles.supportTitle, { color: theme.text }]}>Support Spendly</Text>
-              <Text style={[styles.supportBody, { color: theme.textSecondary }]}>
-                Spendly has no ads anywhere else and never sells your data. If you would like to chip
-                in, watching one short ad is the whole ask.
-              </Text>
-            </View>
-          </View>
-
-          {supportCount > 0 && (
-            <View style={[styles.supporterBadge, { backgroundColor: theme.successMuted }]}>
-              <Ionicons name="ribbon" size={15} color={theme.success} />
-              <Text style={[styles.supporterLabel, { color: theme.success }]}>
-                Supporter · {supportCount} {supportCount === 1 ? 'ad' : 'ads'} watched
-              </Text>
-            </View>
-          )}
-
-          <Pressable
-            style={[styles.supportButton, { borderColor: theme.tint, opacity: canShowAds ? 1 : 0.5 }]}
-            onPress={handleSupport}
-            disabled={watchingAd || !canShowAds}
-          >
-            <Ionicons
-              name={watchingAd ? 'hourglass-outline' : 'play-circle-outline'}
-              size={20}
-              color={theme.tint}
-            />
-            <Text style={[styles.supportButtonLabel, { color: theme.tint }]}>
-              {watchingAd
-                ? 'Loading ad\u2026'
-                : canShowAds
-                  ? 'Watch a short ad'
-                  : 'Not available in this build'}
-            </Text>
-          </Pressable>
-        </Card>
-
         <SectionLabel label="About" />
         <Card>
           <View style={styles.aboutHeader}>
             <Image source={LOGO} style={styles.aboutLogo} resizeMode="contain" />
-            <Text style={[styles.aboutTitle, { color: theme.text }]}>About Spendly</Text>
+            <Text style={[styles.aboutTitle, { color: theme.text }]}>About Raahi</Text>
           </View>
 
           <Text style={[styles.aboutBody, { color: theme.textSecondary }]}>
-            Spendly is a simple and intuitive personal expense-tracking app designed to help you record,
+            Raahi is a simple and intuitive personal expense-tracking app designed to help you record,
             organize, and understand your daily spending. Track your expenses, manage your budget, and keep
             your finances organized—all in one place.
           </Text>
@@ -292,32 +213,6 @@ function SectionLabel({ label, action }: { label: string; action?: { label: stri
 }
 
 const styles = StyleSheet.create({
-  supportHeader: { flexDirection: 'row', gap: spacing.sm },
-  supportHeading: { flex: 1, gap: spacing.xxs },
-  supportTitle: { fontSize: fontSizes.base, fontWeight: '700' },
-  supportBody: { fontSize: fontSizes.sm, lineHeight: 19 },
-  supporterBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    gap: 6,
-    marginTop: spacing.sm,
-    paddingVertical: 5,
-    paddingHorizontal: spacing.sm,
-    borderRadius: radius.pill,
-  },
-  supporterLabel: { fontSize: fontSizes.xs, fontWeight: '700' },
-  supportButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
-    marginTop: spacing.sm,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.lg,
-    borderWidth: 1.4,
-  },
-  supportButtonLabel: { fontSize: fontSizes.base, fontWeight: '700' },
   title: { fontSize: fontSizes.xl, fontWeight: '800', marginBottom: spacing.md },
   sectionLabelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing.lg, marginBottom: spacing.xs },
   sectionLabel: { fontSize: fontSizes.sm, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
@@ -332,7 +227,7 @@ const styles = StyleSheet.create({
   exportLabel: { flex: 1, fontSize: fontSizes.base, fontWeight: '600' },
   divider: { height: StyleSheet.hairlineWidth, marginVertical: spacing.sm },
   aboutHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
-  aboutLogo: { width: 40, height: 40 },
+  aboutLogo: { width: 40, height: 40, borderRadius: 10 },
   aboutTitle: { fontSize: fontSizes.base, fontWeight: '800' },
   aboutBody: { fontSize: fontSizes.sm, lineHeight: 20 },
   aboutAuthor: { fontSize: fontSizes.sm, fontWeight: '700', marginBottom: 2 },

@@ -85,7 +85,7 @@ function AppContent() {
     const releaseAds = holdAppOpenAds();
     try {
       const result = await LocalAuthentication.authenticateAsync({
-        promptMessage: 'Unlock Spendly',
+        promptMessage: 'Unlock Raahi',
         fallbackLabel: 'Use passcode',
       });
       if (result.success && appState.current !== 'background') setUnlocked(true);

@@ -272,3 +272,58 @@ test('expanded cards measure their origin, retain detail identity, and interrupt
   assert.equal(tree.root.findAllByType('Modal').length, 0);
   await act(async () => tree.unmount());
 });
+
+test('notification switch respects permission and retains existing reminder preferences', async () => {
+  const env = environment();
+  const alerts = [];
+  let granted = false;
+  env.native.Switch = 'Switch';
+  env.native.AppState = { addEventListener: () => ({ remove() {} }) };
+  env.native.Linking = { openSettings: async () => {} };
+  env.native.Alert = { alert: (...args) => alerts.push(args) };
+  const store = createStore((set) => ({ enabled: false, hour: 19, minute: 42, language: 'en', confirmations: false, offered: false, update: patch => set(patch) }));
+  const Component = loader({ ...env.mocks,
+    '../store/useReminderStore': { useReminderStore: store },
+    '../services/reminders': { remindersSupported: true, notificationsAllowed: async () => true, ensurePermission: async () => granted },
+    './Card': { Card: 'Card' },
+  })('src/components/ReminderSettings.tsx').ReminderSettings;
+  let tree;
+  await act(async () => { tree = create(React.createElement(Component)); });
+  const toggle = () => tree.root.findByType('Switch');
+  assert.equal(tree.root.findAllByType('Switch').length, 1);
+  assert.equal(toggle().props.value, false);
+  await act(async () => toggle().props.onValueChange(true));
+  assert.equal(store.getState().enabled, false);
+  assert.equal(alerts.length, 1);
+  granted = true;
+  await act(async () => toggle().props.onValueChange(true));
+  assert.equal(store.getState().enabled, true);
+  assert.equal(toggle().props.value, true);
+  assert.deepEqual([store.getState().hour, store.getState().minute, store.getState().language, store.getState().confirmations], [19, 42, 'en', false]);
+  await act(async () => toggle().props.onValueChange(false));
+  assert.equal(store.getState().enabled, false);
+  assert.equal(store.getState().offered, true);
+  await act(async () => tree.unmount());
+});
+
+test('glass touch feedback springs on press and remains still with Reduce Motion', async () => {
+  const env = environment(); env.setReduced(false);
+  const Component = loader(env.mocks)('src/components/glass/GlassPressable.tsx').GlassPressable;
+  let pressed = 0; let tree;
+  await act(async () => { tree = create(React.createElement(Component, { onPress: () => pressed++, accessibilityLabel: 'Open card' }, 'Content')); });
+  const button = () => tree.root.findByType('Pressable');
+  await act(async () => button().props.onPressIn());
+  assert.equal(env.animations.at(-1).kind, 'spring');
+  assert.equal(env.animations.at(-1).config.useNativeDriver, true);
+  await act(async () => button().props.onPress());
+  await act(async () => button().props.onPressOut());
+  assert.equal(pressed, 1);
+  assert.equal(env.animations.at(-1).config.toValue, 0);
+  const count = env.animations.length;
+  env.setReduced(true);
+  await act(async () => tree.update(React.createElement(Component, { onPress: () => pressed++, accessibilityLabel: 'Open card' }, 'Content')));
+  await act(async () => button().props.onPressIn());
+  await act(async () => button().props.onPressOut());
+  assert.equal(env.animations.length, count);
+  await act(async () => tree.unmount());
+});

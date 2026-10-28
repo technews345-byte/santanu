@@ -1,6 +1,14 @@
-# Spendly updates
+# Raahi updates
 
 This changelog separates the current UI/responsiveness update from capabilities already present in the release baseline. A source version, successful test run and published APK are different states; check [Actions](https://github.com/technews345-byte/santanu/actions) and [Releases](https://github.com/technews345-byte/santanu/releases) for build availability.
+
+## 1.0.2 — Raahi rebrand and UI refinement
+
+- Renamed the app and its visible labels to Raahi, using the supplied R logo and splash artwork. Android package, iOS bundle ID, local database and storage keys remain unchanged; app version code increases to 3.
+- Oversized the animated background field to cover the screen as its glow moves and removed the expanded-detail frame. System safe areas continue to protect controls.
+- Replaced per-touch measurement and tracking with a native-driven spring and light haptic feedback; budget list rings avoid JS-driven frame updates.
+- Removed the appearance and support-ad sections from Settings. Notifications now have a single on/off switch; the stored reminder time, language and other preferences remain intact. Native app-open ads are still part of the app.
+- Android installation as an update requires the same signing certificate as the installed build. Physical-device rendering, haptics and frame rates still need verification.
 
 ## 1.0.1 — 25 October 2026
 
