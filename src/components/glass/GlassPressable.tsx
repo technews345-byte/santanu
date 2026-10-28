@@ -1,7 +1,6 @@
 import React, { useCallback, useRef, useState } from 'react';
 import {
   Animated,
-  Easing,
   GestureResponderEvent,
   Platform,
   Pressable,
@@ -51,7 +50,7 @@ export function GlassPressable({
   level = 'panel',
   blur = true,
   opaque = false,
-  feedback = 'lift',
+  feedback = 'press',
   style,
   contentStyle,
   borderRadius = radius.xl,
@@ -138,12 +137,7 @@ export function GlassPressable({
       }
       sweep.setValue(0);
       moves.push(
-        Animated.timing(sweep, {
-          toValue: 1,
-          duration: 620,
-          easing: Easing.bezier(0.22, 1, 0.36, 1),
-          useNativeDriver: true,
-        })
+        Animated.spring(sweep, { toValue: 1, ...motion.enter, useNativeDriver: true })
       );
     }
 
@@ -172,7 +166,7 @@ export function GlassPressable({
     feedback === 'lift'
       ? [
           { perspective: 900 },
-          { scale: press.interpolate({ inputRange: [0, 1], outputRange: [1, moving ? motion.liftScale : 1] }) },
+          { scale: press.interpolate({ inputRange: [0, 1], outputRange: [1, moving ? motion.pressScale : 1] }) },
           { rotateX: reduced ? '0deg' : tiltX.interpolate({ inputRange: [-10, 10], outputRange: ['-10deg', '10deg'] }) },
           { rotateY: reduced ? '0deg' : tiltY.interpolate({ inputRange: [-10, 10], outputRange: ['-10deg', '10deg'] }) },
         ]

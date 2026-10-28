@@ -377,7 +377,7 @@ export default function TransactionsScreen() {
 
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: spacing.md, paddingTop: spacing.sm },
-  title: { fontSize: fontSizes.xl, fontWeight: '800' },
+  title: { fontSize: 26, fontWeight: '300' },
   headerActions: { flexDirection: 'row', alignItems: 'center' },
   roundBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   filterBadge: { position: 'absolute', top: -2, right: -4, minWidth: 17, height: 17, borderRadius: 9, borderWidth: 2, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 },

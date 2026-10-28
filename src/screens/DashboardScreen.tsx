@@ -1,7 +1,10 @@
 import { useShallow } from 'zustand/react/shallow';
-import React, { useId, useMemo, useState } from 'react';
-import { Image, Platform, Pressable, SectionList, StyleSheet, View } from 'react-native';
+import React, { useId, useMemo, useRef, useState } from 'react';
+import { Animated, Image, Pressable, SectionList, StyleSheet, View } from 'react-native';
 import { Text } from '../theme/type';
+import { HeroCard, HeroTransitionContainer, HeroDetail } from '../components/glass/HeroTransitionContainer';
+import { ProgressRing } from '../components/glass/ProgressRing';
+import { useReducedMotion } from '../theme/useReducedMotion';
 import { format } from 'date-fns/format';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
@@ -39,6 +42,8 @@ import { budgetRows, budgetTotals, spendingPace, spendWindows } from '../utils/i
 import { formatCompact, formatMoney } from '../utils/money';
 import { PeriodKey, Transaction } from '../types';
 
+const AnimatedSectionList = Animated.createAnimatedComponent(SectionList<Transaction>);
+
 const MARK = require('../../assets/brand-mark.webp');
 
 const PERIODS: { key: PeriodKey; label: string }[] = [
@@ -72,6 +77,8 @@ export default function DashboardScreen() {
   const user = useAuthStore((s) => s.user);
   const [period, setPeriod] = useState<PeriodKey>('month');
   const [switcherOpen, setSwitcherOpen] = useState(false);
+  const reduced = useReducedMotion();
+  const scrollY = useRef(new Animated.Value(0)).current;
 
   const activeAccount = accounts.find((a) => a.id === activeAccountId) ?? null;
 
@@ -98,45 +105,42 @@ export default function DashboardScreen() {
   const accountMap = useMemo(() => new Map(accounts.map((a) => [a.id, a])), [accounts]);
 
   return (
+    <HeroTransitionContainer renderDetail={(detail, close) => <DashboardDetail detail={detail} close={close} transactions={scoped} balance={balance} visible={balanceVisible} />}>
     <Screen>
-      <View style={styles.header}>
-        <View style={styles.greetBlock}>
-          <Text
-            style={[styles.greeting, { color: theme.text }]}
-            numberOfLines={1}
-            // Shrinks a little rather than cutting the greeting off beside a
-            // long name. The web has no shrink-to-fit and would pass it to the DOM.
-            {...(Platform.OS !== 'web' ? { adjustsFontSizeToFit: true, minimumFontScale: 0.75 } : null)}
-          >
-            {greeting(user)}
-          </Text>
-          <Text style={[styles.tagline, { color: theme.textSecondary }]}>Track. Plan. Save. Live Better.</Text>
-        </View>
-        <View style={styles.headerActions}>
-          <ProfileChip />
-        </View>
-      </View>
 
-      <Pressable style={styles.switcher} onPress={() => setSwitcherOpen(true)} accessibilityRole="button">
-        <GlassSurface level="control" blur={false} borderRadius={radius.pill} contentStyle={styles.switcherInner}>
-          <Ionicons name="wallet-outline" size={15} color={theme.textSecondary} />
-          <Text style={[styles.switcherLabel, { color: theme.textSecondary }]}>
-            {activeAccount ? activeAccount.name : 'All Accounts'}
-          </Text>
-          <Ionicons name="chevron-down" size={15} color={theme.textSecondary} />
-        </GlassSurface>
-      </Pressable>
-
-      <SectionList
+      <AnimatedSectionList
+        onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: true })}
+        scrollEventThrottle={16}
+        bounces
+        overScrollMode="always"
         sections={recentSections}
         keyExtractor={(item) => item.id}
         stickySectionHeadersEnabled={false}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 168, paddingHorizontal: spacing.md }}
+        contentContainerStyle={{ paddingBottom: 168, paddingHorizontal: spacing.lg }}
         ListHeaderComponent={
           <View style={{ marginBottom: spacing.xs }}>
+            <View style={styles.header}>
+              <ProfileChip />
+              <Text style={[styles.brandName, { color: theme.textSecondary }]}>Spendly</Text>
+              <GlassPressable level="control" blur={false} borderRadius={24} contentStyle={styles.headerBell}
+                accessibilityLabel="Reminder settings" onPress={() => navigation.navigate('Settings')}>
+                <Ionicons name="notifications-outline" size={21} color={theme.text} />
+              </GlassPressable>
+            </View>
+            <Animated.View style={{ transform: [{ translateY: reduced ? 0 : scrollY.interpolate({ inputRange: [-100, 0, 220], outputRange: [-40, 0, 88], extrapolate: 'clamp' }) }] }}>
+              <Text style={[styles.greeting, { color: theme.text }]}>{greeting(user)}</Text>
+              <Text style={[styles.tagline, { color: theme.textSecondary }]}>Track. Plan. Save. Live Better.</Text>
+            </Animated.View>
+            <GlassPressable level="control" blur={false} borderRadius={24} style={styles.switcher}
+              contentStyle={styles.switcherInner} onPress={() => setSwitcherOpen(true)} accessibilityLabel="Switch account">
+              <Ionicons name="wallet-outline" size={16} color={theme.textSecondary} />
+              <Text style={[styles.switcherLabel, { color: theme.textSecondary }]}>{activeAccount ? activeAccount.name : 'All Accounts'}</Text>
+              <Ionicons name="chevron-down" size={14} color={theme.textSecondary} />
+            </GlassPressable>
             <Rise order={0} flat>
-            <BalanceHero
+            <HeroCard detail="balance" title="Balance overview">{open => <BalanceHero
+              onOpen={open}
               balance={balance}
               visible={balanceVisible}
               onToggleVisible={toggleBalanceVisible}
@@ -146,7 +150,7 @@ export default function DashboardScreen() {
               expense={expense}
               investment={investment}
               net={net}
-            />
+            />}</HeroCard>
             </Rise>
 
             <Rise order={1} style={styles.quickActions}>
@@ -234,6 +238,7 @@ export default function DashboardScreen() {
         ))}
       </BottomSheetModal>
     </Screen>
+    </HeroTransitionContainer>
   );
 }
 
@@ -255,6 +260,7 @@ function BalanceHero({
   expense,
   investment,
   net,
+  onOpen,
 }: {
   balance: number;
   visible: boolean;
@@ -265,6 +271,7 @@ function BalanceHero({
   expense: number;
   investment: number;
   net: number;
+  onOpen: () => void;
 }) {
   const { theme } = useTheme();
   const id = useId().replace(/[^a-zA-Z0-9]/g, '');
@@ -307,12 +314,15 @@ function BalanceHero({
           </View>
           <View style={styles.brandMark}>
             <Image source={MARK} style={styles.brandImage} resizeMode="contain" />
-            <Text style={[styles.brandName, { color: theme.text }]}>Spendly</Text>
+            <Pressable onPress={onOpen} style={styles.detailButton} accessibilityRole="button" accessibilityLabel="Expand balance overview">
+              <Ionicons name="expand-outline" size={18} color={theme.textSecondary} />
+            </Pressable>
           </View>
         </View>
 
         <Figure
           value={balance}
+          countOnMount
           format={(n) => formatMoney(n)}
           hidden={!visible}
           fit
@@ -409,11 +419,11 @@ function SpendingBento({ transactions }: { transactions: Transaction[] }) {
 
   return (
     <View style={styles.bento}>
-      <GlassPressable
+      <HeroCard detail="spending" title="Spending overview">{open => <GlassPressable
         level="panel"
         borderRadius={radius.xl}
         contentStyle={styles.paceTile}
-        onPress={() => navigation.navigate('Analytics' as never)}
+        onPress={open}
         accessibilityLabel={`Monthly spending ${formatMoney(windows.month)}. Opens analytics.`}
       >
         <View style={styles.tileHead}>
@@ -461,15 +471,14 @@ function SpendingBento({ transactions }: { transactions: Transaction[] }) {
             <LegendKey color={theme.textTertiary} label="Last month" faint />
           </View>
         )}
-      </GlassPressable>
+      </GlassPressable>}</HeroCard>
 
       <View style={styles.bentoRow}>
-        <GlassPressable
+        <View style={styles.budgetTileOuter}><HeroCard detail="budget" title="Monthly budget">{open => <GlassPressable
           level="panel"
           borderRadius={radius.xl}
-          style={styles.budgetTileOuter}
           contentStyle={styles.budgetTile}
-          onPress={() => navigation.navigate('Budgets' as never)}
+          onPress={open}
           accessibilityLabel="Remaining budget. Opens budgets."
         >
           <Text style={[styles.tileLabel, { color: theme.textSecondary }]}>Remaining budget</Text>
@@ -498,7 +507,7 @@ function SpendingBento({ transactions }: { transactions: Transaction[] }) {
               <Text style={[styles.tileFoot, { color: theme.textTertiary }]}>of {formatCompact(budget.planned)} planned</Text>
             </>
           )}
-        </GlassPressable>
+        </GlassPressable>}</HeroCard></View>
 
         <View style={styles.smallCol}>
           <WindowTile label="Today" value={windows.today} count={counts.today} />
@@ -551,8 +560,8 @@ function QuickAction({ icon, label, color, onPress }: { icon: keyof typeof Ionic
       onPress={onPress}
       accessibilityLabel={label}
     >
-      <IconBadge icon={icon} color={color} size={44} />
-      <Text numberOfLines={2} style={[styles.quickActionLabel, { color: theme.text }]}>{label}</Text>
+      <Ionicons name={({ 'arrow-up-circle': 'arrow-up-outline', 'arrow-down-circle': 'arrow-down-outline', 'pie-chart': 'pie-chart-outline', scan: 'scan-outline' } as Record<string, keyof typeof Ionicons.glyphMap>)[icon] ?? icon} color={color} size={23} />
+      <Text numberOfLines={1} style={[styles.quickActionLabel, { color: theme.text }]}>{label.replace('Add ', '').replace(' Receipt', '')}</Text>
     </GlassPressable>
   );
 }
@@ -630,6 +639,77 @@ function SmartTip({
   );
 }
 
+/** Expanded cards read the same scoped records as Home; no demo data is stored. */
+function DashboardDetail({ detail, close, transactions, balance, visible }: {
+  detail: HeroDetail; close: (after?: () => void) => void;
+  transactions: Transaction[]; balance: number; visible: boolean;
+}) {
+  const { theme } = useTheme();
+  const navigation = useNavigation<any>();
+  const { categories, budgets } = useStore(useShallow(s => ({ categories: s.categories, budgets: s.budgets })));
+  const today = format(new Date(), 'yyyy-MM-dd');
+  const data = useMemo(() => {
+    const now = new Date();
+    const { start, end } = periodInterval('month', now);
+    const month = transactionsInRange(transactions, start, end);
+    const rows = budgetRows(categories, month, budgets, monthKeyFor(now));
+    return { summary: summarize(month), rows, budget: budgetTotals(rows), pace: spendingPace(transactions, now) };
+  }, [transactions, categories, budgets, today]);
+  const go = (route: string) => close(() => navigation.navigate(route));
+  if (detail === 'balance') return <>
+    <Card level="raised">
+      <Text style={{ color: theme.textSecondary, fontSize: 14 }}>Total balance</Text>
+      <Figure value={balance} format={formatMoney} hidden={!visible} fit style={{ color: theme.text, fontSize: 40, fontWeight: '300', marginVertical: 16 }} />
+      <Text style={{ color: theme.textSecondary, fontSize: 13 }}>Opening balances and recorded transactions across your selected accounts.</Text>
+    </Card>
+    {([['Income', data.summary.income, theme.success], ['Expenses', data.summary.expense, theme.expense], ['Investments', data.summary.investment, theme.investment], ['Net this month', data.summary.net, theme.text]] as const).map(([label, value, color]) => <Card key={label} level="row">
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+        <Text style={{ color: theme.textSecondary, fontSize: 14 }}>{label}</Text>
+        <Figure value={value} format={formatMoney} hidden={!visible} fit style={{ color, fontSize: 20, flexShrink: 1 }} />
+      </View>
+    </Card>)}
+    <GlassPressable contentStyle={{ padding: 16, minHeight: 48 }} onPress={() => go('Transactions')} accessibilityLabel="View transactions">
+      <Text style={{ color: theme.tint, textAlign: 'center', fontSize: 14 }}>View transactions</Text>
+    </GlassPressable>
+  </>;
+  if (detail === 'spending') return <>
+    <Card level="raised">
+      <Text style={{ color: theme.textSecondary, fontSize: 14 }}>Spent this month</Text>
+      <Figure value={data.summary.expense} format={formatMoney} fit style={{ color: theme.text, fontSize: 36, fontWeight: '300', marginVertical: 16 }} />
+      <FlowChart values={data.pace.thisMonth} compare={data.pace.lastMonth} slots={data.pace.slots} height={200}
+        labelFor={i => `${i + 1}`} format={formatMoney} />
+      <View style={{ flexDirection: 'row', gap: 16, marginTop: 12 }}><LegendKey color={theme.tint} label="This month" /><LegendKey color={theme.textTertiary} label="Last month" faint /></View>
+    </Card>
+    <Text style={{ color: theme.textSecondary, fontSize: 14, lineHeight: 22 }}>The chart compares cumulative recorded expenses. Investments and transfers are kept separate from spending.</Text>
+    <GlassPressable contentStyle={{ padding: 16, minHeight: 48 }} onPress={() => go('Analytics')} accessibilityLabel="Open spending analytics">
+      <Text style={{ color: theme.tint, textAlign: 'center', fontSize: 14 }}>Explore analytics</Text>
+    </GlassPressable>
+  </>;
+  const plannedRows = data.rows.filter(row => row.budget);
+  return <>
+    <Card level="raised">
+      <Text style={{ color: theme.textSecondary, fontSize: 14 }}>Remaining planned budget</Text>
+      <Figure value={data.budget.remaining} format={formatMoney} fit style={{ color: data.budget.remaining < 0 ? theme.danger : theme.text, fontSize: 36, fontWeight: '300', marginVertical: 16 }} />
+      <ProgressBar progress={data.budget.planned > 0 ? data.budget.spent / data.budget.planned : 0} height={6} />
+      <Text style={{ color: theme.textSecondary, fontSize: 13, marginTop: 12 }}>{formatMoney(data.budget.spent)} of {formatMoney(data.budget.planned)} planned</Text>
+    </Card>
+    {plannedRows.length === 0 ? <Text style={{ color: theme.textSecondary }}>Set category budgets to see your progress here.</Text> : plannedRows.map(row => {
+      const ratio = row.budget!.amount > 0 ? row.spent / row.budget!.amount : 0;
+      const color = ratio >= 1 ? theme.danger : ratio >= 0.85 ? theme.warning : theme.tint;
+      return <Card key={row.category.id} level="row"><View style={{ flexDirection: 'row', gap: 16, alignItems: 'center' }}>
+        <ProgressRing progress={ratio} color={color}><Ionicons name={row.category.icon as any} size={22} color={color} /></ProgressRing>
+        <View style={{ flex: 1 }}><Text style={{ color: theme.text, fontSize: 15 }}>{row.category.name}</Text>
+          <Text style={{ color: theme.textSecondary, fontSize: 12, marginTop: 6 }}>{formatMoney(row.spent)} of {formatMoney(row.budget!.amount)}</Text>
+          <Text style={{ color, fontSize: 12, marginTop: 6 }}>{ratio >= 1 ? 'Budget reached' : `${Math.round(ratio * 100)}% used`}</Text>
+        </View>
+      </View></Card>;
+    })}
+    <GlassPressable contentStyle={{ padding: 16, minHeight: 48 }} onPress={() => go('Budgets')} accessibilityLabel="Manage budgets">
+      <Text style={{ color: theme.tint, textAlign: 'center', fontSize: 14 }}>Manage budgets</Text>
+    </GlassPressable>
+  </>;
+}
+
 /** Time of day, and their first name if the account carries one. */
 function greeting(user: { displayName: string | null; email: string | null } | null): string {
   const hour = new Date().getHours();
@@ -649,7 +729,6 @@ function ProfileChip() {
   // A photo URL can 404 once Google rotates it; fall back rather than show a gap.
   const [photoBroken, setPhotoBroken] = useState(false);
 
-  const given = greetingName(user);
   const photo = photoBroken ? null : user?.photoURL;
 
   return (
@@ -660,11 +739,6 @@ function ProfileChip() {
       accessibilityRole="button"
       accessibilityLabel={user ? 'Your account' : 'Sign in'}
     >
-      {given && (
-        <Text numberOfLines={1} style={[styles.profileName, { color: theme.text }]}>
-          {given}
-        </Text>
-      )}
       {photo ? (
         <Image
           source={{ uri: photo }}
@@ -698,41 +772,43 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: 0,
     paddingTop: spacing.sm,
     paddingBottom: spacing.xs,
   },
   greetBlock: { flex: 1, paddingRight: spacing.sm },
-  greeting: { fontSize: fontSizes.xl, fontWeight: '800', letterSpacing: -0.6 },
+  greeting: { fontSize: 30, fontWeight: '300', letterSpacing: -0.9, marginTop: 16 },
   tagline: { fontSize: fontSizes.xs, fontWeight: '500', marginTop: 2 },
+  headerBell: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  detailButton: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  profile: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, maxWidth: 170 },
-  profileName: { fontSize: fontSizes.sm, fontWeight: '700', flexShrink: 1 },
+  profile: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, minWidth: 44, minHeight: 44 },
+  profileName: { fontSize: fontSizes.sm, fontWeight: '500', flexShrink: 1 },
   avatar: { width: 34, height: 34, borderRadius: 17, borderWidth: 1 },
   avatarFallback: { alignItems: 'center', justifyContent: 'center' },
-  avatarInitial: { fontSize: fontSizes.sm, fontWeight: '800' },
+  avatarInitial: { fontSize: fontSizes.sm, fontWeight: '500' },
 
-  switcher: { alignSelf: 'flex-start', marginHorizontal: spacing.md, marginBottom: spacing.sm },
-  switcherInner: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: spacing.sm, paddingVertical: 7 },
-  switcherLabel: { fontSize: fontSizes.sm, fontWeight: '700' },
+  switcher: { alignSelf: 'flex-start', marginTop: 16, marginBottom: 12 },
+  switcherInner: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: spacing.sm, minHeight: 44, paddingVertical: 10 },
+  switcherLabel: { fontSize: fontSizes.sm, fontWeight: '500' },
 
   hero: { marginTop: spacing.xxs },
   heroInner: { padding: spacing.lg, paddingBottom: spacing.md },
   balanceRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   balanceLabelGroup: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  overlineTight: { fontSize: fontSizes.xs, fontWeight: '700', letterSpacing: 1.2, textTransform: 'uppercase' },
+  overlineTight: { fontSize: 13, fontWeight: '400', letterSpacing: 0 },
   brandMark: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   brandImage: { width: 24, height: 24 },
-  brandName: { fontSize: fontSizes.sm, fontWeight: '800', letterSpacing: -0.2 },
+  brandName: { fontSize: fontSizes.sm, fontWeight: '500', letterSpacing: -0.2 },
   // The one hero figure on the screen: large, and in proportional figures,
   // which set a big standalone number tighter than tabular ones would.
   balanceValue: {
-    fontSize: fontSizes.display,
-    fontWeight: '800',
+    fontSize: 38,
+    fontWeight: '500',
     letterSpacing: -1.8,
     marginTop: spacing.xs,
     textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 24,
+    textShadowRadius: 10,
   },
   periodRow: { marginTop: spacing.md },
   grid: { marginTop: spacing.md },
@@ -750,26 +826,26 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 0 },
   },
   summaryLabel: { fontSize: fontSizes.xs, fontWeight: '600' },
-  summaryValue: { fontSize: 19, fontWeight: '800', marginTop: 4, letterSpacing: -0.4 },
+  summaryValue: { fontSize: 19, fontWeight: '500', marginTop: 4, letterSpacing: -0.4 },
 
-  quickActions: { flexDirection: 'row', gap: spacing.xs, marginTop: spacing.md },
+  quickActions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm },
   quickAction: { flex: 1 },
-  quickActionInner: { alignItems: 'center', gap: spacing.xs, paddingVertical: spacing.md, paddingHorizontal: 4, minHeight: 88, justifyContent: 'center' },
-  quickActionLabel: { fontSize: fontSizes.xs, fontWeight: '700', textAlign: 'center', lineHeight: 15 },
+  quickActionInner: { alignItems: 'center', gap: spacing.xs, paddingVertical: spacing.md, paddingHorizontal: 4, minHeight: 68, justifyContent: 'center' },
+  quickActionLabel: { fontSize: fontSizes.xs, fontWeight: '500', textAlign: 'center', lineHeight: 15 },
 
   overline: {
     fontSize: fontSizes.xs,
-    fontWeight: '800',
+    fontWeight: '500',
     letterSpacing: 1.4,
     textTransform: 'uppercase',
     marginTop: spacing.xl,
     marginBottom: spacing.sm,
   },
-  bento: { gap: spacing.xs },
+  bento: { gap: spacing.sm },
   paceTile: { padding: spacing.md, paddingBottom: spacing.sm },
   tileHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  tileLabel: { fontSize: fontSizes.xs, fontWeight: '700' },
-  paceValue: { fontSize: fontSizes.xxl, fontWeight: '800', letterSpacing: -0.9, marginTop: 2 },
+  tileLabel: { fontSize: fontSizes.xs, fontWeight: '500' },
+  paceValue: { fontSize: fontSizes.xxl, fontWeight: '500', letterSpacing: -0.9, marginTop: 2 },
   tileSub: { fontSize: fontSizes.xs, fontWeight: '600', marginTop: 2 },
   tileFoot: { fontSize: 11, fontWeight: '600', marginTop: 4 },
   deltaChip: {
@@ -781,43 +857,43 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     borderWidth: 1,
   },
-  deltaText: { fontSize: fontSizes.xs, fontWeight: '800' },
+  deltaText: { fontSize: fontSizes.xs, fontWeight: '500' },
   paceChart: { marginTop: spacing.sm, marginHorizontal: -4 },
   legend: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.xs },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   legendLine: { width: 14, borderRadius: 1 },
   legendLabel: { fontSize: 11, fontWeight: '600' },
 
-  bentoRow: { flexDirection: 'row', gap: spacing.xs, alignItems: 'stretch' },
+  bentoRow: { flexDirection: 'row', gap: spacing.sm, alignItems: 'stretch' },
   budgetTileOuter: { flex: 1.12 },
   budgetTile: { padding: spacing.md },
   budgetEmpty: { flex: 1, alignItems: 'flex-start', justifyContent: 'center', gap: spacing.xs, marginTop: spacing.xs },
   budgetBar: { marginTop: spacing.sm },
   overRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
-  cta: { fontSize: fontSizes.sm, fontWeight: '800' },
-  tileValue: { fontSize: fontSizes.xl, fontWeight: '800', letterSpacing: -0.7, marginTop: 4 },
+  cta: { fontSize: fontSizes.sm, fontWeight: '500' },
+  tileValue: { fontSize: fontSizes.xl, fontWeight: '500', letterSpacing: -0.7, marginTop: 4 },
   smallCol: { flex: 1, gap: spacing.xs },
   smallTileOuter: { flex: 1 },
   smallTile: { padding: spacing.sm, paddingHorizontal: spacing.md, justifyContent: 'center' },
-  smallValue: { fontSize: fontSizes.lg, fontWeight: '800', letterSpacing: -0.5, marginTop: 2 },
+  smallValue: { fontSize: fontSizes.lg, fontWeight: '500', letterSpacing: -0.5, marginTop: 2 },
 
   tipCard: { marginTop: spacing.md },
   tipRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
   tipBody: { flex: 1 },
-  tipTitle: { fontSize: fontSizes.base, fontWeight: '800' },
+  tipTitle: { fontSize: fontSizes.base, fontWeight: '500' },
   tipText: { fontSize: fontSizes.xs, lineHeight: 18, marginTop: 2 },
   tipCta: { flexDirection: 'row', alignItems: 'center', gap: 2, alignSelf: 'flex-end', marginTop: spacing.xs },
-  tipCtaText: { fontSize: fontSizes.sm, fontWeight: '700' },
+  tipCtaText: { fontSize: fontSizes.sm, fontWeight: '500' },
 
   sectionHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.xl },
-  sectionTitle: { fontSize: fontSizes.md, fontWeight: '800', letterSpacing: -0.3 },
+  sectionTitle: { fontSize: fontSizes.md, fontWeight: '500', letterSpacing: -0.3 },
   seeAll: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  seeAllText: { fontSize: fontSizes.sm, fontWeight: '700' },
-  dateHeader: { fontSize: fontSizes.xs, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1, marginTop: spacing.md, marginBottom: spacing.xs },
+  seeAllText: { fontSize: fontSizes.sm, fontWeight: '500' },
+  dateHeader: { fontSize: fontSizes.xs, fontWeight: '500', textTransform: 'uppercase', letterSpacing: 1, marginTop: spacing.md, marginBottom: spacing.xs },
   txnRowOuter: { marginBottom: spacing.xs },
   txnRow: { flexDirection: 'row', alignItems: 'center', padding: spacing.sm, gap: spacing.sm },
   txnMeta: { flex: 1 },
-  txnTitle: { fontSize: fontSizes.base, fontWeight: '700', letterSpacing: -0.2 },
+  txnTitle: { fontSize: fontSizes.base, fontWeight: '500', letterSpacing: -0.2 },
   txnSub: { fontSize: fontSizes.xs, marginTop: 2 },
   txnAmount: { fontSize: fontSizes.base },
 

@@ -12,50 +12,22 @@ import {
 // Each weight from its own entry point: the packages' main entry requires
 // every weight and italic they have (25 files, 7 MB), and the bundler ships
 // whatever is required, used or not.
+import { Inter_300Light } from '@expo-google-fonts/inter/300Light';
 import { Inter_400Regular } from '@expo-google-fonts/inter/400Regular';
 import { Inter_500Medium } from '@expo-google-fonts/inter/500Medium';
 import { Inter_600SemiBold } from '@expo-google-fonts/inter/600SemiBold';
 import { Inter_700Bold } from '@expo-google-fonts/inter/700Bold';
-import { Manrope_400Regular } from '@expo-google-fonts/manrope/400Regular';
-import { Manrope_500Medium } from '@expo-google-fonts/manrope/500Medium';
-import { Manrope_600SemiBold } from '@expo-google-fonts/manrope/600SemiBold';
-import { Manrope_700Bold } from '@expo-google-fonts/manrope/700Bold';
-import { Manrope_800ExtraBold } from '@expo-google-fonts/manrope/800ExtraBold';
-
-/**
- * The app's two typefaces.
- *
- * The interface is set in SF Pro. On iPhone that is simply the system font.
- * Apple licenses SF Pro for its own platforms only, so Android and the web
- * use Inter instead: it was drawn to the same brief, a neutral grotesque that
- * holds up at small sizes, and sits closest to SF Pro of the open faces.
- *
- * Manrope carries the large type — balances, big figures and screen titles —
- * everywhere, which is where its rounder, more geometric figures give the app
- * its own voice. Anything set at display size takes it automatically, so a
- * number never changes typeface depending on which screen drew it.
- *
- * Custom faces ship one file per weight, and Android fakes bold rather than
- * finding the heavier file when asked for a weight, so each style's weight is
- * translated here into the file that draws it.
- */
+/** SF Pro through the iOS system font; Inter on Android and web. */
 export const fontAssets = {
+  Inter_300Light,
   Inter_400Regular,
   Inter_500Medium,
   Inter_600SemiBold,
   Inter_700Bold,
-  Manrope_400Regular,
-  Manrope_500Medium,
-  Manrope_600SemiBold,
-  Manrope_700Bold,
-  Manrope_800ExtraBold,
 };
 
 /** Set as a style's fontFamily to ask for the display face at any size. */
-export const DISPLAY = 'Manrope';
-
-/** From this size up, type is display type. */
-const DISPLAY_SIZE = 24;
+export const DISPLAY = 'SystemDisplay';
 
 type Weight = '400' | '500' | '600' | '700' | '800';
 
@@ -66,14 +38,6 @@ const INTER: Record<Weight, string> = {
   // Body text never goes heavier than bold.
   '700': 'Inter_700Bold',
   '800': 'Inter_700Bold',
-};
-
-const MANROPE: Record<Weight, string> = {
-  '400': 'Manrope_400Regular',
-  '500': 'Manrope_500Medium',
-  '600': 'Manrope_600SemiBold',
-  '700': 'Manrope_700Bold',
-  '800': 'Manrope_800ExtraBold',
 };
 
 function weightOf(weight: TextStyle['fontWeight']): Weight {
@@ -96,9 +60,8 @@ export function typeface(style: StyleProp<TextStyle>): TextStyle | null {
   const family = flat.fontFamily;
   if (family && family !== DISPLAY) return null;
   const weight = weightOf(flat.fontWeight);
-  const display = family === DISPLAY || (flat.fontSize ?? 0) >= DISPLAY_SIZE;
-  if (display) return { fontFamily: MANROPE[weight], fontWeight: 'normal' };
-  if (Platform.OS === 'ios') return null;
+  if (Platform.OS === 'ios') return family === DISPLAY ? { fontFamily: 'System' } : null;
+  if (flat.fontWeight === '300' || flat.fontWeight === 300) return { fontFamily: 'Inter_300Light', fontWeight: 'normal' };
   return { fontFamily: INTER[weight], fontWeight: 'normal' };
 }
 

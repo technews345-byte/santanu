@@ -39,11 +39,11 @@ export function BottomSheetModal({
   useEffect(() => {
     if (visible) setMounted(true);
     if (!visible && !mounted) return;
-    const animation = visible && !reduced
-      ? Animated.spring(progress, { toValue: 1, useNativeDriver: true, damping: 24, stiffness: 220, mass: 0.9 })
+    const animation = !reduced
+      ? Animated.spring(progress, { toValue: visible ? 1 : 0, useNativeDriver: true, damping: 24, stiffness: 220, mass: 0.9 })
       : Animated.timing(progress, {
           toValue: visible ? 1 : 0,
-          duration: reduced ? 0 : 200,
+          duration: 200,
           easing: Easing.in(Easing.cubic),
           useNativeDriver: true,
         });
@@ -64,7 +64,7 @@ export function BottomSheetModal({
       </Animated.View>
 
       <Animated.View
-        style={[styles.dock, { maxHeight: Math.min(height - insets.top - spacing.md, height * maxHeightPct / 100), transform: [{ translateY: reduced ? 0 : translateY }] }]}
+        style={[styles.dock, { opacity: reduced ? progress : 1, maxHeight: Math.min(height - insets.top - spacing.md, height * maxHeightPct / 100), transform: [{ translateY: reduced ? 0 : translateY }] }]}
         pointerEvents="box-none"
         accessibilityViewIsModal
       >
@@ -79,7 +79,7 @@ export function BottomSheetModal({
           <View style={styles.headerRow}>
             <Text style={[styles.title, { color: theme.text }]}>{title}</Text>
             <Pressable onPress={onClose} hitSlop={12} accessibilityRole="button" accessibilityLabel={`Close ${title}`}>
-              <Text style={{ color: theme.tint, fontWeight: '700', fontSize: fontSizes.base }}>Done</Text>
+              <Text style={{ color: theme.tint, fontWeight: '600', fontSize: fontSizes.base, minHeight: 44, paddingTop: 10 }}>Done</Text>
             </Pressable>
           </View>
           <ScrollView

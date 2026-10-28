@@ -210,3 +210,65 @@ test('save button shows a spinner and disabled/busy semantics while saving', asy
   assert.equal(tree.root.findAllByType('Spinner').length, 0);
   await act(async () => tree.unmount());
 });
+
+test('expanded cards measure their origin, retain detail identity, and interrupted dismissal cannot unmount a reopened card', async () => {
+  const env = environment(); env.setReduced(false);
+  const transitions = [];
+  const createShared = initial => {
+    const ref = React.useRef(null);
+    if (!ref.current) {
+      let value = initial;
+      let pending;
+      ref.current = {
+        get value() { return value; },
+        set value(next) {
+          if (pending) pending.cancelled = true;
+          if (next && typeof next === 'object' && next.transition) { pending = next; next.shared = ref.current; value = next.target; }
+          else { pending = null; value = next; }
+        },
+        cancel() { if (pending) pending.cancelled = true; },
+      };
+    }
+    return ref.current;
+  };
+  const transition = (target, config, callback) => {
+    const result = { transition: true, target, callback, cancelled: false, finish() { callback?.(!this.cancelled); } };
+    transitions.push(result);
+    return result;
+  };
+  const gesture = () => {
+    const handlers = {};
+    const object = { handlers };
+    for (const key of ['enabled', 'minDistance', 'onStart', 'onUpdate', 'onEnd', 'onFinalize']) object[key] = value => { handlers[key] = value; return object; };
+    return object;
+  };
+  const mocks = { ...env.mocks,
+    'react-native-reanimated': { __esModule: true, default: { View: 'AnimatedView' },
+      useSharedValue: createShared, useAnimatedStyle: () => ({}), cancelAnimation: v => v.cancel(),
+      runOnJS: f => f, withSpring: transition, withTiming: transition, interpolate: v => v },
+    'react-native-gesture-handler': { Gesture: { Pan: gesture }, GestureDetector: 'GestureDetector', GestureHandlerRootView: 'GestureRoot' },
+    './Aurora': { Aurora: 'Aurora' },
+  };
+  const { HeroTransitionContainer, HeroCard } = loader(mocks)('src/components/glass/HeroTransitionContainer.tsx');
+  const Fixture = () => React.createElement(HeroTransitionContainer, {
+    renderDetail: detail => React.createElement('Detail', { detail }),
+  }, React.createElement(HeroCard, { detail: 'budget', title: 'Monthly budget' }, open => React.createElement('Pressable', { onPress: open })));
+  let tree;
+  await act(async () => { tree = create(React.createElement(Fixture), { createNodeMock: element => element.type === 'View' ? { measureInWindow: cb => cb(23,177,344,190) } : null }); });
+  await act(async () => tree.root.findByType('Pressable').props.onPress());
+  assert.equal(tree.root.findByType('Detail').props.detail, 'budget');
+  assert.equal(tree.root.findAllByType('Modal').length, 1);
+  const overlay = tree.root.findAll(n => n.props.card && n.props.card.title === 'Monthly budget')[0];
+  assert.deepEqual([overlay.props.card.x, overlay.props.card.y, overlay.props.card.width, overlay.props.card.height], [23,177,344,190]);
+  await act(async () => tree.root.findByType('Modal').props.onRequestClose());
+  const interrupted = transitions.at(-1);
+  const pan = tree.root.findAllByType('GestureDetector')[0].props.gesture.handlers;
+  await act(async () => { pan.onStart(); pan.onUpdate({ translationY: -120 }); pan.onEnd({ velocityY: -200 }); });
+  assert.ok(interrupted.cancelled);
+  await act(async () => interrupted.finish());
+  assert.equal(tree.root.findAllByType('Modal').length, 1);
+  await act(async () => tree.root.findByType('Modal').props.onRequestClose());
+  await act(async () => transitions.at(-1).finish());
+  assert.equal(tree.root.findAllByType('Modal').length, 0);
+  await act(async () => tree.unmount());
+});
