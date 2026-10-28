@@ -4,6 +4,7 @@ import { Alert, FlatList, Pressable, ScrollView, StyleSheet, View } from 'react-
 import { Text, TextInput } from '../theme/type';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
+import Animated, { useAnimatedStyle, type SharedValue } from 'react-native-reanimated';
 import { useNavigation } from '@react-navigation/native';
 import { format } from 'date-fns/format';
 import { parseISO } from 'date-fns/parseISO';
@@ -40,6 +41,27 @@ const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: 'amount_asc', label: 'Amount: Low to High' },
   { key: 'category_az', label: 'Category: A-Z' },
 ];
+
+/** Keep the swipe colors hidden behind rounded corners until the row moves. */
+function SwipeAction({ progress, color, icon, label, onPress }: {
+  progress: SharedValue<number>;
+  color: string;
+  icon: 'trash-outline' | 'pencil-outline';
+  label: string;
+  onPress: () => void;
+}) {
+  const reveal = useAnimatedStyle(() => ({
+    opacity: Math.min(1, Math.max(0, (progress.value - 0.03) / 0.15)),
+  }));
+  return (
+    <Animated.View style={[styles.swipeActionContainer, reveal]}>
+      <Pressable style={[styles.swipeAction, { backgroundColor: color }]} onPress={onPress}
+        accessibilityRole="button" accessibilityLabel={label}>
+        <Ionicons name={icon} size={22} color="#fff" />
+      </Pressable>
+    </Animated.View>
+  );
+}
 
 export default function TransactionsScreen() {
   const { theme } = useTheme();
@@ -138,27 +160,21 @@ export default function TransactionsScreen() {
     setBulkCategorySheetOpen(false);
   };
 
-  const renderRightActions = (item: Transaction) => (
-    <Pressable
-      style={[styles.swipeAction, { backgroundColor: theme.danger }]}
+  const renderRightActions = (item: Transaction, progress: SharedValue<number>) => (
+    <SwipeAction progress={progress} color={theme.danger} icon="trash-outline" label="Delete transaction"
       onPress={() =>
         Alert.alert('Delete transaction?', undefined, [
           { text: 'Cancel', style: 'cancel' },
           { text: 'Delete', style: 'destructive', onPress: () => removeTransaction(item.id) },
         ])
       }
-    >
-      <Ionicons name="trash-outline" size={22} color="#fff" />
-    </Pressable>
+    />
   );
 
-  const renderLeftActions = (item: Transaction) => (
-    <Pressable
-      style={[styles.swipeAction, { backgroundColor: theme.tint }]}
+  const renderLeftActions = (item: Transaction, progress: SharedValue<number>) => (
+    <SwipeAction progress={progress} color={theme.tint} icon="pencil-outline" label="Edit transaction"
       onPress={() => navigation.navigate('TransactionEntry', { transactionId: item.id })}
-    >
-      <Ionicons name="pencil-outline" size={22} color="#fff" />
-    </Pressable>
+    />
   );
 
   return (
@@ -271,7 +287,7 @@ export default function TransactionsScreen() {
             );
             if (selectionMode) return row;
             return (
-              <Swipeable renderRightActions={() => renderRightActions(item)} renderLeftActions={() => renderLeftActions(item)}>
+              <Swipeable renderRightActions={(progress) => renderRightActions(item, progress)} renderLeftActions={(progress) => renderLeftActions(item, progress)}>
                 {row}
               </Swipeable>
             );
@@ -390,7 +406,8 @@ const styles = StyleSheet.create({
   txnMeta: { flex: 1 },
   txnTitle: { fontSize: fontSizes.base, fontWeight: '600' },
   txnSub: { fontSize: fontSizes.xs, marginTop: 2 },
-  swipeAction: { width: 72, alignItems: 'center', justifyContent: 'center', marginTop: spacing.xs, borderRadius: radius.lg },
+  swipeActionContainer: { width: 72, marginTop: spacing.xs },
+  swipeAction: { flex: 1, alignItems: 'center', justifyContent: 'center', borderRadius: radius.lg },
   bulkBar: { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: spacing.md, borderTopWidth: StyleSheet.hairlineWidth },
   optionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.sm },
   filterGroupLabel: { fontSize: fontSizes.sm, fontWeight: '700', marginTop: spacing.sm, marginBottom: spacing.xs },

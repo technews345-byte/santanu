@@ -58,6 +58,7 @@ function environment() {
   };
   const mocks = {
     'react-native': native,
+    'react-native-reanimated': { __esModule: true, default: { View: 'ReanimatedView' }, useAnimatedStyle: fn => fn() },
     'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 24, bottom: 34, left: 0, right: 0 }) },
     '../theme/useReducedMotion': { useReducedMotion: () => reduced },
     '../../theme/useReducedMotion': { useReducedMotion: () => reduced },
@@ -120,6 +121,41 @@ test('transaction search matches category and note; category sorting leaves sour
   await act(async () => store.setState({ activeAccountId: 'bank' }));
   assert.deepEqual(ids(), ['c']);
   await act(async () => tree.unmount());
+});
+
+test('transaction swipe actions stay hidden at rest and reveal working edit and delete controls', async () => {
+  const env = environment();
+  const calls = []; const alerts = [];
+  env.native.Alert = { alert: (...args) => alerts.push(args) };
+  const item = { id: 'a', note: 'Lunch', categoryId: 'food', type: 'expense', accountId: 'cash', amount: 250, date: '2026-10-25T12:00:00Z' };
+  const store = createStore(() => ({ transactions: [item], categories: [{ id: 'food', name: 'Food' }], accounts: [], activeAccountId: null, removeTransaction: id => calls.push(['delete', id]), updateTransaction() {} }));
+  const Component = loader({ ...env.mocks,
+    '@react-navigation/native': { useNavigation: () => ({ navigate: (...args) => calls.push(args) }) },
+    'react-native-gesture-handler/ReanimatedSwipeable': 'Swipeable',
+    '../store/useStore': { useStore: store },
+    '../components/Screen': { Screen: 'Screen' },
+    ...Object.fromEntries(['Pill', 'IconBadge', 'AmountText', 'EmptyState', 'QuickAddFab', 'BottomSheetModal'].map(n => [`../components/${n}`, { [n]: n }])),
+    '../components/glass/GlassSurface': { GlassSurface: 'GlassSurface' },
+    '../components/glass/GlassPressable': { GlassPressable: 'GlassPressable' },
+  })('src/screens/TransactionsScreen.tsx').default;
+  let screen, row, action;
+  await act(async () => { screen = create(React.createElement(Component)); });
+  await act(async () => { row = create(screen.root.findByType('FlatList').props.renderItem({ item })); });
+  const swipe = row.root.findByType('Swipeable');
+  const progress = { value: 0 };
+  for (const side of ['renderLeftActions', 'renderRightActions']) {
+    await act(async () => { action = create(swipe.props[side](progress)); });
+    assert.equal(action.root.findByType('ReanimatedView').props.style[1].opacity, 0);
+    progress.value = 1;
+    await act(async () => action.update(swipe.props[side](progress)));
+    assert.equal(action.root.findByType('ReanimatedView').props.style[1].opacity, 1);
+    await act(async () => action.root.findByType('Pressable').props.onPress());
+    if (side === 'renderRightActions') await act(async () => alerts[0][2][1].onPress());
+    progress.value = 0;
+    await act(async () => action.unmount());
+  }
+  assert.deepEqual(calls, [['TransactionEntry', { transactionId: 'a' }], ['delete', 'a']]);
+  await act(async () => { row.unmount(); screen.unmount(); });
 });
 
 test('tab bar exposes selection and long press; a prevented tab press does not navigate; Reduce Motion avoids springs', async () => {

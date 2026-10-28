@@ -52,8 +52,25 @@ jobs:
         run: |
           mkdir -p dist
           cp android/app/build/outputs/apk/release/app-release.apk dist/Raahi-1.0.2.apk
-          cd dist
-          sha256sum Raahi-1.0.2.apk > SHA256SUMS.txt
+          (cd dist && sha256sum Raahi-1.0.2.apk > SHA256SUMS.txt)
+          git archive --format=zip -o "$RUNNER_TEMP/raahi-source.zip" HEAD
+          python3 - <<'PY'
+          import os, pathlib, zipfile
+          out = pathlib.Path('dist')
+          essential = {
+              'assets/raahi-icon.png', 'assets/raahi-notification.png',
+              'assets/raahi-splash.jpg', 'assets/space-dark.webp', 'assets/space-light.webp',
+          }
+          media = {'.png', '.jpg', '.jpeg', '.webp', '.gif', '.mp4', '.mov', '.webm'}
+          with zipfile.ZipFile(out / 'Raahi-1.0.2-APK-and-Source.zip', 'w', zipfile.ZIP_DEFLATED) as bundle:
+              with zipfile.ZipFile(pathlib.Path(os.environ['RUNNER_TEMP']) / 'raahi-source.zip') as source:
+                  for item in source.infolist():
+                      if pathlib.PurePosixPath(item.filename).suffix.lower() in media and item.filename not in essential:
+                          continue
+                      bundle.writestr('Raahi-source/' + item.filename, source.read(item.filename))
+              bundle.write(out / 'Raahi-1.0.2.apk', 'Raahi-1.0.2.apk')
+              bundle.write(out / 'SHA256SUMS.txt', 'SHA256SUMS.txt')
+          PY
       - name: Upload preview APK
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
