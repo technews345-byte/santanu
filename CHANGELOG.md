@@ -2,6 +2,13 @@
 
 This changelog separates the current UI/responsiveness update from capabilities already present in the release baseline. A source version, successful test run and published APK are different states; check [Actions](https://github.com/technews345-byte/santanu/actions) and [Releases](https://github.com/technews345-byte/santanu/releases) for build availability.
 
+## 1.0.3 — Launcher icon and startup
+
+- Add padding around the Android adaptive icon so the R remains visible inside launcher masks.
+- Size and center the supplied splash artwork using the measured screen dimensions, with a gentle loading animation and reduced-motion support.
+- Avoid showing the biometric lock during initial loading when the lock is disabled; keep the real lock and its authentication behavior when enabled.
+- Allow a database-loading error to leave the splash and show the retry screen. App identity and data remain unchanged.
+
 ## 1.0.2 — Raahi rebrand and UI refinement
 
 - Renamed the app and its visible labels to Raahi, using the supplied R logo and splash artwork. Android package, iOS bundle ID, local database and storage keys remain unchanged; app version code increases to 3.

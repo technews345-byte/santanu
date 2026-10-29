@@ -245,12 +245,12 @@ test('PDF export escapes hostile input and disables scripts; XLSX keeps formula-
   assert.ok(xml.includes('t="inlineStr"'));
 });
 
-test('app relocks on background and retains the mounted form behind the lock', async () => {
+test('startup hides a disabled lock, exposes loading errors, and relocks without losing the mounted form', async () => {
   const React = require('react');
   const { create, act } = require('react-test-renderer');
   global.IS_REACT_ACT_ENVIRONMENT = true;
   const listeners = new Set(); let mounted = 0; let authCalls = 0;
-  const state = { hydrated: true, hydrationError: null, hydrate: async () => {}, biometricLockEnabled: true, transactions: [], categories: [] };
+  const state = { hydrated: false, hydrationError: null, hydrate: async () => {}, biometricLockEnabled: false, transactions: [], categories: [] };
   const Root = () => { React.useEffect(() => { mounted++; }, []); return React.createElement('Ledger'); };
   const reminders = { loaded: false };
   const useStore = Object.assign(() => state, { getState: () => state });
@@ -273,6 +273,14 @@ test('app relocks on background and retains the mounted form behind the lock', a
   const App = load('App.tsx').default;
   let renderer;
   await act(async () => { renderer = create(React.createElement(App)); });
+  assert.ok(!renderer.root.findAllByType('Text').some(node => node.children.includes('Locked')));
+  assert.equal(authCalls, 0);
+  state.hydrationError = 'Unable to read local data';
+  await act(async () => renderer.update(React.createElement(App)));
+  assert.equal(renderer.root.findByType('BrandSplash').props.ready, true);
+  assert.ok(renderer.root.findAllByType('Text').some(node => node.children.includes("Couldn't load your data")));
+  state.hydrationError = null; state.hydrated = true; state.biometricLockEnabled = true;
+  await act(async () => renderer.update(React.createElement(App)));
   assert.equal(authCalls, 1); assert.equal(mounted, 1);
   await act(async () => { for (const listener of listeners) listener('background'); });
   assert.ok(renderer.root.findAllByType('Text').some(node => node.children.includes('Locked')));

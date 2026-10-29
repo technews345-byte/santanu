@@ -363,3 +363,26 @@ test('glass touch feedback springs on press and remains still with Reduce Motion
   assert.equal(env.animations.length, count);
   await act(async () => tree.unmount());
 });
+
+test('splash fills the measured screen, waits for artwork, and respects Reduce Motion', async () => {
+  const env = environment();
+  env.native.Animated.Image = 'AnimatedImage';
+  const Component = loader({ ...env.mocks, '../../assets/raahi-splash.jpg': 1 })('src/components/BrandSplash.tsx').BrandSplash;
+  let firstFrames = 0; let finished = 0; let tree;
+  await act(async () => { tree = create(React.createElement(Component, { ready: true, onFirstFrame: () => firstFrames++, onFinish: () => finished++ })); });
+  assert.equal(firstFrames, 0);
+  await act(async () => tree.root.findByType('AnimatedView').props.onLayout({ nativeEvent: { layout: { width: 393, height: 852 } } }));
+  const image = tree.root.findByType('AnimatedImage');
+  assert.deepEqual([image.props.style[1].width, image.props.style[1].height], [393, 852]);
+  assert.equal(image.props.resizeMode, 'cover');
+  assert.equal(firstFrames, 0);
+  await act(async () => image.props.onLoadEnd());
+  assert.equal(firstFrames, 1);
+  assert.equal(tree.root.findAllByType('AnimatedView').length, 4); // screen and three loading dots
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 700)); });
+  assert.equal(env.animations.at(-1).kind, 'timing');
+  assert.equal(env.animations.at(-1).config.duration, 200);
+  await act(async () => env.animations.at(-1).finish());
+  assert.equal(finished, 1);
+  await act(async () => tree.unmount());
+});
