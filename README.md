@@ -18,9 +18,15 @@ Records are saved in local SQLite. Optional Google sign-in and Cloud Firestore s
 | Optional cloud | Firebase Authentication and Cloud Firestore |
 | License | [MIT](LICENSE) |
 
-The Raahi rebrand and visual refinements are in source; previously published 1.0.1 APKs retain the Spendly name. Existing app identity and local data keys are retained for compatible updates.
+The Raahi name and R logo replace Spendly branding. The Android launcher mark is padded to fit rounded masks, and the centered opening screen has a gentle loading animation. Existing app identity and local data keys are retained for compatible updates.
 
 Read the [complete feature and UI guide](docs/FEATURES-AND-UI.md), [detailed latest updates](CHANGELOG.md), [1.0.1 build notes](docs/UI-UPDATE-1.0.1.md) and [security guidance](SECURITY.md).
+
+## Brand and latest updates
+
+Raahi's sculpted white **R** has cyan and violet highlights on a blue-purple background. The centered opening screen displays the name and tagline, with a spring entrance and loading dots; the Android adaptive icon has extra space around the R so it fits rounded launcher masks.
+
+Version **1.0.3** centers the splash, prevents the lock screen showing through during loading, and preserves biometric authentication when enabled. Version **1.0.2** introduced the Raahi name, full-edge blue background, simpler touch feedback, cleaner Activity card corners, and a single Notifications switch. See [CHANGELOG.md](CHANGELOG.md) for the full history.
 
 ## Main features
 
@@ -37,7 +43,7 @@ Read the [complete feature and UI guide](docs/FEATURES-AND-UI.md), [detailed lat
 
 Record **expenses, income, investments and transfers**. The entry form includes an arithmetic keypad, category, source account, destination account for transfers, date/time, notes, receipt images and repeat settings. Saved transactions can be edited or deleted.
 
-The Activity ledger provides All / Daily / Weekly / Monthly / Yearly intervals, search across notes and category names, combined type/category/account filters, date and amount ordering, and category-name sorting. Swipe to edit/delete; long-press to select multiple entries for deletion or recategorization. Search has a result count and updating feedback, and saving has an in-progress state and submission guard.
+The Activity ledger provides All / Daily / Weekly / Monthly / Yearly intervals, search across notes and category names, combined type/category/account filters, date and amount ordering, and category-name sorting. Swipe to edit/delete; long-press to select multiple entries for deletion or recategorization. Search uses deferred filtering, and saving has an in-progress state and submission guard.
 
 Balances are derived from opening balances and transactions. A transfer moves money between accounts without changing their combined total. Investments are separate from expenses but reduce the source account's balance. Period net is **income − expenses − investments**. Investment entries track recorded cash movements, not live market valuations.
 
@@ -63,12 +69,12 @@ Repeat transactions daily, weekly, monthly or yearly. Due entries are generated 
 
 | Feature | Behavior |
 | --- | --- |
-| Daily reminder | Native local notification at a chosen time; default 20:30 device-local time; today's reminder is omitted after an entry has been recorded |
-| Reminder messages | English, Hinglish or mixed choices, plus a test-reminder control |
-| Save confirmations | Optional short messages after saving |
+| Daily reminder | Native local notification controlled by one on/off switch; default 20:30 device-local time; today's reminder is omitted after an entry has been recorded |
+| Reminder preferences | Previously stored time and language preferences remain in use; their detailed controls are hidden |
+| Save confirmations | In-app save feedback follows the existing saved preference |
 | Excel export | `.xlsx` transaction rows: date, type, category, source account, destination account, amount, currency and note |
 | PDF report | Formatted summaries and a detailed table capped at the 500 most recent entries; Excel exports the complete row set |
-| Appearance | Light, dark or system preference |
+| Appearance | Dark blue theme only |
 | Biometric lock | Supported device authentication, with re-locking when the app backgrounds |
 | Google account | Optional sign-in, sync status, pending changes, last sync time, retry, export, sign out and account deletion |
 | Advertising | Native app-open ads remain implemented |
@@ -77,22 +83,22 @@ Notifications need permission and depend on OS scheduling. Cloud, ads and native
 
 ## UI and visual design
 
-Spendly uses rounded glass cards, a floating navigation capsule, pill controls, edge lighting, layered backgrounds and semantic financial colors. The strongest depth is reserved for important surfaces such as the balance card and navigation. Transaction rows use simpler surfaces with no live row blur or decorative reflection sweep.
+Raahi uses a dark blue gradient, rounded glass cards, a floating navigation capsule, pill controls, edge lighting, cyan/violet glows and semantic financial colors. The strongest depth is reserved for important surfaces such as the balance card and navigation. Transaction rows use simpler surfaces with no live row blur or decorative reflection sweep.
 
 | Element | Design |
 | --- | --- |
 | Five tabs | Home, Activity, Budgets, Analytics and Settings |
 | Typography | Native system text on iOS and Inter on Android/web |
-| Radius tokens | 12, 16, 22 and 28 logical pixels, plus fully rounded pills |
+| Radius tokens | 12, 16, 22 and 30 logical pixels, plus fully rounded pills |
 | Spacing tokens | Shared 4–40 logical-pixel scale |
 | Color roles | Distinct income, expense, transfer, investment, warning and danger colors |
 | Picker sheets | Height-limited scrolling body and a Done control outside the scrolling content |
-| Feedback | Press states, selected categories/tabs, saving spinner and busy/disabled semantics, result counts, alerts and native haptics where supported |
+| Feedback | Press states, selected categories/tabs, saving spinner and busy/disabled semantics, alerts and native haptics where supported |
 | Motion | Shared spring/press behavior and Reduce Motion handling in the updated navigation and controls |
 
-Blur is platform-aware: important surfaces use supported native blur where available, with tinted/opaque treatments elsewhere. The glass navigation effect also reuses background imagery. The appearance is iOS-inspired and implemented with React Native components; it is not an Apple-provided Liquid Glass component set.
+Blur is platform-aware: important surfaces use supported native blur where available, with tinted/opaque treatments elsewhere. The navigation uses a floating glass surface. The appearance is iOS-inspired and implemented with React Native components; it is not an Apple-provided Liquid Glass component set.
 
-The 1.0.1 update reduces unnecessary store-driven redraws, caches lookups and defers search filtering. It adds no runtime dependency. Physical-device frame-rate gains have not been measured. The [UI guide](docs/FEATURES-AND-UI.md#visual-system) describes the design in more detail.
+The 1.0.1 update reduced unnecessary redraws and deferred search filtering. Later updates add the Raahi branding, full-edge backgrounds, simpler touch feedback and a centered animated splash. Physical-device frame-rate gains have not been measured. The [UI guide](docs/FEATURES-AND-UI.md#visual-system) describes the design in more detail.
 
 ## Platform and data considerations
 
@@ -111,10 +117,10 @@ Biometric locking protects access to the app. Native authentication sessions use
 
 ## Get started
 
-The Spendly source is on its app branches in this repository. Check out this update:
+The Raahi source is on the app branch in this repository:
 
 ```bash
-git clone --branch codex/spendly-ui-20261025 https://github.com/technews345-byte/santanu.git
+git clone --branch claude/expense-budget-app-vdww3s https://github.com/technews345-byte/santanu.git
 cd santanu
 npm ci --legacy-peer-deps
 ```
@@ -150,7 +156,7 @@ cd android
 
 The APK normally appears in `android/app/build/outputs/apk/release/`. The supplied workflow targets ARM64; other architectures require an appropriate build.
 
-The [Android workflow](.github/workflows/build-apk.yml) validates the source, builds an APK, and packages it with matching source code and a checksum. It runs on the Spendly release branch and `codex/spendly-ui-20261025`, and supports manual dispatch. This update uses the separate `spendly-ui-v1.0.1` prerelease tag. Check [Actions](https://github.com/technews345-byte/santanu/actions) and [Releases](https://github.com/technews345-byte/santanu/releases) for actual run/output availability.
+The [Raahi preview workflow](.github/workflows/raahi-preview-apk.yml) validates the source, builds a 1.0.3 APK, and packages it with matching source and a checksum for the designated preview pull request. It uses the public debug key; it does not publish a production release. The older [Android workflow](.github/workflows/build-apk.yml) targets the historical Spendly 1.0.1 release. Check [Actions](https://github.com/technews345-byte/santanu/actions) and [Releases](https://github.com/technews345-byte/santanu/releases) for actual availability.
 
 | GitHub Actions secret | Purpose |
 | --- | --- |
@@ -169,11 +175,11 @@ The existing workflow falls back to the public debug key, with a warning, if pri
 | Command | Coverage |
 | --- | --- |
 | `npm run typecheck` | TypeScript checks |
-| `npm test` | 15 regression tests: calculations, persistence, recurrence, sync races, session storage, exports and re-locking |
-| `npm run test:ui` | 5 interaction tests: ledger behavior, store subscriptions, tab events, reduced motion, sheets, hidden actions and save feedback |
+| `npm test` | 15 regression tests: calculations, persistence, recurrence, sync races, session storage, exports and startup/re-locking |
+| `npm run test:ui` | 10 interaction tests: ledger behavior, swipe actions, navigation, reduced motion, sheets, notifications, press feedback and splash startup |
 | `npm run test:rules` | Firestore rules suite; requires the appropriate emulator setup |
 
-Type checking and the 20 standard regression/UI tests passed locally and in the initial 1.0.1 GitHub build's validation step. Native installation, visual layout, larger font sizes, scrolling frame rates, notifications, OCR accuracy and haptics need separate device testing.
+Type checking and the 25 standard regression/UI tests pass for the 1.0.3 changes. Native installation, visual layout, larger font sizes, scrolling frame rates, notifications, OCR accuracy and haptics need separate device testing.
 
 ## Project layout
 
