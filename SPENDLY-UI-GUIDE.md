@@ -1,3 +1,5 @@
+> **Historical:** This page describes Spendly 1.0.1. Spendly is now Raahi; see the [current Raahi overview](RAAHI.md) for the new logo, features and updates.
+
 # Spendly: features, screens and UI
 
 This guide describes Spendly 1.0.1, merged into the Spendly app branch and published as a GitHub prerelease. It covers the user experience and the code that supports it. Build and service configuration still determine which native/cloud capabilities are available.

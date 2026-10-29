@@ -1,4 +1,9 @@
-> **Spendly — Expense & Budget Manager:** [App details and features](SPENDLY.md) · [Complete UI guide](SPENDLY-UI-GUIDE.md) · [Detailed latest updates](SPENDLY-UPDATES.md) · [APK and source release](https://github.com/technews345-byte/santanu/releases/tag/spendly-ui-v1.0.1)
+<table>
+  <tr>
+    <td><img src="https://raw.githubusercontent.com/technews345-byte/santanu/f1f4f4b9849a564c98a5b585921d42df43b8fe8a/assets/raahi-icon.png" width="96" alt="Raahi R logo"></td>
+    <td><strong>Raahi</strong> (formerly Spendly)<br>Track. Plan. Save. Live Better.<br><a href="RAAHI.md">App features, logo and latest updates</a> &middot; <a href="https://github.com/technews345-byte/santanu/tree/claude/expense-budget-app-vdww3s">Raahi source</a> &middot; <a href="https://github.com/technews345-byte/santanu/actions">Builds</a></td>
+  </tr>
+</table>
 
 # Prabhat — Your Morning Mantra
 

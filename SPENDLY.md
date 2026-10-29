@@ -1,3 +1,5 @@
+> **Historical:** This page describes Spendly 1.0.1. Spendly is now Raahi; see the [current Raahi overview](RAAHI.md) for the new logo, features and updates.
+
 <p align="center"><img src="https://raw.githubusercontent.com/technews345-byte/santanu/claude/expense-budget-app-vdww3s/assets/brand-mark.webp" width="96" alt="Spendly app mark"></p>
 
 # Spendly
