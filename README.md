@@ -10,7 +10,7 @@ Records are saved in local SQLite. Optional Google sign-in and Cloud Firestore s
 
 | Project detail | Value |
 | --- | --- |
-| Version | 1.0.3; Android version code 4 |
+| Version | 1.0.4; Android version code 5 |
 | Android application ID | `com.santanu.spendly` |
 | Source platforms | Android, iOS and web, with different native capabilities |
 | Application stack | Expo SDK 57, React Native 0.86.3, React 19.2.3, TypeScript and Zustand |
@@ -26,7 +26,7 @@ Read the [complete feature and UI guide](docs/FEATURES-AND-UI.md), [detailed lat
 
 Raahi's sculpted white **R** has cyan and violet highlights on a blue-purple background. The centered opening screen displays the name and tagline, with a spring entrance and loading dots; the Android adaptive icon has extra space around the R so it fits rounded launcher masks.
 
-Version **1.0.3** centers the splash, prevents the lock screen showing through during loading, and preserves biometric authentication when enabled. Version **1.0.2** introduced the Raahi name, full-edge blue background, simpler touch feedback, cleaner Activity card corners, and a single Notifications switch. See [CHANGELOG.md](CHANGELOG.md) for the full history.
+Version **1.0.4** brings the Budgets tab's clean outline category icons to category lists, transaction entry, activity and analytics while preserving saved icons, colors and budget progress. Version **1.0.3** centers the splash, prevents the lock screen showing through during loading, and preserves biometric authentication when enabled. Version **1.0.2** introduced the Raahi name, full-edge blue background, simpler touch feedback, cleaner Activity card corners, and a single Notifications switch. See [CHANGELOG.md](CHANGELOG.md) for the full history.
 
 ## Main features
 
@@ -156,7 +156,7 @@ cd android
 
 The APK normally appears in `android/app/build/outputs/apk/release/`. The supplied workflow targets ARM64; other architectures require an appropriate build.
 
-The [Raahi preview workflow](.github/workflows/raahi-preview-apk.yml) validates the source, builds a 1.0.3 APK, and packages it with matching source and a checksum for the designated preview pull request. It uses the public debug key; it does not publish a production release. The older [Android workflow](.github/workflows/build-apk.yml) targets the historical Spendly 1.0.1 release. Check [Actions](https://github.com/technews345-byte/santanu/actions) and [Releases](https://github.com/technews345-byte/santanu/releases) for actual availability.
+The [Raahi preview workflow](.github/workflows/raahi-preview-apk.yml) validates the source, builds a 1.0.4 APK, and packages it with matching source and a checksum for the designated preview pull request. It uses the public debug key; it does not publish a production release. The older [Android workflow](.github/workflows/build-apk.yml) targets the historical Spendly 1.0.1 release. Check [Actions](https://github.com/technews345-byte/santanu/actions) and [Releases](https://github.com/technews345-byte/santanu/releases) for actual availability.
 
 | GitHub Actions secret | Purpose |
 | --- | --- |
@@ -179,7 +179,7 @@ The existing workflow falls back to the public debug key, with a warning, if pri
 | `npm run test:ui` | 10 interaction tests: ledger behavior, swipe actions, navigation, reduced motion, sheets, notifications, press feedback and splash startup |
 | `npm run test:rules` | Firestore rules suite; requires the appropriate emulator setup |
 
-Type checking and the 25 standard regression/UI tests pass for the 1.0.3 changes. Native installation, visual layout, larger font sizes, scrolling frame rates, notifications, OCR accuracy and haptics need separate device testing.
+The preview workflow runs type checking and the regression/UI tests. Native installation, visual layout, larger font sizes, scrolling frame rates, notifications, OCR accuracy and haptics need separate device testing.
 
 ## Project layout
 

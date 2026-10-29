@@ -10,6 +10,7 @@ import { Card } from '../components/Card';
 import { GlassButton } from '../components/glass/GlassButton';
 import { GlassPressable } from '../components/glass/GlassPressable';
 import { IconBadge } from '../components/IconBadge';
+import { CategoryIcon } from '../components/CategoryIcon';
 import { BottomSheetModal } from '../components/BottomSheetModal';
 import { useTheme } from '../theme/ThemeContext';
 import { fontSizes, radius, spacing } from '../theme/tokens';
@@ -205,7 +206,7 @@ export default function ScanReceiptScreen() {
                   accessibilityLabel="Change category"
                 >
                   {category ? (
-                    <IconBadge icon={category.icon as any} color={category.color} size={34} />
+                    <CategoryIcon icon={category.icon as any} size={34} />
                   ) : (
                     <Ionicons name="pricetag-outline" size={22} color={theme.textSecondary} />
                   )}
@@ -235,7 +236,7 @@ export default function ScanReceiptScreen() {
                 setSheetOpen(false);
               }}
             >
-              <IconBadge icon={c.icon as any} color={c.color} size={48} />
+              <CategoryIcon icon={c.icon as any} size={48} />
               <Text style={[styles.gridLabel, { color: theme.text }]} numberOfLines={1}>
                 {c.name}
               </Text>

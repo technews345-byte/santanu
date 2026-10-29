@@ -10,7 +10,7 @@ import { format } from 'date-fns/format';
 import { parseISO } from 'date-fns/parseISO';
 import { Screen } from '../components/Screen';
 import { Pill } from '../components/Pill';
-import { IconBadge } from '../components/IconBadge';
+import { CategoryIcon } from '../components/CategoryIcon';
 import { AmountText } from '../components/AmountText';
 import { EmptyState } from '../components/EmptyState';
 import { QuickAddFab } from '../components/QuickAddFab';
@@ -272,7 +272,7 @@ export default function TransactionsScreen() {
                     color={selectedIds.includes(item.id) ? theme.tint : theme.textTertiary}
                   />
                 )}
-                <IconBadge icon={(cat?.icon as any) ?? 'swap-horizontal'} color={cat?.color ?? theme.transfer} />
+                <CategoryIcon icon={(cat?.icon as any) ?? 'swap-horizontal-outline'} />
                 <View style={styles.txnMeta}>
                   <Text style={[styles.txnTitle, { color: theme.text }]} numberOfLines={1}>
                     {item.note || cat?.name || 'Transfer'}
@@ -381,7 +381,7 @@ export default function TransactionsScreen() {
         <BottomSheetModal visible={bulkCategorySheetOpen} onClose={() => setBulkCategorySheetOpen(false)} title="Set Category">
           {categories.filter((c) => !c.archived).map((c) => (
             <Pressable key={c.id} style={styles.optionRow} onPress={() => applyBulkCategory(c.id)}>
-              <IconBadge icon={c.icon as any} color={c.color} size={32} />
+              <CategoryIcon icon={c.icon as any} size={32} />
               <Text style={{ color: theme.text, fontSize: fontSizes.base, fontWeight: '600', marginLeft: spacing.sm, flex: 1 }}>{c.name}</Text>
             </Pressable>
           ))}

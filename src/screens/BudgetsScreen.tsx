@@ -10,6 +10,7 @@ import { subMonths } from 'date-fns/subMonths';
 import { Screen } from '../components/Screen';
 import { Card } from '../components/Card';
 import { ProgressRing } from '../components/glass/ProgressRing';
+import { CategoryGlyph } from '../components/CategoryIcon';
 import { ProgressBar } from '../components/ProgressBar';
 import { GlassPressable } from '../components/glass/GlassPressable';
 import { EmptyState } from '../components/EmptyState';
@@ -100,7 +101,7 @@ export default function BudgetsScreen() {
             >
               <View style={styles.budgetTop}>
                 <ProgressRing progress={progress} color={overspent ? theme.danger : progress >= 0.85 ? theme.warning : theme.tint} size={56}>
-                  <Ionicons name={category.icon as any} color={theme.textSecondary} size={22} />
+                  <CategoryGlyph icon={category.icon as any} size={22} />
                 </ProgressRing>
                 <View style={styles.budgetMeta}>
                   <Text style={[styles.budgetName, { color: theme.text }]}>{category.name}</Text>

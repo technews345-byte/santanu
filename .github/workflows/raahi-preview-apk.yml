@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   build:
-    if: github.event.pull_request.head.ref == 'codex/raahi-logo-splash-fix' && github.event.pull_request.head.repo.full_name == github.repository
+    if: github.event.pull_request.head.ref == 'codex/raahi-category-icons' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
@@ -51,8 +51,8 @@ jobs:
       - name: Package APK
         run: |
           mkdir -p dist
-          cp android/app/build/outputs/apk/release/app-release.apk dist/Raahi-1.0.3.apk
-          (cd dist && sha256sum Raahi-1.0.3.apk > SHA256SUMS.txt)
+          cp android/app/build/outputs/apk/release/app-release.apk dist/Raahi-1.0.4.apk
+          (cd dist && sha256sum Raahi-1.0.4.apk > SHA256SUMS.txt)
           git archive --format=zip -o "$RUNNER_TEMP/raahi-source.zip" HEAD
           python3 - <<'PY'
           import os, pathlib, zipfile
@@ -62,18 +62,18 @@ jobs:
               'assets/raahi-splash.jpg', 'assets/space-dark.webp', 'assets/space-light.webp',
           }
           media = {'.png', '.jpg', '.jpeg', '.webp', '.gif', '.mp4', '.mov', '.webm'}
-          with zipfile.ZipFile(out / 'Raahi-1.0.3-APK-and-Source.zip', 'w', zipfile.ZIP_DEFLATED) as bundle:
+          with zipfile.ZipFile(out / 'Raahi-1.0.4-APK-and-Source.zip', 'w', zipfile.ZIP_DEFLATED) as bundle:
               with zipfile.ZipFile(pathlib.Path(os.environ['RUNNER_TEMP']) / 'raahi-source.zip') as source:
                   for item in source.infolist():
                       if pathlib.PurePosixPath(item.filename).suffix.lower() in media and item.filename not in essential:
                           continue
                       bundle.writestr('Raahi-source/' + item.filename, source.read(item.filename))
-              bundle.write(out / 'Raahi-1.0.3.apk', 'Raahi-1.0.3.apk')
+              bundle.write(out / 'Raahi-1.0.4.apk', 'Raahi-1.0.4.apk')
               bundle.write(out / 'SHA256SUMS.txt', 'SHA256SUMS.txt')
           PY
       - name: Upload preview APK
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: raahi-1.0.3-apk
+          name: raahi-1.0.4-apk
           path: dist/*
           if-no-files-found: error

@@ -6,7 +6,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Screen } from '../components/Screen';
 import { GlassButton } from '../components/glass/GlassButton';
-import { IconBadge } from '../components/IconBadge';
+import { CategoryIcon } from '../components/CategoryIcon';
 import { useTheme } from '../theme/ThemeContext';
 import { fontSizes, radius, spacing } from '../theme/tokens';
 import { useStore } from '../store/useStore';
@@ -73,7 +73,7 @@ export default function BudgetFormScreen() {
 
       <View style={styles.body}>
         <View style={styles.categoryHeader}>
-          <IconBadge icon={(category?.icon as any) ?? 'pricetag-outline'} color={category?.color ?? theme.tint} size={56} />
+          <CategoryIcon icon={(category?.icon as any) ?? 'pricetag-outline'} size={56} />
           <Text style={[styles.categoryName, { color: theme.text }]}>{category?.name}</Text>
         </View>
 
