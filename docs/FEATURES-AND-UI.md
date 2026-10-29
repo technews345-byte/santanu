@@ -1,16 +1,20 @@
-# Spendly: features, screens and UI
+# Raahi: features, screens and UI
 
-This guide describes the implemented application on the Spendly 1.0.1 update branch. It covers the user experience and the code that supports it. Build and service configuration still determine which native/cloud capabilities are available.
+This guide describes Raahi 1.0.3, formerly Spendly. It covers the implemented user experience and the code that supports it. Build and service configuration determine which native/cloud capabilities are available.
+
+## Brand and startup
+
+The Raahi identity uses a sculpted white R with cyan/violet highlights, the name Raahi and the line “Track. Plan. Save. Live Better.” Android's adaptive icon gives the R extra room inside launcher masks. The opening artwork is sized to the screen and centered, with a spring entrance and loading dots. It respects Reduce Motion. The lock screen is held until the splash transition ends; biometric authentication and background re-locking remain available when enabled.
 
 ## Navigation and screen map
 
 | Main tab | What the user sees | Main actions |
 | --- | --- | --- |
 | Home | Greeting/profile access, account selector, balance card, period summaries, spending cards, Smart Tip and recent activity | Hide balance, change account/period, add income or expense, scan a receipt, open budgets or analytics |
-| Activity | Transaction history, search field, interval choices, filters, sorting and result count | Search, edit, delete, select several entries or change their category |
+| Activity | Transaction history, search field, interval choices, filters and sorting | Search, edit, delete, select several entries or change their category |
 | Budgets | Month navigation, planned/spent/daily allowance summary and expense-category budget rows | Add or edit a category budget; inspect remaining or overspent amounts |
 | Analytics | Period/type selectors, category donut, six-month comparison chart and ranked breakdown | Compare periods, change expense/income/investment view, open category history |
-| Settings | Account/cloud status, appearance, security, notifications, manual accounts, category management, exports, support and app information | Customize the app, manage records/accounts/categories, export and access account controls |
+| Settings | Account/cloud status, security, one notification switch, manual accounts, category management, exports and app information | Customize the app, manage records/accounts/categories, export and access account controls |
 
 Supporting routes include Transaction Entry, Scan Receipt, Category Detail, Categories, Account Form, Category Form, Budget Form, Login/Welcome and Account. Forms use a modal stack; category history and account details have separate stack routes. The floating quick-action control opens income, expense and receipt-scanning actions.
 
@@ -69,9 +73,9 @@ Financial changes save locally first; synchronization needs connectivity and cor
 
 ### Reminders and confirmations
 
-Native reminders are scheduled locally over a rolling 14-day horizon. The default time is 20:30 in the device's local timezone; the user can change it. Today's reminder is omitted when any transaction has already been recorded, and reopening/saving refreshes the schedule. Tapping a reminder opens a new expense form, with navigation readiness handled when the app is starting.
+Native reminders are scheduled locally over a rolling 14-day horizon. The default time is 20:30 in the device's local timezone. Settings provides one Notifications on/off switch and retains any previously saved reminder time and language. Today's reminder is omitted when any transaction has already been recorded, and reopening/saving refreshes the schedule. Tapping a reminder opens a new expense form, with navigation readiness handled when the app is starting.
 
-The message selector supports English, Hinglish and mixed choices. A test notification helps verify permission/delivery, and Android battery-settings guidance is available. Notification scheduling and delivery are controlled by the operating system, so actual delivery needs device testing. Save confirmations can be enabled or disabled separately.
+Older saved English, Hinglish or mixed message preferences are retained, but the detailed message, time and test-notification controls are no longer shown in Settings. Delivery is controlled by the operating system and needs device testing. In-app save feedback follows the existing stored confirmation preference.
 
 ### Reports and sharing
 
@@ -83,38 +87,38 @@ The export context includes category and account names, source/destination accou
 
 ### Layers, surfaces and depth
 
-The background uses existing light/dark spatial artwork and aurora/backdrop components. Rounded surfaces sit above it with tinted fills, subtle borders, gradients and edge highlights. The surface system distinguishes raised, panel, row and control levels.
+The dark-only background uses a deep blue gradient and aurora components with cyan/violet glows. Rounded surfaces sit above it with tinted fills, subtle borders, gradients and edge highlights. The surface system distinguishes raised, panel, row and control levels.
 
 - **Raised:** leading content such as the balance hero and important chart/work surfaces.
 - **Panel:** grouped sections and content cards.
 - **Row:** repeated ledger/category/budget surfaces, with restrained decoration.
 - **Control:** buttons, capsules, tabs and compact interactive controls.
 
-The 1.0.1 row treatment removes live row blur and shadows, and avoids row reflection sweeps and touch-following glow work. Important cards and navigation retain their depth. iOS and supported Android surfaces choose appropriate blur behavior; older/unsupported cases use tinted or opaque fills. The tab bar also uses a blurred copy of existing background imagery aligned with the screen.
+Rows avoid live blur and decorative touch-following effects; important cards and navigation retain their depth. Swipe actions are hidden when an Activity card is at rest. iOS and supported Android surfaces choose appropriate blur behavior; older/unsupported cases use tinted or opaque fills.
 
 This hierarchy is intended to make the balance/navigation feel prominent while keeping dense records readable. It does not imply measured GPU or battery savings.
 
 ### Typography, spacing and color
 
-The shared text components choose Manrope for display-sized text and large financial figures. Normal interface text uses native iOS styling and Inter on Android/web. Font weights are imported from individual font entry points rather than importing every available weight.
+The shared text components use system styling on iOS and Inter on Android/web. Font weights are imported from individual font entry points rather than importing every available weight.
 
 | Token family | Current scale |
 | --- | --- |
 | Spacing | 4, 8, 12, 16, 20, 24, 32 and 40 logical pixels |
-| Standard corner radii | 12, 16, 22 and 28; pills use fully rounded ends |
+| Standard corner radii | 12, 16, 22 and 30; pills use fully rounded ends |
 | Type sizes | 12, 13, 15, 17, 20, 24, 30, 36 and 48 |
-| Tab labels | 12 logical pixels in the updated bar |
-| Press scale | 0.97 for the shared press treatment |
-| Lift scale | 1.02 for the shared lifted treatment |
+| Tab labels | 10 logical pixels in the current bar |
+| Press scale | 0.96 for the shared press treatment |
+| Featured card press | 0.975 in the shared lift-feedback variant |
 
-| Meaning | Dark-theme color | Light-theme color |
-| --- | --- | --- |
-| Income / success | `#22A99A` | `#0C796D` |
-| Expense | `#E36B4A` | `#C04125` |
-| Transfer | `#5EA2F2` | `#1D6EBE` |
-| Investment | `#A68CF5` | `#7650D6` |
-| Warning | `#E8A93B` | `#975F0B` |
-| Danger | `#E5534B` | `#C63831` |
+| Meaning | Dark-theme color |
+| --- | --- |
+| Income / success | `#70E6CD` |
+| Expense | `#FFB3A3` |
+| Transfer | `#5EA2F2` |
+| Investment | `#A68CF5` |
+| Warning | `#E8A93B` |
+| Danger | `#FFADA8` |
 
 Categories also have customizable palette colors. Labels, amounts and state indicators complement color; color should not be the only way a financial state is understood. Full accessibility/contrast certification has not been established by the current automated tests.
 
@@ -161,4 +165,4 @@ See [SECURITY.md](../SECURITY.md), [the README platform table](../README.md#plat
 | Advertising | [`ads.ts`](../src/services/ads.ts), [`SettingsScreen.tsx`](../src/screens/SettingsScreen.tsx), [`App.tsx`](../App.tsx) |
 | Automated verification | [`tests/`](../tests), [`package.json`](../package.json) |
 
-For the difference between established app features and the changes introduced in 1.0.1, read [CHANGELOG.md](../CHANGELOG.md).
+For the Raahi 1.0.3 logo/startup changes and earlier updates, read [CHANGELOG.md](../CHANGELOG.md).
