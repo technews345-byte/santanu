@@ -1,3 +1,5 @@
+> **Historical:** This page describes Spendly 1.0.1. Spendly is now Raahi; see the [current Raahi overview](RAAHI.md) for the new logo, features and updates.
+
 # Spendly updates
 
 This changelog separates the current UI/responsiveness update from capabilities already present in the release baseline. A source version, successful test run and published APK are different states; check [Actions](https://github.com/technews345-byte/santanu/actions) and [Releases](https://github.com/technews345-byte/santanu/releases) for build availability.
