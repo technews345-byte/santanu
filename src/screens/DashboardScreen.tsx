@@ -12,6 +12,7 @@ import Svg, { Defs, RadialGradient, Rect, Stop } from 'react-native-svg';
 import { Screen } from '../components/Screen';
 import { Card } from '../components/Card';
 import { IconBadge } from '../components/IconBadge';
+import { CategoryGlyph, CategoryIcon } from '../components/CategoryIcon';
 import { AmountText } from '../components/AmountText';
 import { EmptyState } from '../components/EmptyState';
 import { QuickAddFab } from '../components/QuickAddFab';
@@ -195,9 +196,8 @@ export default function DashboardScreen() {
               contentStyle={styles.txnRow}
               onPress={() => navigation.navigate('TransactionEntry', { transactionId: item.id })}
             >
-              <IconBadge
-                icon={(cat?.icon as any) ?? (item.type === 'transfer' ? 'swap-horizontal' : 'help-outline')}
-                color={cat?.color ?? theme.transfer}
+              <CategoryIcon
+                icon={(cat?.icon as any) ?? (item.type === 'transfer' ? 'swap-horizontal-outline' : 'help-outline')}
                 size={42}
               />
               <View style={styles.txnMeta}>
@@ -697,7 +697,7 @@ function DashboardDetail({ detail, close, transactions, balance, visible }: {
       const ratio = row.budget!.amount > 0 ? row.spent / row.budget!.amount : 0;
       const color = ratio >= 1 ? theme.danger : ratio >= 0.85 ? theme.warning : theme.tint;
       return <Card key={row.category.id} level="row"><View style={{ flexDirection: 'row', gap: 16, alignItems: 'center' }}>
-        <ProgressRing progress={ratio} color={color} animate><Ionicons name={row.category.icon as any} size={22} color={color} /></ProgressRing>
+        <ProgressRing progress={ratio} color={color} animate><CategoryGlyph icon={row.category.icon as any} size={22} /></ProgressRing>
         <View style={{ flex: 1 }}><Text style={{ color: theme.text, fontSize: 15 }}>{row.category.name}</Text>
           <Text style={{ color: theme.textSecondary, fontSize: 12, marginTop: 6 }}>{formatMoney(row.spent)} of {formatMoney(row.budget!.amount)}</Text>
           <Text style={{ color, fontSize: 12, marginTop: 6 }}>{ratio >= 1 ? 'Budget reached' : `${Math.round(ratio * 100)}% used`}</Text>

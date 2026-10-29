@@ -6,7 +6,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Screen } from '../components/Screen';
 import { GlassButton } from '../components/glass/GlassButton';
-import { IconBadge } from '../components/IconBadge';
+import { CategoryIcon } from '../components/CategoryIcon';
 import { ColorPicker } from '../components/ColorPicker';
 import { IconPicker, EXPENSE_ICONS, INCOME_ICONS, INVESTMENT_ICONS } from '../components/IconPicker';
 import { useTheme } from '../theme/ThemeContext';
@@ -80,7 +80,7 @@ export default function CategoryFormScreen() {
 
       <ScrollView contentContainerStyle={styles.body}>
         <View style={styles.previewRow}>
-          <IconBadge icon={icon as any} color={color} size={64} />
+          <CategoryIcon icon={icon as any} ringColor={color} size={64} />
         </View>
 
         <Text style={[styles.label, { color: theme.textSecondary }]}>Name</Text>

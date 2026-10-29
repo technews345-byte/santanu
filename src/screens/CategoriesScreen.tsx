@@ -4,7 +4,7 @@ import { Text } from '../theme/type';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import { Screen } from '../components/Screen';
-import { IconBadge } from '../components/IconBadge';
+import { CategoryIcon } from '../components/CategoryIcon';
 import { GlassTabs } from '../components/glass/GlassTabs';
 import { GlassPressable } from '../components/glass/GlassPressable';
 import { EmptyState } from '../components/EmptyState';
@@ -67,7 +67,7 @@ export default function CategoriesScreen() {
             onPress={() => navigation.navigate('CategoryForm', { categoryId: item.id, type: item.type })}
             accessibilityLabel={`Edit ${item.name}`}
           >
-            <IconBadge icon={item.icon as any} color={item.color} size={38} />
+            <CategoryIcon icon={item.icon as any} size={38} />
             <Text style={[styles.name, { color: theme.text }]} numberOfLines={1}>
               {item.name}
             </Text>

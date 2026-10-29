@@ -1,6 +1,6 @@
 # Raahi: features, screens and UI
 
-This guide describes Raahi 1.0.3, formerly Spendly. It covers the implemented user experience and the code that supports it. Build and service configuration determine which native/cloud capabilities are available.
+This guide describes Raahi 1.0.4, formerly Spendly. It covers the implemented user experience and the code that supports it. Build and service configuration determine which native/cloud capabilities are available.
 
 ## Brand and startup
 
@@ -165,4 +165,4 @@ See [SECURITY.md](../SECURITY.md), [the README platform table](../README.md#plat
 | Advertising | [`ads.ts`](../src/services/ads.ts), [`SettingsScreen.tsx`](../src/screens/SettingsScreen.tsx), [`App.tsx`](../App.tsx) |
 | Automated verification | [`tests/`](../tests), [`package.json`](../package.json) |
 
-For the Raahi 1.0.3 logo/startup changes and earlier updates, read [CHANGELOG.md](../CHANGELOG.md).
+For the Raahi 1.0.4 category icons and earlier updates, read [CHANGELOG.md](../CHANGELOG.md).

@@ -8,6 +8,7 @@ import * as LocalAuthentication from 'expo-local-authentication';
 import { Screen } from '../components/Screen';
 import { Card } from '../components/Card';
 import { IconBadge } from '../components/IconBadge';
+import { CategoryIcon } from '../components/CategoryIcon';
 import { ReminderSettings } from '../components/ReminderSettings';
 import { useTheme } from '../theme/ThemeContext';
 import { fontSizes, spacing } from '../theme/tokens';
@@ -134,13 +135,7 @@ export default function SettingsScreen() {
             accessibilityRole="button"
             accessibilityLabel="Manage categories"
           >
-            <View style={styles.categoryStack}>
-              {activeCategories.slice(0, 3).map((c, i) => (
-                <View key={c.id} style={{ marginLeft: i === 0 ? 0 : -14, zIndex: 3 - i }}>
-                  <IconBadge icon={c.icon as any} color={c.color} size={36} />
-                </View>
-              ))}
-            </View>
+            <CategoryIcon icon="pricetags-outline" size={36} />
             <View style={{ flex: 1 }}>
               <Text style={[styles.rowLabel, { color: theme.text }]}>Manage categories</Text>
               <Text style={[styles.rowSub, { color: theme.textTertiary }]}>
@@ -222,7 +217,6 @@ const styles = StyleSheet.create({
   listRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.sm },
   listLabel: { flex: 1, fontSize: fontSizes.base, fontWeight: '600' },
   emptyText: { padding: spacing.md, fontSize: fontSizes.sm },
-  categoryStack: { flexDirection: 'row', alignItems: 'center' },
   exportRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.xs },
   exportLabel: { flex: 1, fontSize: fontSizes.base, fontWeight: '600' },
   divider: { height: StyleSheet.hairlineWidth, marginVertical: spacing.sm },

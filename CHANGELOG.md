@@ -2,6 +2,12 @@
 
 This changelog separates the current UI/responsiveness update from capabilities already present in the release baseline. A source version, successful test run and published APK are different states; check [Actions](https://github.com/technews345-byte/santanu/actions) and [Releases](https://github.com/technews345-byte/santanu/releases) for build availability.
 
+## 1.0.4 — Consistent category icons
+
+- Use the Budgets tab's clean outline category symbols across category lists, entry forms, activity and analytics.
+- Keep the actual progress rings and colors in Budgets; category displays without a budget use a neutral, static circle.
+- Keep saved category icons, colors, transactions, budgets and app identity unchanged.
+
 ## 1.0.3 — Launcher icon and startup
 
 - Add padding around the Android adaptive icon so the R remains visible inside launcher masks.

@@ -77,9 +77,28 @@ function environment() {
     './glass/Aurora': { ROOM: {dark: 1, light: 2} },
     './glass/GlassTabBar': { TAB_BAR_HEIGHT: 82 },
     '@expo/vector-icons/Ionicons': 'Icon',
+    '../components/CategoryIcon': { CategoryIcon: 'CategoryIcon', CategoryGlyph: 'CategoryGlyph' },
   };
   return { native, mocks, animations, values, setReduced: value => { reduced = value; } };
 }
+
+test('category icons display outline variants without changing saved icon names', async () => {
+  const env = environment();
+  const Glyph = props => React.createElement('Icon', props);
+  Glyph.glyphMap = { card: 1, 'card-outline': 2, 'cart-outline': 3, 'logo-bitcoin': 4, 'pricetag-outline': 5 };
+  const { categoryGlyphName, CategoryIcon } = loader({ ...env.mocks, '@expo/vector-icons/Ionicons': Glyph })('src/components/CategoryIcon.tsx');
+  assert.equal(categoryGlyphName('card'), 'card-outline');
+  assert.equal(categoryGlyphName('cart-outline'), 'cart-outline');
+  assert.equal(categoryGlyphName('logo-bitcoin'), 'logo-bitcoin');
+  assert.equal(categoryGlyphName('unknown'), 'pricetag-outline');
+  const category = { icon: 'card' };
+  let tree;
+  await act(async () => { tree = create(React.createElement(CategoryIcon, { icon: category.icon, size: 56 })); });
+  assert.equal(tree.root.findByType('Icon').props.name, 'card-outline');
+  assert.equal(category.icon, 'card');
+  assert.equal(tree.root.findAllByType('View')[1].props.style.borderRadius, 26);
+  await act(async () => tree.unmount());
+});
 
 test('transaction search matches category and note; category sorting leaves source order intact; unrelated store changes do not render the screen', async () => {
   const env = environment();

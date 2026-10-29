@@ -9,7 +9,7 @@ import { format } from 'date-fns/format';
 import { subMonths } from 'date-fns/subMonths';
 import { Screen } from '../components/Screen';
 import { Card } from '../components/Card';
-import { IconBadge } from '../components/IconBadge';
+import { CategoryIcon } from '../components/CategoryIcon';
 import { DonutChart, DonutSlice } from '../components/DonutChart';
 import { TrendChart } from '../components/TrendChart';
 import { EmptyState } from '../components/EmptyState';
@@ -166,7 +166,7 @@ export default function AnalyticsScreen() {
             contentStyle={styles.rankRow}
             onPress={() => navigation.navigate('CategoryDetail', { categoryId: item.categoryId })}
           >
-            <IconBadge icon={item.icon as any} color={item.color} />
+            <CategoryIcon icon={item.icon as any} />
             <View style={styles.rankMeta}>
               <Text style={[styles.rankName, { color: theme.text }]}>{item.name}</Text>
               {/* A bar under the name turns the share into something you can

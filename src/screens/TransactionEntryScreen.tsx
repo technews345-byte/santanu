@@ -10,6 +10,7 @@ import * as ImagePicker from 'expo-image-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Screen } from '../components/Screen';
 import { IconBadge } from '../components/IconBadge';
+import { CategoryIcon } from '../components/CategoryIcon';
 import { GlassPressable } from '../components/glass/GlassPressable';
 import { GlassSurface } from '../components/glass/GlassSurface';
 import { GlassTabs } from '../components/glass/GlassTabs';
@@ -307,6 +308,7 @@ export default function TransactionEntryScreen() {
 
           {type !== 'transfer' && (
             <MetaRow
+              isCategory
               icon={(selectedCategory?.icon as any) ?? 'pricetag-outline'}
               iconColor={selectedCategory?.color ?? theme.tint}
               label="Category"
@@ -416,7 +418,7 @@ export default function TransactionEntryScreen() {
                 setCategorySheetOpen(false);
               }}
             >
-              <IconBadge icon={c.icon as any} color={c.color} size={52} />
+              <CategoryIcon icon={c.icon as any} size={52} />
               <Text style={[styles.categoryLabel, { color: theme.text }]} numberOfLines={1}>
                 {c.name}
               </Text>
@@ -519,8 +521,10 @@ function MetaRow({
   label,
   value,
   onPress,
+  isCategory = false,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
+  isCategory?: boolean;
   iconColor: string;
   label: string;
   value: string;
@@ -535,7 +539,7 @@ function MetaRow({
       contentStyle={styles.metaRow}
       onPress={onPress}
     >
-      <IconBadge icon={icon} color={iconColor} size={36} />
+      {isCategory ? <CategoryIcon icon={icon} size={36} /> : <IconBadge icon={icon} color={iconColor} size={36} />}
       <Text style={[styles.metaLabel, { color: theme.textSecondary }]}>{label}</Text>
       <Text style={[styles.metaValue, { color: theme.text }]} numberOfLines={1}>
         {value}

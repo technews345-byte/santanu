@@ -7,7 +7,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { format } from 'date-fns/format';
 import { parseISO } from 'date-fns/parseISO';
 import { Screen } from '../components/Screen';
-import { IconBadge } from '../components/IconBadge';
+import { CategoryIcon } from '../components/CategoryIcon';
 import { AmountText } from '../components/AmountText';
 import { EmptyState } from '../components/EmptyState';
 import { useTheme } from '../theme/ThemeContext';
@@ -41,7 +41,7 @@ export default function CategoryDetailScreen() {
       </View>
 
       <View style={styles.summaryRow}>
-        <IconBadge icon={(category?.icon as any) ?? 'pricetag-outline'} color={category?.color ?? theme.tint} size={56} />
+        <CategoryIcon icon={(category?.icon as any) ?? 'pricetag-outline'} size={56} />
         <View style={{ marginLeft: spacing.md }}>
           <Figure value={total} format={(n) => formatMoney(n)} fit style={[styles.totalValue, { color: theme.text }]} />
           <Text style={[styles.totalLabel, { color: theme.textTertiary }]}>{items.length} transactions</Text>
