@@ -6,7 +6,7 @@
       "spendly",
       "com.santanu.spendly"
     ],
-    "version": "1.0.2",
+    "version": "1.0.3",
     "orientation": "portrait",
     "icon": "./assets/raahi-icon.png",
     "userInterfaceStyle": "dark",
@@ -19,13 +19,13 @@
         "NSPhotoLibraryUsageDescription": "Allow selecting receipt images to attach to transactions.",
         "NSFaceIDUsageDescription": "Use Face ID to unlock Raahi."
       },
-      "buildNumber": "3"
+      "buildNumber": "4"
     },
     "android": {
       "package": "com.santanu.spendly",
       "adaptiveIcon": {
         "backgroundColor": "#1703D5",
-        "foregroundImage": "./assets/raahi-icon.png"
+        "foregroundImage": "./assets/raahi-adaptive-icon.png"
       },
       "predictiveBackGestureEnabled": false,
       "permissions": [
@@ -41,7 +41,7 @@
         "android.permission.SYSTEM_ALERT_WINDOW",
         "android.permission.WRITE_EXTERNAL_STORAGE"
       ],
-      "versionCode": 3
+      "versionCode": 4
     },
     "web": {
       "favicon": "./assets/raahi-icon.png"

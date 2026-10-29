@@ -10,7 +10,7 @@ Records are saved in local SQLite. Optional Google sign-in and Cloud Firestore s
 
 | Project detail | Value |
 | --- | --- |
-| Version | 1.0.2; Android version code 3 |
+| Version | 1.0.3; Android version code 4 |
 | Android application ID | `com.santanu.spendly` |
 | Source platforms | Android, iOS and web, with different native capabilities |
 | Application stack | Expo SDK 57, React Native 0.86.3, React 19.2.3, TypeScript and Zustand |
