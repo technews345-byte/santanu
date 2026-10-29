@@ -6,7 +6,7 @@ This changelog separates the current UI/responsiveness update from capabilities 
 
 - Add padding around the Android adaptive icon so the R remains visible inside launcher masks.
 - Size and center the supplied splash artwork using the measured screen dimensions, with a gentle loading animation and reduced-motion support.
-- Avoid showing the biometric lock during initial loading when the lock is disabled; keep the real lock and its authentication behavior when enabled.
+- Keep the lock screen behind the splash until loading finishes; keep the real lock and its authentication behavior when enabled.
 - Allow a database-loading error to leave the splash and show the retry screen. App identity and data remain unchanged.
 
 ## 1.0.2 — Raahi rebrand and UI refinement
