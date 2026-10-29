@@ -283,6 +283,8 @@ test('startup hides a disabled lock, exposes loading errors, and relocks without
   await act(async () => renderer.update(React.createElement(App)));
   assert.equal(authCalls, 1); assert.equal(mounted, 1);
   await act(async () => { for (const listener of listeners) listener('background'); });
+  assert.ok(!renderer.root.findAllByType('Text').some(node => node.children.includes('Locked')));
+  await act(async () => renderer.root.findByType('BrandSplash').props.onFinish());
   assert.ok(renderer.root.findAllByType('Text').some(node => node.children.includes('Locked')));
   assert.equal(mounted, 1);
   await act(async () => { for (const listener of listeners) listener('active'); });

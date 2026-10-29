@@ -178,7 +178,7 @@ function AppContent() {
       {everUnlocked.current && (
         <View style={[styles.flex, !unlocked && { display: 'none' }]}><RootNavigator /></View>
       )}
-      {hydrated && biometricLockEnabled && !unlocked && (
+      {splashDone && hydrated && biometricLockEnabled && !unlocked && (
         <View style={[styles.center, { backgroundColor: theme.bg }]}>
           <Ionicons name="lock-closed-outline" size={44} color={theme.textSecondary} />
           <Text style={[styles.lockTitle, { color: theme.text }]}>Locked</Text>
