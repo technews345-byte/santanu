@@ -1,4 +1,4 @@
-name: Spendly UI APK
+name: Raahi APK
 
 on:
   workflow_dispatch:
@@ -13,7 +13,7 @@ permissions:
 # The release tag is shared, so an older run finishing late would publish a
 # stale APK over a newer one.
 concurrency:
-  group: spendly-ui-apk-${{ github.ref }}
+  group: raahi-apk-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -145,40 +145,47 @@ jobs:
         if: always()
         run: rm -f "$RUNNER_TEMP/release.keystore"
 
+      # Named from the version in app.json, so a version bump is all a new
+      # release needs.
       - name: Package APK and matching source
         run: |
+          VERSION=$(node -p "require('./app.json').expo.version")
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
           mkdir -p dist
-          cp android/app/build/outputs/apk/release/app-release.apk dist/Spendly-1.0.1.apk
-          git archive --format=zip --prefix=Spendly-source/ -o "$RUNNER_TEMP/spendly-source.zip" HEAD
+          cp android/app/build/outputs/apk/release/app-release.apk "dist/Raahi-$VERSION.apk"
+          git archive --format=zip --prefix=Raahi-source/ -o "$RUNNER_TEMP/raahi-source.zip" HEAD
           python3 - <<'PYCODE'
           import hashlib, os, pathlib, zipfile
+          version = os.environ['VERSION']
           out = pathlib.Path('dist')
-          apk = out / 'Spendly-1.0.1.apk'
+          apk = out / f'Raahi-{version}.apk'
           checksum = hashlib.sha256(apk.read_bytes()).hexdigest()
           (out / 'SHA256SUMS.txt').write_text(f'{checksum}  {apk.name}\n')
-          with zipfile.ZipFile(out / 'Spendly-1.0.1-APK-and-Source.zip', 'w', zipfile.ZIP_DEFLATED) as bundle:
-              with zipfile.ZipFile(pathlib.Path(os.environ['RUNNER_TEMP']) / 'spendly-source.zip') as source:
+          with zipfile.ZipFile(out / f'Raahi-{version}-APK-and-Source.zip', 'w', zipfile.ZIP_DEFLATED) as bundle:
+              with zipfile.ZipFile(pathlib.Path(os.environ['RUNNER_TEMP']) / 'raahi-source.zip') as source:
                   for item in source.infolist():
                       bundle.writestr(item, source.read(item.filename))
               bundle.write(apk, apk.name)
               bundle.write(out / 'SHA256SUMS.txt', 'SHA256SUMS.txt')
-              bundle.write('docs/UI-UPDATE-1.0.1.md', 'README.md')
+              bundle.write('docs/RELEASE-NOTES.md', 'README.md')
           PYCODE
 
       - name: Upload APK and source as workflow artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: spendly-1.0.1-apk-and-source
+          name: raahi-${{ env.VERSION }}-apk-and-source
           path: dist/*
           if-no-files-found: error
 
+      # One release per version: a later build of the same version replaces it.
       - name: Publish APK to a release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create spendly-ui-v1.0.1 \
-            dist/Spendly-1.0.1.apk dist/Spendly-1.0.1-APK-and-Source.zip dist/SHA256SUMS.txt \
-            --title "Spendly 1.0.1 — UI and responsiveness update" \
-            --notes "Spendly with updated glass UI, readable navigation labels, scrollable pickers, more responsive search, reduced-motion support and save feedback. Built from ${GITHUB_SHA}." \
-            --prerelease \
+          TAG="raahi-v$VERSION"
+          gh release delete "$TAG" --yes --cleanup-tag || true
+          gh release create "$TAG" \
+            "dist/Raahi-$VERSION.apk" "dist/Raahi-$VERSION-APK-and-Source.zip" dist/SHA256SUMS.txt \
+            --title "Raahi $VERSION" \
+            --notes-file docs/RELEASE-NOTES.md \
             --target "${GITHUB_SHA}"
