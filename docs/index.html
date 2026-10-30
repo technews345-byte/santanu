@@ -7,8 +7,8 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Spendly — Your Money, Simplified</title>
-<meta name="description" content="A private expense and budget tracker for Android. Your money data stays on your phone.">
+<title>Raahi — Track. Plan. Save. Live Better.</title>
+<meta name="description" content="Raahi (formerly Spendly): a private expense and budget tracker for Android. Your money data stays on your phone.">
 <style>
   :root {
     --bg: #eef3fc;
@@ -18,7 +18,7 @@
     --muted: #46536b;
     --tint: #3b5bff;
     --aurora-a: rgba(59,91,255,.20);
-    --aurora-b: rgba(34,184,240,.18);
+    --aurora-b: rgba(124,58,237,.16);
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
@@ -27,9 +27,9 @@
       --border: #24324f;
       --text: #f2f5fc;
       --muted: #9fb0cd;
-      --tint: #6e8bff;
+      --tint: #8aa0ff;
       --aurora-a: rgba(110,139,255,.16);
-      --aurora-b: rgba(34,184,240,.12);
+      --aurora-b: rgba(124,58,237,.14);
     }
   }
   * { box-sizing: border-box; }
@@ -49,19 +49,20 @@
   .brand { display: flex; align-items: center; gap: 12px; }
   .mark {
     width: 52px; height: 52px; border-radius: 16px; flex: none;
-    background: linear-gradient(135deg, #22b8f0, #3b5bff);
+    background: linear-gradient(135deg, #3b5bff, #7c3aed);
     display: grid; place-items: center;
     color: #fff; font-weight: 800; font-size: 26px;
     box-shadow: 0 8px 22px rgba(59,91,255,.32);
   }
   .brand h1 { font-size: 28px; margin: 0; }
+  .brand small { display: block; font-size: 14px; font-weight: 500; color: var(--muted); }
   .tagline { font-size: 21px; font-weight: 600; color: var(--muted); margin: 22px 0 0; }
   .tagline b { color: var(--tint); font-weight: 700; }
   .lede { margin-top: 12px; color: var(--muted); }
   .cta {
     display: inline-block; margin-top: 22px;
     padding: 13px 24px; border-radius: 999px;
-    background: linear-gradient(135deg, #3b5bff, #22b8f0);
+    background: linear-gradient(135deg, #3b5bff, #7c3aed);
     color: #fff; font-weight: 700; text-decoration: none;
     box-shadow: 0 8px 22px rgba(59,91,255,.32);
   }
@@ -75,7 +76,10 @@
     padding: 16px 18px;
   }
   .card h3 { margin: 0 0 4px; font-size: 16px; }
-  .card p { margin: 0; color: var(--muted); font-size: 15px; }
+  .card p, .card li { margin: 0; color: var(--muted); font-size: 15px; }
+  .card ul { margin: 6px 0 0; padding-left: 20px; }
+  .version { display: inline-block; font-size: 13px; font-weight: 700; color: var(--tint); margin-bottom: 2px; }
+  .stack { display: grid; gap: 12px; }
   a { color: var(--tint); }
   footer {
     margin-top: 56px; padding-top: 20px;
@@ -89,23 +93,81 @@
 
 <header>
   <div class="brand">
-    <span class="mark">S</span>
-    <h1>Spendly</h1>
+    <span class="mark">R</span>
+    <h1>Raahi <small>formerly Spendly</small></h1>
   </div>
-  <p class="tagline">Your Money, <b>Simplified</b></p>
+  <p class="tagline">Track. Plan. Save. <b>Live Better.</b></p>
   <p class="lede">
-    A personal expense and budget tracker for Android. Record what you spend, see where it goes,
-    and keep your finances in one place — with your data kept on your own phone.
+    A personal expense and budget tracker for Android. Record what you spend, plan category budgets,
+    and see where your money goes — with your data kept on your own phone.
   </p>
-  <a class="cta" href="https://github.com/technews345-byte/santanu/releases/download/android-apk/app-release.apk">Download for Android</a>
-  <p class="cta-note">Installs from an .apk — allow installation from unknown sources when prompted.</p>
+  <a class="cta" href="https://github.com/technews345-byte/santanu/releases/download/raahi-v1.0.4/Raahi-1.0.4.apk">Download Raahi 1.0.4</a>
+  <p class="cta-note">
+    Android .apk — allow installation from unknown sources when prompted.
+    <a href="https://github.com/technews345-byte/santanu/releases/tag/raahi-v1.0.4">Release notes</a>
+  </p>
 </header>
+
+<h2>What's new</h2>
+<div class="stack">
+  <div class="card">
+    <span class="version">1.0.4</span>
+    <h3>Consistent category icons</h3>
+    <ul>
+      <li>The Budgets tab's clean outline category symbols now appear everywhere: category lists, entry forms, activity and analytics.</li>
+      <li>Budget progress rings and colours stay as they were; categories without a budget show a calm neutral circle.</li>
+      <li>Your saved categories, icons, colours, transactions and budgets are unchanged.</li>
+    </ul>
+  </div>
+  <div class="card">
+    <span class="version">1.0.3</span>
+    <h3>Launcher icon and startup</h3>
+    <ul>
+      <li>The R logo sits fully inside rounded launcher icons.</li>
+      <li>A centred opening screen with a gentle loading animation, respecting Reduce Motion.</li>
+      <li>The lock screen stays hidden until loading finishes, and fingerprint/face unlock works as before.</li>
+    </ul>
+  </div>
+  <div class="card">
+    <span class="version">1.0.2</span>
+    <h3>Spendly is now Raahi</h3>
+    <ul>
+      <li>New name, R logo and splash artwork. Updating keeps all your data.</li>
+      <li>A full-edge blue background, simpler touch feedback with a light haptic, and cleaner Activity cards.</li>
+      <li>One switch for notifications; your reminder time and language are kept.</li>
+    </ul>
+  </div>
+</div>
+
+<h2>The look</h2>
+<div class="grid">
+  <div class="card">
+    <h3>Rounded glass</h3>
+    <p>An iOS-inspired interface of frosted glass panels over a deep blue background, in dark and light.</p>
+  </div>
+  <div class="card">
+    <h3>Floating tab bar</h3>
+    <p>Home, Activity, Budgets, Analytics and Settings in a floating glass capsule, with a soft spring on every tap.</p>
+  </div>
+  <div class="card">
+    <h3>Clear category symbols</h3>
+    <p>One family of outline icons across budgets, entries, activity and charts.</p>
+  </div>
+  <div class="card">
+    <h3>Calm motion</h3>
+    <p>Native-driven springs that stay smooth on the phone, and switch off when Reduce Motion is on.</p>
+  </div>
+</div>
 
 <h2>What it does</h2>
 <div class="grid">
   <div class="card">
     <h3>Track spending</h3>
     <p>Income, expenses, transfers and investments, with categories, accounts and receipt photos.</p>
+  </div>
+  <div class="card">
+    <h3>Scan receipts</h3>
+    <p>Photograph or pick a receipt; the amount, date and shop are read on the phone itself.</p>
   </div>
   <div class="card">
     <h3>Set budgets</h3>
@@ -120,12 +182,8 @@
     <p>Export a formatted PDF report or an Excel sheet whenever you need one.</p>
   </div>
   <div class="card">
-    <h3>Private by default</h3>
-    <p>Everything lives on your phone. Sign in only if you want a backup that survives losing it.</p>
-  </div>
-  <div class="card">
-    <h3>Lock it</h3>
-    <p>Fingerprint or face unlock, handled by Android itself.</p>
+    <h3>Private and locked</h3>
+    <p>Everything lives on your phone, with fingerprint or face unlock. Sign in with Google only if you want a cloud backup.</p>
   </div>
 </div>
 
@@ -138,7 +196,7 @@
 
 <footer>
   Developed by Santanu Bordoloi · <a href="./privacy.html">Privacy Policy</a> ·
-  <a href="https://github.com/technews345-byte/santanu">Source on GitHub</a><br>
+  <a href="https://github.com/technews345-byte/santanu/tree/claude/expense-budget-app-vdww3s">Source on GitHub</a><br>
   © 2026 Santanu Bordoloi. All rights reserved.
 </footer>
 
