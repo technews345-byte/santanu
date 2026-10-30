@@ -266,7 +266,7 @@ test('startup hides a disabled lock, exposes loading errors, and relocks without
     './src/navigation/RootNavigator': { RootNavigator: Root }, './src/components/BrandSplash': { BrandSplash: 'BrandSplash' },
     './src/store/useStore': { useStore }, './src/store/useReminderStore': { useReminderStore },
     './src/store/useAuthStore': { useAuthStore: selector => selector({ init: () => {}, ready: true }) },
-    './src/services/ads': { initAds() {}, preloadAppOpenAd() {}, showAppOpenAd() {}, holdAppOpenAds: () => () => {} },
+    './src/services/ads': { initAds() {}, preloadInterstitial() {} },
     './src/services/reminders': { configureNotifications() {}, remindersSupported: false },
     './src/components/Toast': { ToastHost: 'Toast' }, './src/theme/tokens': { fontSizes: {}, radius: {}, spacing: {} },
   });

@@ -15,7 +15,7 @@ import { RootNavigator } from './src/navigation/RootNavigator';
 import { BrandSplash } from './src/components/BrandSplash';
 import { useStore } from './src/store/useStore';
 import { useAuthStore } from './src/store/useAuthStore';
-import { holdAppOpenAds, initAds, preloadAppOpenAd, showAppOpenAd } from './src/services/ads';
+import { initAds, preloadInterstitial } from './src/services/ads';
 import { configureNotifications, ensurePermission, remindersSupported, rescheduleReminders } from './src/services/reminders';
 import { useReminderStore } from './src/store/useReminderStore';
 import { showToast, ToastHost } from './src/components/Toast';
@@ -49,9 +49,8 @@ function AppContent() {
     // awaited: nothing on screen depends on it, and it no-ops where ads are
     // unsupported.
     initAds();
-    // Started at once so the launch ad below has as little to wait for as
-    // possible.
-    preloadAppOpenAd();
+    // Loaded early so one is ready at the first natural break.
+    preloadInterstitial();
     useReminderStore.getState().load();
     configureNotifications();
   }, []);
@@ -82,7 +81,6 @@ function AppContent() {
   const authenticate = useCallback(async () => {
     if (authenticating.current) return;
     authenticating.current = true;
-    const releaseAds = holdAppOpenAds();
     try {
       const result = await LocalAuthentication.authenticateAsync({
         promptMessage: 'Unlock Raahi',
@@ -94,7 +92,6 @@ function AppContent() {
       setUnlocked(false);
     } finally {
       authenticating.current = false;
-      releaseAds();
     }
   }, []);
 
@@ -104,23 +101,13 @@ function AppContent() {
     if (biometricLockEnabled) void authenticate();
   }, [hydrated, hydrationError, biometricLockEnabled, authenticate]);
 
-  useEffect(() => {
-    if (!biometricLockEnabled || unlocked) return;
-    return holdAppOpenAds();
-  }, [biometricLockEnabled, unlocked]);
-
-  // An ad on every open: once the app is actually usable after launch, and
-  // again each time it is brought back. The service holds the only limits —
-  // one ad at a time, and a short pause after one is dismissed, since
-  // returning from an ad looks exactly like reopening the app.
-  const launchAdShown = useRef(false);
+  // Once the app is usable on the very first launch, ask once whether Raahi
+  // may send its daily reminder (on by default).
+  const reminderOffered = useRef(false);
 
   useEffect(() => {
-    if (!unlocked || !splashDone || launchAdShown.current || !reminders.loaded) return;
-    launchAdShown.current = true;
-    // The very first launch asks once whether Spendly may send its daily
-    // reminder (on by default), and shows no ad: a permission prompt and an
-    // ad fighting for the screen on someone's first minute is no welcome.
+    if (!unlocked || !splashDone || reminderOffered.current || !reminders.loaded) return;
+    reminderOffered.current = true;
     const r = useReminderStore.getState();
     if (remindersSupported && r.enabled && !r.offered) {
       setTimeout(async () => {
@@ -131,11 +118,7 @@ function AppContent() {
           showToast(`Daily reminder on · ${time} ⏰`);
         }
       }, 700);
-      return;
     }
-    // Behind the splash the app has already loaded, so this covers the ad
-    // rather than standing in front of an empty screen.
-    showAppOpenAd();
   }, [unlocked, splashDone, reminders.loaded]);
 
   useEffect(() => {
@@ -148,17 +131,12 @@ function AppContent() {
       }
       if (next !== 'active') return;
       if (previous === 'background') void hydrate();
-      if (biometricLockEnabled && (previous === 'background' || !unlocked)) {
-        void authenticate();
-        return;
-      }
-      if (!unlocked || !splashDone) return;
-      showAppOpenAd();
+      if (biometricLockEnabled && (previous === 'background' || !unlocked)) void authenticate();
     };
 
     const subscription = AppState.addEventListener('change', onChange);
     return () => subscription.remove();
-  }, [unlocked, splashDone, biometricLockEnabled, authenticate]);
+  }, [unlocked, biometricLockEnabled, authenticate]);
 
   const handleSplashShown = useCallback(() => {
     SplashScreen.hideAsync().catch(() => {});

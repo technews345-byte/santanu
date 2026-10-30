@@ -5,7 +5,6 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import { Screen } from '../components/Screen';
 import { GlassPressable } from '../components/glass/GlassPressable';
-import { holdAppOpenAds } from '../services/ads';
 import { useTheme } from '../theme/ThemeContext';
 import { fontSizes, radius, spacing } from '../theme/tokens';
 import { useAuthStore } from '../store/useAuthStore';
@@ -16,11 +15,6 @@ import { useGoogleSignIn } from '../services/oauth';
 const RAAHI_MARK = require('../../assets/raahi-icon.png');
 
 export default function LoginScreen() {
-  // No ad may land on top of signing in: the flow deliberately leaves the
-  // app — for the SMS, for a security check — and each return would
-  // otherwise read as the app being reopened.
-  useEffect(() => holdAppOpenAds(), []);
-
   const { theme } = useTheme();
   const navigation = useNavigation<any>();
   const continueAsGuest = useAuthStore((s) => s.continueAsGuest);

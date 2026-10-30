@@ -8,7 +8,6 @@ import { subDays } from 'date-fns/subDays';
 import { Category, Transaction } from '../types';
 import { ReminderSettings } from '../store/useReminderStore';
 import { reminderFor, reminderPool, SpendingFocus } from '../utils/messages';
-import { holdAppOpenAds } from './ads';
 
 /**
  * The evening reminder, scheduled on the phone itself: no server, no account,
@@ -81,15 +80,8 @@ export async function ensurePermission(): Promise<boolean> {
   const current = await Notifications.getPermissionsAsync();
   if (current.granted) return true;
   if (!current.canAskAgain) return false;
-  // Android's permission dialog briefly sends the app to the background;
-  // coming back from it must not count as reopening the app and bring an ad.
-  const release = holdAppOpenAds();
-  try {
-    const asked = await Notifications.requestPermissionsAsync();
-    return asked.granted;
-  } finally {
-    setTimeout(release, 2000);
-  }
+  const asked = await Notifications.requestPermissionsAsync();
+  return asked.granted;
 }
 
 /** Which kinds of spending this person actually does, from the last weeks. */

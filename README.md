@@ -77,7 +77,7 @@ Repeat transactions daily, weekly, monthly or yearly. Due entries are generated 
 | Appearance | Dark blue theme only |
 | Biometric lock | Supported device authentication, with re-locking when the app backgrounds |
 | Google account | Optional sign-in, sync status, pending changes, last sync time, retry, export, sign out and account deletion |
-| Advertising | Native app-open ads remain implemented |
+| Advertising | A banner at the end of Home, and an interstitial after saving a transaction (at most once every 3 minutes) |
 
 Notifications need permission and depend on OS scheduling. Cloud, ads and native features depend on build configuration, network or hardware as appropriate. See the [feature guide](docs/FEATURES-AND-UI.md) for detailed workflows and limits.
 

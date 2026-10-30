@@ -21,7 +21,7 @@ import { FlowChart } from '../components/FlowChart';
 import { ProgressBar } from '../components/ProgressBar';
 import { BottomSheetModal } from '../components/BottomSheetModal';
 import { GlassPressable } from '../components/glass/GlassPressable';
-import { GlassSurface } from '../components/glass/GlassSurface';
+import { AdBanner } from '../components/AdBanner';
 import { Rise } from '../components/glass/Rise';
 import { GlassTabs } from '../components/glass/GlassTabs';
 import { useTheme } from '../theme/ThemeContext';
@@ -213,6 +213,7 @@ export default function DashboardScreen() {
             </GlassPressable>
           );
         }}
+        ListFooterComponent={<AdBanner />}
         ListEmptyComponent={<EmptyState icon="receipt-outline" title="No transactions yet" subtitle="Tap + to add your first transaction" />}
       />
 
@@ -388,7 +389,6 @@ function SummaryFigure({ label, value, color, visible }: { label: string; value:
  */
 function SpendingBento({ transactions }: { transactions: Transaction[] }) {
   const { theme } = useTheme();
-  const navigation = useNavigation<any>();
   const { categories, budgets } = useStore(useShallow((s) => ({ categories: s.categories, budgets: s.budgets })));
 
   const now = new Date();
@@ -754,11 +754,6 @@ function ProfileChip() {
       )}
     </Pressable>
   );
-}
-
-/** Their name as they wrote it, or failing that the address they signed in with. */
-function greetingName(user: { displayName: string | null; email: string | null } | null): string | null {
-  return user?.displayName?.trim() || user?.email?.trim() || null;
 }
 
 function initial(user: { displayName: string | null; email: string | null }): string {

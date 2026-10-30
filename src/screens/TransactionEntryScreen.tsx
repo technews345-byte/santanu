@@ -29,6 +29,7 @@ import { format } from 'date-fns/format';
 import { showToast } from '../components/Toast';
 import { useReminderStore } from '../store/useReminderStore';
 import { savedMessage } from '../utils/messages';
+import { showInterstitialAtBreak } from '../services/ads';
 
 const TYPE_CONFIG: Record<TransactionType, { label: string; title: string; color: (theme: any) => string }> = {
   expense: { label: 'Expense', title: 'Expense', color: (t) => t.expense },
@@ -187,6 +188,8 @@ export default function TransactionEntryScreen() {
       }
       if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       navigation.goBack();
+      // A save is a natural break; the ad service decides whether one is due.
+      setTimeout(showInterstitialAtBreak, 600);
 
       const reminders = useReminderStore.getState();
       if (reminders.confirmations) {
