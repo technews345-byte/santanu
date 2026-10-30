@@ -10,13 +10,18 @@ Raahi, formerly called **Spendly**, helps you record your money, plan category b
 
 | At a glance | Details |
 | --- | --- |
-| Current app source | Raahi **1.0.3**, Android version code **4** |
+| Current version | Raahi **1.0.4**, Android version code **5** |
+| Download | [Raahi-1.0.4.apk](https://github.com/technews345-byte/santanu/releases/download/raahi-v1.0.4/Raahi-1.0.4.apk) · [release notes](https://github.com/technews345-byte/santanu/releases/tag/raahi-v1.0.4) |
 | Currency | Indian Rupees (₹), with Indian number formatting |
 | Platforms | React Native / Expo source for Android, iOS and web; native capabilities vary |
 | Primary data | Accounts, transactions, categories and budgets in local SQLite |
 | Optional account | Google sign-in and Firestore sync in a correctly configured build |
 | App developer | Santanu Bordoloi |
 | App source | [Raahi app branch](https://github.com/technews345-byte/santanu/tree/claude/expense-budget-app-vdww3s) |
+
+## Download
+
+**[Download Raahi 1.0.4 for Android](https://github.com/technews345-byte/santanu/releases/download/raahi-v1.0.4/Raahi-1.0.4.apk)** — open it on your phone and allow installation from unknown sources when asked. The [release page](https://github.com/technews345-byte/santanu/releases/tag/raahi-v1.0.4) also has the APK together with the full source, and a SHA-256 checksum. Installing over Spendly or an earlier Raahi keeps your data, provided both builds are signed with the same key.
 
 ## The Raahi name and logo
 
@@ -71,9 +76,15 @@ The ledger is local-first, but biometric locking is an app-access control: the d
 
 ## Look and interaction
 
-Raahi uses a **dark-only** blue gradient with cyan and violet glows, rounded frosted-style cards, soft borders and a floating five-tab dock. The balance card and primary controls carry the strongest glass treatment; activity rows are simpler for readability. SF/system fonts are used on iOS, with Inter on Android and web. Native-driven springs, press feedback and supported haptics provide a responsive feel. Reduce Motion is supported by the updated navigation and loading screen. Actual appearance, performance and haptics depend on the device.
+Raahi uses a **dark-only** blue gradient with cyan and violet glows, rounded frosted-style cards, soft borders and a floating five-tab dock. Category symbols share one clean outline style across Budgets, entry forms, Activity and Analytics. The balance card and primary controls carry the strongest glass treatment; activity rows are simpler for readability. SF/system fonts are used on iOS, with Inter on Android and web. Native-driven springs, press feedback and supported haptics provide a responsive feel. Reduce Motion is supported by the updated navigation and loading screen. Actual appearance, performance and haptics depend on the device.
 
 ## Latest updates
+
+### 1.0.4 — Consistent category icons
+
+- The Budgets tab's clean outline category symbols now appear across category lists, entry forms, Activity and Analytics.
+- Budget progress rings and colors are unchanged; categories without a budget show a neutral circle.
+- Saved categories, icons, colors, transactions and budgets are kept as they are.
 
 ### 1.0.3 — Logo and opening screen
 

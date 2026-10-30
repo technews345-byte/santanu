@@ -1,7 +1,7 @@
 <table>
   <tr>
     <td><img src="https://raw.githubusercontent.com/technews345-byte/santanu/f1f4f4b9849a564c98a5b585921d42df43b8fe8a/assets/raahi-icon.png" width="96" alt="Raahi R logo"></td>
-    <td><strong>Raahi</strong> (formerly Spendly)<br>Track. Plan. Save. Live Better.<br><a href="RAAHI.md">App features, logo and latest updates</a> &middot; <a href="https://github.com/technews345-byte/santanu/tree/claude/expense-budget-app-vdww3s">Raahi source</a> &middot; <a href="https://github.com/technews345-byte/santanu/actions">Builds</a></td>
+    <td><strong>Raahi 1.0.4</strong> (formerly Spendly)<br>Track. Plan. Save. Live Better.<br><a href="https://github.com/technews345-byte/santanu/releases/download/raahi-v1.0.4/Raahi-1.0.4.apk"><strong>Download Raahi 1.0.4</strong></a> &middot; <a href="RAAHI.md#latest-updates">What's new</a> &middot; <a href="RAAHI.md">App features, logo and UI</a> &middot; <a href="https://github.com/technews345-byte/santanu/tree/claude/expense-budget-app-vdww3s">Raahi source</a> &middot; <a href="https://github.com/technews345-byte/santanu/actions">Builds</a></td>
   </tr>
 </table>
 
