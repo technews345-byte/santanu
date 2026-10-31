@@ -57,7 +57,8 @@ object Library {
             name = "Shri Hanuman Chalisa",
             audio = R.raw.hanuman_chalisa,
             art = R.drawable.hanuman,
-            description = "শ্ৰী হনুমান চালিশা · Shankar Mahadevan",
+            description = "শ্ৰী হনুমান চালিশা · श्री हनुमान चालीसा",
+            lines = HANUMAN_CHALISA,
         ),
         BuiltIn(
             id = "krishna-mantra",

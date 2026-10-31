@@ -21,6 +21,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -75,6 +76,24 @@ class AppBehaviourTest {
     @Test fun `built-in audio is found by its current resource even when the saved reference is stale`() {
         val stale = Mantra(id = "hanuman-chalisa", name = "Hanuman Chalisa", file = "android.resource://${app.packageName}/123")
         assertEquals("android.resource://${app.packageName}/${R.raw.hanuman_chalisa}", Library.uri(app, stale).toString())
+    }
+
+    @Test fun `hanuman chalisa has every verse in assamese and hindi, timed in order within the recording`() {
+        val lines = Library.builtIn("hanuman-chalisa")!!.lines
+        assertEquals(43, lines.size) // 2 opening dohas, 40 chaupais, 1 closing doha
+        assertEquals(lines.map { it.startMs }.sorted(), lines.map { it.startMs })
+        assertTrue(lines.last().startMs < 257_000) // the recording is 4:17
+        val devanagari = Regex("[\\u0900-\\u0963\\u0966-\\u097F]")
+        val bengali = Regex("[\\u0980-\\u09FF]")
+        lines.forEach {
+            assertFalse("Assamese line has Devanagari: ${it.text}", devanagari.containsMatchIn(it.text))
+            assertTrue(bengali.containsMatchIn(it.text))
+            assertTrue("Hindi line is Devanagari: ${it.translit}", devanagari.containsMatchIn(it.translit))
+            assertFalse(bengali.containsMatchIn(it.translit))
+        }
+        // Verse numbers run 1..40 in both scripts.
+        assertTrue(lines[2].text.endsWith("॥১॥") && lines[2].translit.endsWith("॥१॥"))
+        assertTrue(lines[41].text.endsWith("॥৪০॥") && lines[41].translit.endsWith("॥४०॥"))
     }
 
     @Test fun `the next session is armed as an exact alarm clock at its time`() {

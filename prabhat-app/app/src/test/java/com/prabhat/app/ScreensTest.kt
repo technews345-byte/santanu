@@ -81,6 +81,14 @@ class ScreensTest {
         compose.onAllNodesWithText("Sunrise and sunset times are for Jorhat, Assam.").onFirst().assertExists()
     }
 
+    @Test fun `the hanuman chalisa page shows its verses in assamese and hindi`() {
+        launch()
+        compose.onNodeWithText("Mantras").performClick()
+        compose.onNodeWithText("Shri Hanuman Chalisa").performClick()
+        compose.onNodeWithText("জয় হনুমান জ্ঞান গুন সাগৰ।\nজয় কপীস তিহুঁ লোক উজাগৰ॥১॥").assertExists()
+        compose.onNodeWithText("जय हनुमान ज्ञान गुन सागर।\nजय कपीस तिहुँ लोक उजागर॥१॥").assertExists()
+    }
+
     @Test fun `first launch starts with setup`() {
         Store.update { it.copy(onboarded = false) }
         launch()

@@ -132,8 +132,13 @@ fun LyricLineView(line: LyricLine, highlighted: Boolean = false, modifier: Modif
             line.text, fontFamily = LyricFont, fontSize = 22.sp, lineHeight = 32.sp, textAlign = TextAlign.Center,
             color = if (highlighted) p.gold else p.text,
         )
-        Text(line.translit, fontFamily = LyricFont, fontStyle = FontStyle.Italic, fontSize = 16.sp, textAlign = TextAlign.Center)
-        Text(line.meaning, style = MaterialTheme.typography.bodySmall, color = p.muted, textAlign = TextAlign.Center)
+        // Latin transliteration in italics; a second script (e.g. Hindi under Assamese) stays upright.
+        val latin = line.translit.firstOrNull { it.isLetter() }?.let { it.code < 0x250 } ?: true
+        Text(
+            line.translit, fontFamily = LyricFont, fontStyle = if (latin) FontStyle.Italic else FontStyle.Normal,
+            fontSize = if (latin) 16.sp else 18.sp, lineHeight = 28.sp, textAlign = TextAlign.Center,
+        )
+        if (line.meaning.isNotBlank()) Text(line.meaning, style = MaterialTheme.typography.bodySmall, color = p.muted, textAlign = TextAlign.Center)
     }
 }
 

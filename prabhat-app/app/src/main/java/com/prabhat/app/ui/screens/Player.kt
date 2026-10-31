@@ -230,7 +230,7 @@ private fun SyncedLyrics(lines: List<LyricLine>, active: Boolean, player: Player
     GlassCard(Modifier.fillMaxWidth(), padding = PaddingValues(vertical = 6.dp)) {
         LazyColumn(
             state = list,
-            modifier = Modifier.fillMaxWidth().height(220.dp),
+            modifier = Modifier.fillMaxWidth().height(280.dp),
             contentPadding = PaddingValues(horizontal = 18.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
