@@ -4,6 +4,8 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.net.Uri
 import android.os.Build
+import android.os.VibrationEffect
+import android.os.Vibrator
 import androidx.annotation.OptIn
 import androidx.core.app.ServiceCompat
 import androidx.media3.common.AudioAttributes
@@ -18,6 +20,7 @@ import androidx.media3.session.DefaultMediaNotificationProvider
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import com.prabhat.app.R
+import com.prabhat.app.data.Ambience
 import com.prabhat.app.data.Library
 import com.prabhat.app.data.Mantra
 import com.prabhat.app.data.ResumePoint
@@ -55,6 +58,9 @@ class PlaybackService : MediaSessionService() {
     private var sleepAtEnd = false
     /** The current session's own repeat count (from its schedule), or null to follow the setting. */
     private var repeatOverride: Int? = null
+    /** True while the bells or birds intro plays before the mantra. */
+    private var introActive = false
+    private val vibrator by lazy { getSystemService(Vibrator::class.java) }
     private var fadeJob: Job? = null
     private var sleepJob: Job? = null
 
@@ -129,6 +135,7 @@ class PlaybackService : MediaSessionService() {
             }
             is PlaybackHub.Command.Sleep -> setSleep(cmd.minutes)
             PlaybackHub.Command.Stop -> {
+                introActive = false
                 clearSleep()
                 fadeJob?.cancel()
                 player.stop()
@@ -146,6 +153,18 @@ class PlaybackService : MediaSessionService() {
             .setUri(Library.uri(this, m))
             .setMediaMetadata(
                 MediaMetadata.Builder().setTitle(m.name).setArtist(getString(R.string.app_name)).setArtworkUri(art).build()
+            )
+            .build()
+    }
+
+    private fun introItem(ambience: Ambience, before: Mantra): MediaItem {
+        val (audio, title) = if (ambience == Ambience.BELLS) R.raw.intro_bells to "Temple bells" else R.raw.intro_birds to "Morning birds"
+        return MediaItem.Builder()
+            .setMediaId(INTRO_ID)
+            .setUri(Uri.parse("android.resource://$packageName/$audio"))
+            .setMediaMetadata(
+                MediaMetadata.Builder().setTitle(title).setArtist(before.name)
+                    .setArtworkUri(Uri.parse("android.resource://$packageName/${Library.artRes(before)}")).build()
             )
             .build()
     }
@@ -169,7 +188,14 @@ class PlaybackService : MediaSessionService() {
         repeatOverride = repeat
         plan = RepeatPlan(repeat ?: s.repeat, point?.played ?: 0)
         clearSleep()
-        player.setMediaItems(playable.map(::mediaItem), index, point?.positionMs ?: 0L)
+        val items = playable.map(::mediaItem)
+        // Morning sessions can open with temple bells or birdsong, placed just before the mantra so it follows on its own.
+        introActive = s.ambience != Ambience.NONE && kind != SessionKind.MANUAL && point == null
+        if (introActive) {
+            player.setMediaItems(items.take(index) + introItem(s.ambience, playable[index]) + items.drop(index), index, 0L)
+        } else {
+            player.setMediaItems(items, index, point?.positionMs ?: 0L)
+        }
         applyRepeat()
         fadeJob?.cancel()
         player.volume = if (fade && s.fadeInSeconds > 0) 0f else s.volume
@@ -183,6 +209,12 @@ class PlaybackService : MediaSessionService() {
     /** Loop the current mantra, except on the final play of the session (or before an end-of-mantra sleep). */
     private fun applyRepeat() {
         if (!::player.isInitialized) return
+        if (introActive) { // the intro plays once and runs straight into the mantra
+            player.repeatMode = Player.REPEAT_MODE_OFF
+            player.pauseAtEndOfMediaItems = false
+            publishSession()
+            return
+        }
         val last = plan.isFinalPlay || sleepAtEnd
         player.repeatMode = if (last) Player.REPEAT_MODE_OFF else Player.REPEAT_MODE_ONE
         player.pauseAtEndOfMediaItems = last
@@ -190,7 +222,9 @@ class PlaybackService : MediaSessionService() {
     }
 
     private fun publishSession() {
-        PlaybackHub.session.value = if (player.mediaItemCount > 0) SessionInfo(kind, plan.label()) else null
+        PlaybackHub.session.value = if (player.mediaItemCount > 0) {
+            SessionInfo(kind, if (introActive) "Opening with ${player.currentMediaItem?.mediaMetadata?.title}" else plan.label(), plan.played, plan.target, introActive)
+        } else null
     }
 
     private fun fadeIn(seconds: Int) {
@@ -241,6 +275,7 @@ class PlaybackService : MediaSessionService() {
     /** The last play reached its end (or the end-of-mantra sleep timer fired). */
     private fun onFinished() {
         val completed = plan.isFinalPlay
+        if (completed) buzz(strong = true)
         if (sleepAtEnd) clearSleep()
         if (completed && kind != SessionKind.MANUAL) {
             Store.update { it.copy(lastCompletedAt = System.currentTimeMillis()) }
@@ -257,15 +292,30 @@ class PlaybackService : MediaSessionService() {
         Scheduler.reschedule(this)
     }
 
+    /** A short tap as each japa completes, a firmer one when the count is done. */
+    private fun buzz(strong: Boolean) {
+        val v = vibrator ?: return
+        if (!Store.value.haptics || !v.hasVibrator()) return
+        v.vibrate(
+            if (Build.VERSION.SDK_INT >= 29) VibrationEffect.createPredefined(if (strong) VibrationEffect.EFFECT_HEAVY_CLICK else VibrationEffect.EFFECT_CLICK)
+            else VibrationEffect.createOneShot(if (strong) 60 else 25, VibrationEffect.DEFAULT_AMPLITUDE)
+        )
+    }
+
     private fun saveResume() {
-        val id = player.currentMediaItem?.mediaId ?: return
+        val id = player.currentMediaItem?.mediaId?.takeIf { it != INTRO_ID } ?: return
         Store.update { it.copy(resume = ResumePoint(id, player.currentPosition, plan.played)) }
     }
 
     private val listener = object : Player.Listener {
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+            if (introActive && mediaItem?.mediaId != INTRO_ID) {
+                // The intro is done: take it out of the queue so Previous never goes back to it.
+                introActive = false
+                (0 until player.mediaItemCount).firstOrNull { player.getMediaItemAt(it).mediaId == INTRO_ID }?.let(player::removeMediaItem)
+            }
             when (reason) {
-                Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT -> plan.onLoop()
+                Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT -> { plan.onLoop(); buzz(strong = false) }
                 Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED -> Unit
                 else -> plan.reset() // the user moved to another mantra
             }
@@ -317,6 +367,7 @@ class PlaybackService : MediaSessionService() {
         const val ACTION_SCHEDULED = "com.prabhat.app.PLAY_SCHEDULED"
         const val EXTRA_MANTRA = "mantra"
         const val EXTRA_REPEAT = "repeat"
+        const val INTRO_ID = "intro"
         private const val FADE_OUT_MS = 8_000L
     }
 }

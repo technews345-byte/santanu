@@ -28,7 +28,7 @@ class PrabhatApp : Application() {
         // Re-arm alarms whenever anything that affects the schedule changes, and once at every start.
         Scheduler.reschedule(this)
         scope.launch {
-            Store.state.map { listOf(it.scheduleOn, it.schedules, it.notifyReminder, it.reminderLeadMinutes) }
+            Store.state.map { listOf(it.scheduleOn, it.schedules, it.place, it.notifyReminder, it.reminderLeadMinutes) }
                 .distinctUntilChanged().drop(1)
                 .collect { Scheduler.reschedule(this@PrabhatApp) }
         }

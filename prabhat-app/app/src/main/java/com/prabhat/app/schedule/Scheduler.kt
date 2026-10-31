@@ -26,7 +26,7 @@ object Scheduler {
 
     fun next(now: ZonedDateTime = ZonedDateTime.now()): Occurrence? {
         val s = Store.value
-        return if (s.scheduleOn) ScheduleMath.next(s.schedules, now) else null
+        return if (s.scheduleOn) ScheduleMath.next(s.schedules, now, s.place) else null
     }
 
     fun canScheduleExact(c: Context): Boolean =

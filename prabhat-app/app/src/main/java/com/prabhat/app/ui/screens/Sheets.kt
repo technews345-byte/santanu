@@ -37,6 +37,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.prabhat.app.data.AppState
+import java.time.ZoneId
+import java.time.LocalDate
+import androidx.compose.ui.text.font.FontStyle
+import com.prabhat.app.ui.theme.LyricFont
+import com.prabhat.app.domain.ScheduleMath
+import com.prabhat.app.data.LyricLine
+import com.prabhat.app.data.Library
+import com.prabhat.app.data.Anchor
 import com.prabhat.app.data.Mantra
 import com.prabhat.app.data.ScheduleRule
 import com.prabhat.app.data.Store
@@ -98,27 +106,38 @@ fun SleepSheet(player: PlayerConnection, onDismiss: () -> Unit) {
 }
 
 /** True when a mantra has words to show. */
-fun hasText(m: Mantra) = m.lyrics.isNotBlank()
+fun hasText(m: Mantra) = m.lyrics.isNotBlank() || Library.lines(m).isNotEmpty()
 
-/** The words of the mantra, large and centred. */
+/** Built-in mantras show each line with transliteration and meaning; own mantras show their words. */
 @Composable
-fun LyricsSheet(mantra: Mantra, onDismiss: () -> Unit) {
-    Sheet(mantra.name, null, onDismiss) {
-        Column(Modifier.verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally) {
-            Lyrics(mantra)
-        }
+fun Lyrics(mantra: Mantra) {
+    val lines = Library.lines(mantra)
+    if (lines.isNotEmpty()) {
+        Column(verticalArrangement = Arrangement.spacedBy(18.dp)) { lines.forEach { LyricLineView(it) } }
+    } else {
+        Text(
+            mantra.lyrics,
+            fontFamily = LyricFont, fontSize = 21.sp, lineHeight = 34.sp,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }
 
 @Composable
-fun Lyrics(mantra: Mantra) {
-    Text(
-        mantra.lyrics,
-        style = MaterialTheme.typography.titleLarge.copy(lineHeight = 38.sp),
-        textAlign = TextAlign.Center,
-        modifier = Modifier.fillMaxWidth(),
-    )
+fun LyricLineView(line: LyricLine, highlighted: Boolean = false, modifier: Modifier = Modifier) {
+    val p = LocalPalette.current
+    Column(modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            line.text, fontFamily = LyricFont, fontSize = 22.sp, lineHeight = 32.sp, textAlign = TextAlign.Center,
+            color = if (highlighted) p.gold else p.text,
+        )
+        Text(line.translit, fontFamily = LyricFont, fontStyle = FontStyle.Italic, fontSize = 16.sp, textAlign = TextAlign.Center)
+        Text(line.meaning, style = MaterialTheme.typography.bodySmall, color = p.muted, textAlign = TextAlign.Center)
+    }
 }
+
+private val OFFSETS = listOf(-30, -15, 0, 15, 30)
 
 val DAY_PRESETS = listOf(
     "Every day" to ScheduleRule.ALL_DAYS,
@@ -151,12 +170,28 @@ fun ScheduleEditor(state: AppState, rule: ScheduleRule?, presetMantra: String? =
     var days by remember { mutableStateOf(base.days) }
     var mantraId by remember { mutableStateOf(base.mantraId) }
     var repeat by remember { mutableStateOf(base.repeat) }
+    var anchor by remember { mutableStateOf(base.anchor) }
+    var offset by remember { mutableStateOf(base.offsetMinutes) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (rule == null) "New morning time" else "Change time") },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                TimePicker(state = time)
+                OptionChips(Anchor.entries, anchor, { a ->
+                    when (a) { Anchor.TIME -> "Clock time"; Anchor.SUNRISE -> "Sunrise"; Anchor.SUNSET -> "Sunset" }
+                }) { anchor = it }
+                if (anchor == Anchor.TIME) {
+                    TimePicker(state = time)
+                } else {
+                    OptionChips(OFFSETS, offset, { o -> ScheduleMath.label(ScheduleRule(id = "", anchor = anchor, offsetMinutes = o)) }) { offset = it }
+                    val today = LocalDate.now()
+                    val at = ScheduleMath.timeOn(ScheduleRule(id = "", anchor = anchor, offsetMinutes = offset), today, ZoneId.systemDefault(), state.place)
+                    Text(
+                        at?.let { "Today: ${Format.time(it.toLocalTime())}" + (state.place?.name?.let { n -> " in $n" } ?: "") }
+                            ?: "Sunrise and sunset times need a place.",
+                        style = MaterialTheme.typography.bodyMedium, color = LocalPalette.current.gold,
+                    )
+                }
                 Text("Days", style = MaterialTheme.typography.titleSmall)
                 DayPicker(days) { days = it }
                 if (state.mantras.size > 1) {
@@ -177,7 +212,10 @@ fun ScheduleEditor(state: AppState, rule: ScheduleRule?, presetMantra: String? =
         },
         confirmButton = {
             TextButton(enabled = days.isNotEmpty(), onClick = {
-                val saved = base.copy(hour = time.hour, minute = time.minute, days = days, mantraId = mantraId, repeat = repeat, enabled = true)
+                val saved = base.copy(
+                    hour = time.hour, minute = time.minute, anchor = anchor, offsetMinutes = if (anchor == Anchor.TIME) 0 else offset,
+                    days = days, mantraId = mantraId, repeat = repeat, enabled = true,
+                )
                 Store.update { s ->
                     val exists = s.schedules.any { it.id == saved.id }
                     s.copy(

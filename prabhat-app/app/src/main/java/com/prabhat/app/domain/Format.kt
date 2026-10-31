@@ -26,7 +26,11 @@ object Format {
         else -> "$count times"
     }
 
-    fun fade(seconds: Int): String = if (seconds == 0) "Off" else "$seconds seconds"
+    fun fade(seconds: Int): String = when {
+        seconds == 0 -> "Off"
+        seconds % 60 == 0 -> if (seconds == 60) "1 minute" else "${seconds / 60} minutes"
+        else -> "$seconds seconds"
+    }
 
     /** Greeting for the hour of the day. */
     fun greeting(hour: Int): Pair<String, String> = when (hour) {

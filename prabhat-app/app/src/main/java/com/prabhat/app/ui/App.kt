@@ -56,6 +56,8 @@ import com.prabhat.app.data.AppState
 import com.prabhat.app.data.Mantra
 import com.prabhat.app.data.Store
 import com.prabhat.app.domain.ScheduleMath
+import com.prabhat.app.domain.Sun
+import com.prabhat.app.ui.components.rememberNow
 import com.prabhat.app.playback.PlaybackHub
 import com.prabhat.app.playback.PlayerConnection
 import com.prabhat.app.playback.SessionKind
@@ -66,6 +68,7 @@ import com.prabhat.app.ui.screens.HomeScreen
 import com.prabhat.app.ui.screens.LibraryScreen
 import com.prabhat.app.ui.screens.MantraScreen
 import com.prabhat.app.ui.screens.OnboardingScreen
+import com.prabhat.app.ui.screens.PlayerScreen
 import com.prabhat.app.ui.screens.ScheduleScreen
 import com.prabhat.app.ui.screens.SettingsScreen
 import com.prabhat.app.ui.theme.LocalPalette
@@ -75,7 +78,7 @@ import java.time.ZonedDateTime
 
 /** The next schedule (or the first one), which Home's Play and "Play now" follow. */
 fun morningRule(s: AppState, now: ZonedDateTime = ZonedDateTime.now()) =
-    ScheduleMath.next(s.schedules, now)?.rule ?: s.schedules.firstOrNull()
+    ScheduleMath.next(s.schedules, now, s.place)?.rule ?: s.schedules.firstOrNull()
 
 /** The mantra the morning session will play: the next schedule's choice, or the default. */
 fun morningMantra(s: AppState, now: ZonedDateTime = ZonedDateTime.now()): Mantra? = s.mantraFor(morningRule(s, now))
@@ -86,6 +89,7 @@ object Routes {
     const val SCHEDULE = "schedule"
     const val SETTINGS = "settings"
     const val MANTRA = "mantra/{id}"
+    const val PLAYER = "player"
     fun mantra(id: String) = "mantra/$id"
 }
 
@@ -109,7 +113,12 @@ fun AppRoot(player: PlayerConnection, playNow: StateFlow<Boolean>, onPlayNowHand
         }
     }
 
-    PrabhatTheme(state.theme) {
+    // Time-of-day theme: the sunrise palette from sunrise to sunset at the chosen place (6:00–18:00 without one).
+    val now by rememberNow(60_000)
+    val sun = state.place?.let { Sun.times(now.toLocalDate(), it, now.zone) }
+    val daytime = sun?.let { (rise, set) -> !now.isBefore(rise) && now.isBefore(set) } ?: (now.hour in 6..17)
+
+    PrabhatTheme(state.theme, daytime) {
         SunriseBackground {
             if (!state.onboarded) OnboardingScreen(state, player) else Shell(state, player)
         }
@@ -133,12 +142,12 @@ private fun Shell(state: AppState, player: PlayerConnection) {
         contentColor = p.text,
         snackbarHost = { SnackbarHost(snack) },
         bottomBar = {
-            Column {
+            if (route != Routes.PLAYER) Column {
                 AnimatedVisibility(
                     visible = route != Routes.HOME,
                     enter = slideInVertically { it } + fadeIn(), exit = slideOutVertically { it } + fadeOut(),
-                ) { MiniPlayer(state, player) { nav.tab(Routes.HOME) } }
-                NavigationBar(containerColor = if (p.dark) Color(0xEE0B1029) else Color(0xF2FFFAF3), tonalElevation = 0.dp) {
+                ) { MiniPlayer(state, player) { nav.navigate(Routes.PLAYER) } }
+                NavigationBar(containerColor = if (p.dark) Color(0xEE1A1B2F) else Color(0xF2FFFDF9), tonalElevation = 0.dp) {
                     val colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = p.gold, selectedTextColor = p.gold, indicatorColor = p.gold.copy(alpha = 0.14f),
                         unselectedIconColor = p.muted, unselectedTextColor = p.muted,
@@ -168,6 +177,7 @@ private fun Shell(state: AppState, player: PlayerConnection) {
                 arguments = listOf(navArgument("mantra") { type = NavType.StringType; nullable = true; defaultValue = null }),
             ) { ScheduleScreen(state, pad, it.arguments?.getString("mantra")) }
             composable(Routes.SETTINGS) { SettingsScreen(state, pad, nav) }
+            composable(Routes.PLAYER) { PlayerScreen(state, player, nav) }
             composable(Routes.MANTRA, arguments = listOf(navArgument("id") { type = NavType.StringType })) {
                 MantraScreen(state, player, pad, nav, it.arguments?.getString("id").orEmpty())
             }

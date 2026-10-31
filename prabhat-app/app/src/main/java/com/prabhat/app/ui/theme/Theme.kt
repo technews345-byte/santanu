@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalTextApi::class)
+
 package com.prabhat.app.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -11,13 +13,17 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import com.prabhat.app.R
 import com.prabhat.app.data.ThemeMode
 
-/** Colours beyond Material's scheme: the sunrise background, frosted glass and the golden glow. */
+/** Colours beyond Material's scheme: the sky background, frosted glass and the warm glow. */
 @Immutable
 data class Palette(
     val dark: Boolean,
@@ -28,95 +34,115 @@ data class Palette(
     /** Bottom of the glass gradient. */
     val glassLow: Color,
     val glassBorder: Color,
+    /** Accent for text, icons and controls (readable on the background). */
     val gold: Color,
+    /** Bright accent for glows, gradients and the mandala. */
     val glow: Color,
     val text: Color,
     val muted: Color,
     val particle: Color,
 )
 
-private val LightPalette = Palette(
+/** Morning: saffron and marigold over warm ivory. */
+private val Sunrise = Palette(
     dark = false,
-    skyTop = Color(0xFFFCE3CB),
-    skyMid = Color(0xFFFBEFE2),
-    skyBottom = Color(0xFFFBF6EE),
-    glass = Color(0xCCFFFFFF),
-    glassLow = Color(0x99FFFDF9),
-    glassBorder = Color(0xE6FFFFFF),
-    gold = Color(0xFFB8862E),
-    glow = Color(0xFFF2B55E),
-    text = Color(0xFF2B2230),
-    muted = Color(0xFF7D7075),
-    particle = Color(0xFFE9B872),
+    skyTop = Color(0xFFFFD9A8),
+    skyMid = Color(0xFFFFEBD2),
+    skyBottom = Color(0xFFFFFDF9),
+    glass = Color(0xD9FFFFFF),
+    glassLow = Color(0xA6FFFDF9),
+    glassBorder = Color(0xF2FFFFFF),
+    gold = Color(0xFFB85C00),       // deep saffron: 5:1 contrast on ivory
+    glow = Color(0xFFFF9933),       // saffron
+    text = Color(0xFF2B1D12),
+    muted = Color(0xFF7A6656),
+    particle = Color(0xFFFFB74D),   // marigold
 )
 
-private val DarkPalette = Palette(
+/** Evening: deep indigo with muted gold. */
+private val Twilight = Palette(
     dark = true,
-    skyTop = Color(0xFF1B2350),
-    skyMid = Color(0xFF0F1533),
-    skyBottom = Color(0xFF080C1F),
+    skyTop = Color(0xFF2C2D4E),
+    skyMid = Color(0xFF1F2038),
+    skyBottom = Color(0xFF1A1B2F),
     glass = Color(0x1AFFFFFF),
     glassLow = Color(0x0DFFFFFF),
     glassBorder = Color(0x26FFFFFF),
-    gold = Color(0xFFE8C27A),
-    glow = Color(0xFFE8B566),
-    text = Color(0xFFF6F1E7),
-    muted = Color(0xFFA9AAC2),
-    particle = Color(0xFFF3D9A4),
+    gold = Color(0xFFD4AF37),
+    glow = Color(0xFFD4AF37),
+    text = Color(0xFFF3EFE6),
+    muted = Color(0xFFA6A8C4),
+    particle = Color(0xFFE9D38A),
 )
 
-val LocalPalette = staticCompositionLocalOf { LightPalette }
+val LocalPalette = staticCompositionLocalOf { Sunrise }
 
-private val Serif = FontFamily.Serif
+private fun jakarta(weight: Int) =
+    Font(R.font.jakarta, FontWeight(weight), variationSettings = FontVariation.Settings(FontVariation.weight(weight)))
+
+/** Plus Jakarta Sans for the interface. */
+private val Sans = FontFamily(jakarta(400), jakarta(500), jakarta(600), jakarta(700))
+
+/** Tiro Bangla, a traditional serif, for mantra words and transliteration (other scripts fall back to the system font). */
+val LyricFont = FontFamily(Font(R.font.tiro_bangla))
 
 private val AppTypography = Typography().let { t ->
+    fun TextStyle.ui(weight: FontWeight? = null) = copy(fontFamily = Sans, fontWeight = weight ?: fontWeight)
     t.copy(
-        displaySmall = t.displaySmall.copy(fontFamily = Serif, fontWeight = FontWeight.Medium),
-        headlineLarge = t.headlineLarge.copy(fontFamily = Serif, fontWeight = FontWeight.Medium),
-        headlineMedium = t.headlineMedium.copy(fontFamily = Serif, fontWeight = FontWeight.Medium),
-        headlineSmall = t.headlineSmall.copy(fontFamily = Serif, fontWeight = FontWeight.Medium),
-        titleLarge = t.titleLarge.copy(fontFamily = Serif, fontWeight = FontWeight.Medium),
-        titleMedium = t.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-        labelLarge = t.labelLarge.copy(fontWeight = FontWeight.SemiBold, letterSpacing = 0.3.sp),
+        displaySmall = t.displaySmall.ui(FontWeight.SemiBold),
+        headlineLarge = t.headlineLarge.ui(FontWeight.SemiBold),
+        headlineMedium = t.headlineMedium.ui(FontWeight.SemiBold),
+        headlineSmall = t.headlineSmall.ui(FontWeight.SemiBold),
+        titleLarge = t.titleLarge.ui(FontWeight.SemiBold),
+        titleMedium = t.titleMedium.ui(FontWeight.SemiBold),
+        titleSmall = t.titleSmall.ui(FontWeight.SemiBold),
+        bodyLarge = t.bodyLarge.ui(),
+        bodyMedium = t.bodyMedium.ui(),
+        bodySmall = t.bodySmall.ui(),
+        labelLarge = t.labelLarge.ui(FontWeight.SemiBold).copy(letterSpacing = 0.3.sp),
+        labelMedium = t.labelMedium.ui(FontWeight.Medium),
+        labelSmall = t.labelSmall.ui(FontWeight.Medium),
     )
 }
 
-val Eyebrow = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.6.sp)
+val Eyebrow = TextStyle(fontFamily = Sans, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.6.sp)
 
+/** [daytime] drives [ThemeMode.AUTO]: the sunrise palette by day, twilight from sunset. */
 @Composable
-fun PrabhatTheme(mode: ThemeMode, content: @Composable () -> Unit) {
+fun PrabhatTheme(mode: ThemeMode, daytime: Boolean, content: @Composable () -> Unit) {
     val dark = when (mode) {
+        ThemeMode.AUTO -> !daytime
         ThemeMode.SYSTEM -> isSystemInDarkTheme()
         ThemeMode.LIGHT -> false
         ThemeMode.DARK -> true
     }
-    val p = if (dark) DarkPalette else LightPalette
+    val p = if (dark) Twilight else Sunrise
     val scheme = if (dark) {
         darkColorScheme(
-            primary = p.gold, onPrimary = Color(0xFF241A06),
-            secondary = Color(0xFFB7B9E6), onSecondary = Color(0xFF151A3C),
+            primary = p.gold, onPrimary = Color(0xFF1A1B2F),
+            secondary = Color(0xFFB9BBE0), onSecondary = Color(0xFF1A1B2F),
             background = p.skyBottom, onBackground = p.text,
-            surface = Color(0xFF12183A), onSurface = p.text,
-            surfaceVariant = Color(0xFF1C2350), onSurfaceVariant = p.muted,
-            surfaceContainerHigh = Color(0xFF161D44), surfaceContainer = Color(0xFF12183A), surfaceContainerHighest = Color(0xFF232A57),
-            primaryContainer = Color(0xFF4A3B17), onPrimaryContainer = p.gold,
-            secondaryContainer = Color(0xFF3A3220), onSecondaryContainer = p.gold,
-            tertiaryContainer = Color(0xFF3A3220), onTertiaryContainer = p.gold,
+            surface = Color(0xFF23243B), onSurface = p.text,
+            surfaceVariant = Color(0xFF2C2D4E), onSurfaceVariant = p.muted,
+            surfaceContainerHigh = Color(0xFF27283F), surfaceContainer = Color(0xFF23243B), surfaceContainerHighest = Color(0xFF30314F),
+            primaryContainer = Color(0xFF4A4126), onPrimaryContainer = p.gold,
+            secondaryContainer = Color(0xFF3B3726), onSecondaryContainer = p.gold,
+            tertiaryContainer = Color(0xFF3B3726), onTertiaryContainer = p.gold,
             outline = Color(0x33FFFFFF), outlineVariant = Color(0x1FFFFFFF),
             error = Color(0xFFFFB4A8),
         )
     } else {
         lightColorScheme(
             primary = p.gold, onPrimary = Color.White,
-            secondary = Color(0xFF8C6D5B), onSecondary = Color.White,
+            secondary = Color(0xFF8C5A3C), onSecondary = Color.White,
             background = p.skyBottom, onBackground = p.text,
-            surface = Color(0xFFFFFBF5), onSurface = p.text,
-            surfaceVariant = Color(0xFFF4E9DC), onSurfaceVariant = p.muted,
-            surfaceContainerHigh = Color(0xFFFBF1E6), surfaceContainer = Color(0xFFFFF8F0), surfaceContainerHighest = Color(0xFFF1E6D8),
-            primaryContainer = Color(0xFFF6E2B8), onPrimaryContainer = p.text,
-            secondaryContainer = Color(0xFFF3E3C4), onSecondaryContainer = p.text,
-            tertiaryContainer = Color(0xFFF3E3C4), onTertiaryContainer = p.text,
-            outline = Color(0x332B2230), outlineVariant = Color(0x1A2B2230),
+            surface = Color(0xFFFFFDF9), onSurface = p.text,
+            surfaceVariant = Color(0xFFFFF0DC), onSurfaceVariant = p.muted,
+            surfaceContainerHigh = Color(0xFFFFF4E6), surfaceContainer = Color(0xFFFFF9F0), surfaceContainerHighest = Color(0xFFFCE9D2),
+            primaryContainer = Color(0xFFFFE0B8), onPrimaryContainer = p.text,
+            secondaryContainer = Color(0xFFFFE6C2), onSecondaryContainer = p.text,
+            tertiaryContainer = Color(0xFFFFE6C2), onTertiaryContainer = p.text,
+            outline = Color(0x332B1D12), outlineVariant = Color(0x1A2B1D12),
             error = Color(0xFFB3261E),
         )
     }

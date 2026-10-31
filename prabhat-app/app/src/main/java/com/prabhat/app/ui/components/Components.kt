@@ -9,6 +9,10 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -201,23 +205,29 @@ fun MantraArt(mantra: Mantra?, size: Dp, playing: Boolean = false, glow: Boolean
 @Composable
 fun BigPlayButton(playing: Boolean, size: Dp = 76.dp, onClick: () -> Unit) {
     val p = LocalPalette.current
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val scale by animateFloatAsState(if (pressed) 0.9f else 1f, spring(dampingRatio = 0.45f, stiffness = 600f), label = "press")
     Surface(
         onClick = onClick,
         shape = CircleShape,
         color = Color.Transparent,
         shadowElevation = 6.dp,
-        modifier = Modifier.size(size),
+        interactionSource = interaction,
+        modifier = Modifier.size(size).graphicsLayer { scaleX = scale; scaleY = scale },
     ) {
         Box(
-            Modifier.fillMaxSize().background(Brush.linearGradient(listOf(p.glow, p.gold))),
+            Modifier.fillMaxSize().background(Brush.linearGradient(listOf(p.particle, p.glow, p.gold))),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(
-                if (playing) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                contentDescription = if (playing) "Pause" else "Play",
-                tint = Color.White,
-                modifier = Modifier.size(size * 0.48f),
-            )
+            Crossfade(playing, animationSpec = tween(180), label = "playIcon") { isPlaying ->
+                Icon(
+                    if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                    contentDescription = if (isPlaying) "Pause" else "Play",
+                    tint = Color.White,
+                    modifier = Modifier.size(size * 0.48f),
+                )
+            }
         }
     }
 }

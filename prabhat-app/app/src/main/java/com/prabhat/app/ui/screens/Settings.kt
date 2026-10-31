@@ -33,10 +33,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.prabhat.app.BuildConfig
+import com.prabhat.app.data.Ambience
 import com.prabhat.app.data.AppState
 import com.prabhat.app.data.Store
 import com.prabhat.app.data.ThemeMode
 import com.prabhat.app.domain.Format
+import com.prabhat.app.domain.ScheduleMath
 import com.prabhat.app.ui.BackgroundChecklist
 import com.prabhat.app.ui.Routes
 import com.prabhat.app.ui.SystemAccess
@@ -65,12 +67,12 @@ fun SettingsScreen(state: AppState, pad: PaddingValues, nav: NavHostController) 
         Section("Morning session") {
             ActionRow(
                 Icons.Rounded.AccessTime, if (state.schedules.size > 1) "Morning playback times" else "Morning playback time",
-                state.schedules.sortedBy { it.hour * 60 + it.minute }
-                    .joinToString(" · ") { Format.time(it.hour, it.minute) }
+                state.schedules.sortedBy { ScheduleMath.minuteOfDay(it, state.place) }
+                    .joinToString(" · ") { ScheduleMath.label(it) }
                     .ifEmpty { "Not set" },
             ) { nav.tab(Routes.SCHEDULE) }
             ActionRow(Icons.Rounded.Star, "Default mantra", state.defaultMantra?.name ?: "None") { pickDefault = true }
-            Label("Repeat count")
+            Label("Japa count (repetitions)")
             OptionChips(AppState.REPEAT_OPTIONS, state.repeat, Format::repeat) { r -> Store.update { it.copy(repeat = r) } }
             Label("Volume · ${(state.volume * 100).toInt()}%")
             Slider(
@@ -79,6 +81,12 @@ fun SettingsScreen(state: AppState, pad: PaddingValues, nav: NavHostController) 
             )
             Label("Gentle fade-in")
             OptionChips(AppState.FADE_OPTIONS, state.fadeInSeconds, Format::fade) { f -> Store.update { it.copy(fadeInSeconds = f) } }
+            Label("Before the mantra")
+            OptionChips(Ambience.entries, state.ambience, {
+                when (it) { Ambience.NONE -> "Nothing"; Ambience.BELLS -> "Temple bells"; Ambience.BIRDS -> "Morning birds" }
+            }) { a -> Store.update { it.copy(ambience = a) } }
+            ToggleRow("Vibrate on each japa", "A gentle tap as each repetition completes", state.haptics) { on -> Store.update { it.copy(haptics = on) } }
+            state.place?.let { Text("Sunrise and sunset times are for ${it.name}.", style = MaterialTheme.typography.bodySmall, color = p.muted) }
         }
 
         Section("Notifications") {
@@ -94,7 +102,7 @@ fun SettingsScreen(state: AppState, pad: PaddingValues, nav: NavHostController) 
 
         Section("Appearance") {
             OptionChips(ThemeMode.entries, state.theme, {
-                when (it) { ThemeMode.SYSTEM -> "System"; ThemeMode.LIGHT -> "Light"; ThemeMode.DARK -> "Dark" }
+                when (it) { ThemeMode.AUTO -> "Sunrise & twilight"; ThemeMode.SYSTEM -> "System"; ThemeMode.LIGHT -> "Light"; ThemeMode.DARK -> "Dark" }
             }) { t -> Store.update { it.copy(theme = t) } }
         }
 

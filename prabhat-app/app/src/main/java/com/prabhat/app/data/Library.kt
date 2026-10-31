@@ -15,6 +15,9 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.UUID
 
+/** One line of a mantra: where it starts in the audio, its original script, transliteration and meaning. */
+class LyricLine(val startMs: Long, val text: String, val translit: String, val meaning: String)
+
 /** A mantra shipped inside the app: its audio in res/raw and its picture in res/drawable-nodpi. */
 class BuiltIn(
     val id: String,
@@ -23,7 +26,8 @@ class BuiltIn(
     /** Shown whole (never cropped) on every screen and in the playback notification. */
     @DrawableRes val art: Int,
     val description: String,
-    val lyrics: String = "",
+    /** Timed lines, highlighted in sync with the audio (each repetition starts again from the first line). */
+    val lines: List<LyricLine> = emptyList(),
 )
 
 /**
@@ -32,6 +36,7 @@ class BuiltIn(
  */
 object Library {
     const val BUNDLED_ID = "bundled"
+    private const val THEME_AUTO = "theme:auto"
 
     val BUILT_INS = listOf(
         BuiltIn(
@@ -40,16 +45,12 @@ object Library {
             audio = R.raw.default_mantra,
             art = R.drawable.lakshmi,
             description = "Listen three times every morning.",
-            lyrics = """
-                ৰাতিপুৱা ৩ বাৰকৈ শুনক
-
-                ওম মহালক্ষ্মী নম নমঃ
-                ওম বিষ্ণুপ্রিয়ায় নম নমঃ
-                ওম ধনপ্রদায়ে নম নমঃ
-                ওম বিশ্বজনমে নম নমঃ
-
-                🙏 ॐ 🙏
-            """.trimIndent(),
+            lines = listOf(
+                LyricLine(0, "ওম মহালক্ষ্মী নম নমঃ", "Om Mahālakṣmī Namo Namaḥ", "Salutations to Mahalakshmi, the great goddess of fortune."),
+                LyricLine(4_100, "ওম বিষ্ণুপ্রিয়ায় নম নমঃ", "Om Viṣṇupriyāya Namo Namaḥ", "Salutations to the beloved of Lord Vishnu."),
+                LyricLine(7_600, "ওম ধনপ্রদায়ে নম নমঃ", "Om Dhanapradāye Namo Namaḥ", "Salutations to her who bestows wealth."),
+                LyricLine(11_100, "ওম বিশ্বজনমে নম নমঃ", "Om Viśvajaname Namo Namaḥ", "Salutations to the mother of the whole world."),
+            ),
         ),
         BuiltIn(
             id = "hanuman-chalisa",
@@ -64,15 +65,17 @@ object Library {
             audio = R.raw.krishna_mantra,
             art = R.drawable.krishna,
             description = "Krishna mantra for peace, freedom from troubles and devotion.",
-            lyrics = """
-                কৃষ্ণায় বাসুদেৱায় হৰয়ে পৰমাত্মনে ।
-                প্ৰণতক্লেশনাশায় গোবিন্দায় নমো নমঃ ॥
-
-                कृष्णाय वासुदेवाय हरये परमात्मने ।
-                प्रणतक्लेशनाशाय गोविन्दाय नमो नमः ॥
-            """.trimIndent(),
+            lines = listOf(
+                LyricLine(0, "কৃষ্ণায় বাসুদেৱায়", "Kṛṣṇāya Vāsudevāya", "To Krishna, son of Vasudeva,"),
+                LyricLine(4_900, "হৰয়ে পৰমাত্মনে ।", "Haraye Paramātmane", "to Hari, the Supreme Soul;"),
+                LyricLine(8_900, "প্ৰণতক্লেশনাশায়", "Praṇata-kleśa-nāśāya", "who ends the sorrows of all who bow to Him,"),
+                LyricLine(12_900, "গোবিন্দায় নমো নমঃ ॥", "Govindāya Namo Namaḥ", "to Govinda, salutations again and again."),
+            ),
         ),
     )
+
+    /** Timed lines for a mantra, or empty (own mantras have plain words only). */
+    fun lines(m: Mantra?): List<LyricLine> = builtIn(m?.id)?.lines.orEmpty()
 
     fun builtIn(id: String?): BuiltIn? = BUILT_INS.firstOrNull { it.id == id }
 
@@ -83,8 +86,11 @@ object Library {
     private fun audioDir(c: Context) = File(c.filesDir, "audio").apply { mkdirs() }
     private fun coverDir(c: Context) = File(c.filesDir, "covers").apply { mkdirs() }
 
-    fun uri(c: Context, m: Mantra): Uri =
-        if (m.file.startsWith(ContentResolver.SCHEME_ANDROID_RESOURCE)) Uri.parse(m.file) else Uri.fromFile(File(m.file))
+    /** Built-in audio is looked up by its current resource, never a stored id (resource ids change between versions). */
+    fun uri(c: Context, m: Mantra): Uri = builtIn(m.id)?.let { resourceUri(c, it.audio) }
+        ?: if (m.file.startsWith(ContentResolver.SCHEME_ANDROID_RESOURCE)) Uri.parse(m.file) else Uri.fromFile(File(m.file))
+
+    private fun resourceUri(c: Context, @RawRes id: Int) = Uri.parse("${ContentResolver.SCHEME_ANDROID_RESOURCE}://${c.packageName}/$id")
 
     fun isAvailable(m: Mantra): Boolean =
         m.file.startsWith(ContentResolver.SCHEME_ANDROID_RESOURCE) || File(m.file).let { it.isFile && it.length() > 0 }
@@ -99,7 +105,14 @@ object Library {
         val missing = BUILT_INS.filter { it.id !in done }
         // Default schedules that shipped after the user installed, added once (deleting them is respected).
         val newSchedules = AppState.DEFAULT_EXTRA_SCHEDULES.filter { "schedule:" + it.id !in done }
-        if (missing.isEmpty() && newSchedules.isEmpty()) return@withContext
+        // Built-ins already in the library pick up new audio (and its duration) shipped with an update.
+        val updated = Store.value.mantras.mapNotNull { m -> builtIn(m.id)?.let { b -> toMantra(c, b) }?.takeIf { it.file != m.file || it.durationMs != m.durationMs } }
+        if (updated.isNotEmpty()) {
+            Store.update { s -> s.copy(mantras = s.mantras.map { m -> updated.firstOrNull { it.id == m.id }?.let { m.copy(file = it.file, durationMs = it.durationMs) } ?: m }) }
+        }
+        // One-time switch of existing installs to the sunrise/twilight theme introduced with it.
+        val autoTheme = THEME_AUTO !in done
+        if (missing.isEmpty() && newSchedules.isEmpty() && !autoTheme) return@withContext
         val added = missing.map { toMantra(c, it) }
         Store.update { s ->
             val have = s.mantras.map { it.id }.toSet()
@@ -111,7 +124,8 @@ object Library {
                 defaultMantraId = s.defaultMantraId ?: fresh.firstOrNull()?.id,
                 seeded = true,
                 seededIds = s.seededIds + done + missing.map { it.id } +
-                    AppState.DEFAULT_EXTRA_SCHEDULES.map { "schedule:" + it.id },
+                    AppState.DEFAULT_EXTRA_SCHEDULES.map { "schedule:" + it.id } + THEME_AUTO,
+                theme = if (autoTheme) ThemeMode.AUTO else s.theme,
             )
         }
     }
@@ -127,9 +141,9 @@ object Library {
         return Mantra(
             id = b.id,
             name = b.name,
-            file = "${ContentResolver.SCHEME_ANDROID_RESOURCE}://${c.packageName}/${b.audio}",
+            file = resourceUri(c, b.audio).toString(),
             description = b.description,
-            lyrics = b.lyrics,
+            lyrics = b.lines.joinToString("\n") { it.text },
             durationMs = duration,
             builtIn = true,
             addedAt = System.currentTimeMillis(),

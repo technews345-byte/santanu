@@ -33,6 +33,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.prabhat.app.data.Anchor
 import com.prabhat.app.data.AppState
 import com.prabhat.app.data.ScheduleRule
 import com.prabhat.app.data.Store
@@ -52,7 +53,7 @@ fun ScheduleScreen(state: AppState, pad: PaddingValues, presetMantra: String?) {
     var editing by rememberSaveable { mutableStateOf<String?>(if (presetMantra != null) NEW else null) }
     var presetUsed by rememberSaveable { mutableStateOf(false) }
     var deleting by remember { mutableStateOf<ScheduleRule?>(null) }
-    val next = if (state.scheduleOn) ScheduleMath.next(state.schedules, now) else null
+    val next = if (state.scheduleOn) ScheduleMath.next(state.schedules, now, state.place) else null
 
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).statusBarsPadding()
@@ -84,7 +85,7 @@ fun ScheduleScreen(state: AppState, pad: PaddingValues, presetMantra: String?) {
             }
         }
 
-        state.schedules.sortedBy { it.hour * 60 + it.minute }.forEach { rule ->
+        state.schedules.sortedBy { ScheduleMath.minuteOfDay(it, state.place) }.forEach { rule ->
             RuleCard(state, rule, onEdit = { editing = rule.id }, onDelete = { deleting = rule })
         }
 
@@ -110,7 +111,7 @@ fun ScheduleScreen(state: AppState, pad: PaddingValues, presetMantra: String?) {
     deleting?.let { rule ->
         AlertDialog(
             onDismissRequest = { deleting = null },
-            title = { Text("Delete ${Format.time(rule.hour, rule.minute)}?") },
+            title = { Text("Delete ${ScheduleMath.label(rule)}?") },
             text = { Text("${state.mantraFor(rule)?.name ?: "The mantra"} will no longer play at this time.") },
             confirmButton = {
                 TextButton(onClick = {
@@ -138,12 +139,16 @@ private fun RuleCard(state: AppState, rule: ScheduleRule, onEdit: () -> Unit, on
     GlassCard(Modifier.fillMaxWidth(), onClick = onEdit) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
+                val today = ScheduleMath.minuteOfDay(rule, state.place).takeIf { it != Int.MAX_VALUE }
                 Text(
-                    Format.time(rule.hour, rule.minute),
+                    today?.let { Format.time(it / 60, it % 60) } ?: ScheduleMath.label(rule),
                     style = MaterialTheme.typography.displaySmall.copy(fontSize = 38.sp),
                     color = if (active) MaterialTheme.colorScheme.onSurface else p.muted,
                 )
-                Text(ScheduleMath.daysLabel(rule.days), style = MaterialTheme.typography.bodyMedium, color = if (active) p.gold else p.muted)
+                Text(
+                    listOfNotNull(rule.takeIf { it.anchor != Anchor.TIME }?.let(ScheduleMath::label), ScheduleMath.daysLabel(rule.days)).joinToString(" · "),
+                    style = MaterialTheme.typography.bodyMedium, color = if (active) p.gold else p.muted,
+                )
                 Text(
                     (state.mantraFor(rule)?.name ?: "No mantra") + " · " + Format.repeat(state.repeatFor(rule)),
                     style = MaterialTheme.typography.bodySmall, color = p.muted,

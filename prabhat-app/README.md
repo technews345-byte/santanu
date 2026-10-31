@@ -12,25 +12,24 @@ Settings, or during first-launch setup.
 
 ## Features
 
-- **Morning schedule**: one or more times, each on chosen days (every day, Mon–Fri, weekends, or any days),
-  each with its own mantra or the default. Large on/off switch, "Starts in 8h 42m" countdown.
-- **Automatic playback** through Android's alarm system (`setAlarmClock`): works when the app is closed, in Doze and
-  on the lock screen; re-armed after a reboot, an app update, and time, time-zone or daylight-saving changes.
-  Duplicate alarm deliveries are ignored, and it never interrupts something you are already playing.
-  If the phone was off at the time, you get "Your mantra was scheduled for 6:30 AM" with **Play Now** instead
-  of surprise audio. A completed session is never replayed unless you press Play.
-- **Background audio** (Media3 / ExoPlayer): lock-screen and notification controls, Bluetooth and headphone buttons,
-  audio focus (pauses for calls and other apps, resumes after short interruptions), pauses on headphone unplug.
-- **Repeat**: once, 3, 5, 11, 108 times or continuous (default 3). Previous / Next move between mantras.
-- **Gentle fade-in** (off, 5–60 s, default 20 s) and a **sleep timer** (5–60 min or end of mantra, fades out).
-- **Resume** from where you paused.
-- **Library**: add MP3 / M4A / WAV (copied into the app, so moving or deleting the original never breaks it),
-  rename, description, cover image, default mantra, delete, preview. Missing files are flagged, never crash.
-- **Mantra words**: shown on Home and the mantra page.
-- **Notifications** (each optional): reminder 5–30 min before, session starting, session completed.
-- **Onboarding**: mantra → time → repeat → permissions → "You're all set 🌅".
-- Light (ivory, sunrise, gold), dark (midnight navy, golden glow) or follow the system.
-- Fully offline, no account; everything is stored on the phone.
+- **Home dashboard**: greeting with today's sunrise and sunset (Jorhat, Assam), what is playing or a one-tap start,
+  the next session, and today's routine with each session marked done, missed (with Play) or upcoming.
+- **Immersive player**: the mantra's picture inside a slowly turning, glowing mandala (moving only while it plays),
+  a japa progress ring, synced words with transliteration and meaning, and the full controls.
+- **Smart scheduler**: any number of sessions on chosen days, each at a clock time or at **sunrise / sunset**
+  (up to 30 minutes before or after), with its own mantra and japa count. Sun times are computed on the phone.
+- **Japa counter**: 1, 3, 5, 11, 21, 54, 108 or continuous, looping seamlessly, with an optional vibration as each
+  repetition completes.
+- **Gentle wake**: fade-in up to 2 minutes (to the volume you set), optionally opening with temple bells or morning
+  birds before the mantra.
+- **Reliable**: Android alarm clock (works locked, closed and in Doze; restored after reboot, updates and time changes),
+  a foreground media service with wake lock, lock-screen/Bluetooth/headphone controls and audio focus. A session
+  missed while the phone was off offers Play Now instead of surprise audio.
+- **Library**: built-in Mahalakshmi Mantra (6:30 AM, 3 times), Shri Hanuman Chalisa (7:00 AM, once) and
+  Krishnaya Vasudevaya; add your own MP3 / M4A / WAV with a cover, name and words.
+- **Design**: saffron and marigold on warm ivory by day, deep indigo and muted gold from sunset (or a fixed light,
+  dark or system theme); Plus Jakarta Sans for the interface and Tiro Bangla for mantra words.
+- Fully offline, no account; everything stays on the phone.
 
 ## Permissions
 

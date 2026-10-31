@@ -6,7 +6,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 /** What started a session: only morning sessions count towards "today's session completed". */
 enum class SessionKind { SCHEDULED, MORNING, MANUAL }
 
-data class SessionInfo(val kind: SessionKind, val playLabel: String?)
+/** [played] of [target] plays are done ([target] 0 = continuous); [intro] while the bells or birds play first. */
+data class SessionInfo(val kind: SessionKind, val playLabel: String?, val played: Int, val target: Int, val intro: Boolean)
 
 /** A running sleep timer: either a fixed end time or "end of current mantra". */
 data class SleepTimer(val endsAt: Long?, val endOfMantra: Boolean)

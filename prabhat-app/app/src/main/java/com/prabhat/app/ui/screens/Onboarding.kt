@@ -226,7 +226,7 @@ private fun Finish(state: AppState, hour: Int, minute: Int, days: Set<Int>) {
         listOfNotNull(
             state.defaultMantra?.name ?: "Your mantra",
             Format.repeat(state.repeat),
-            if (state.fadeInSeconds > 0) "fades in over ${state.fadeInSeconds} seconds" else null,
+            if (state.fadeInSeconds > 0) "fades in over ${Format.fade(state.fadeInSeconds).lowercase()}" else null,
         ).joinToString(" · "),
         style = MaterialTheme.typography.bodyMedium, color = LocalPalette.current.muted, textAlign = TextAlign.Center,
     )

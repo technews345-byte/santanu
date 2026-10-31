@@ -17,12 +17,30 @@ data class Mantra(
     val addedAt: Long = 0,
 )
 
+/** The place whose sunrise and sunset sun-based schedules follow. Used only on the phone. */
+@Serializable
+data class Place(val lat: Double, val lng: Double, val name: String = "") {
+    companion object {
+        val JORHAT = Place(26.7509, 94.2037, "Jorhat, Assam")
+    }
+}
+
+/** What a schedule's time follows: a clock time, or the day's sunrise or sunset plus [ScheduleRule.offsetMinutes]. */
+@Serializable
+enum class Anchor { TIME, SUNRISE, SUNSET }
+
+/** Played before a scheduled mantra, under the fade-in. */
+@Serializable
+enum class Ambience { NONE, BELLS, BIRDS }
+
 /** A daily playback time on a set of ISO days of the week (1 = Monday … 7 = Sunday). */
 @Serializable
 data class ScheduleRule(
     val id: String,
     val hour: Int = 6,
     val minute: Int = 30,
+    val anchor: Anchor = Anchor.TIME,
+    val offsetMinutes: Int = 0,
     val days: Set<Int> = ALL_DAYS,
     /** The mantra to play, or null for the default mantra. */
     val mantraId: String? = null,
@@ -36,7 +54,7 @@ data class ScheduleRule(
 }
 
 @Serializable
-enum class ThemeMode { SYSTEM, LIGHT, DARK }
+enum class ThemeMode { AUTO, SYSTEM, LIGHT, DARK }
 
 /** Where playback stopped, so pressing Play continues from there. */
 @Serializable
@@ -52,7 +70,11 @@ data class AppState(
     val repeat: Int = 3,
     val volume: Float = 1f,
     val fadeInSeconds: Int = 20,
-    val theme: ThemeMode = ThemeMode.SYSTEM,
+    val theme: ThemeMode = ThemeMode.AUTO,
+    val ambience: Ambience = Ambience.NONE,
+    /** A short vibration as each repetition (japa) completes. */
+    val haptics: Boolean = true,
+    val place: Place? = Place.JORHAT,
     val notifyReminder: Boolean = true,
     val notifyStart: Boolean = true,
     val notifyComplete: Boolean = true,
@@ -77,8 +99,8 @@ data class AppState(
 
     companion object {
         const val CONTINUOUS = 0
-        val REPEAT_OPTIONS = listOf(1, 3, 5, 11, 108, CONTINUOUS)
-        val FADE_OPTIONS = listOf(0, 5, 10, 20, 30, 60)
+        val REPEAT_OPTIONS = listOf(1, 3, 5, 11, 21, 54, 108, CONTINUOUS)
+        val FADE_OPTIONS = listOf(0, 10, 20, 30, 60, 120)
 
         /** Shri Hanuman Chalisa once at 7:00 AM every day (also added once to existing installs). */
         val HANUMAN_SCHEDULE = ScheduleRule(id = "hanuman", hour = 7, minute = 0, mantraId = "hanuman-chalisa", repeat = 1)
