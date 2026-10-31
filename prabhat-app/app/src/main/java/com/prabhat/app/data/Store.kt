@@ -21,8 +21,9 @@ object Store {
     val value: AppState get() = _state.value
 
     fun init(context: Context) {
-        if (::file.isInitialized) return
-        file = File(context.filesDir, "prabhat.json")
+        val target = File(context.filesDir, "prabhat.json")
+        if (::file.isInitialized && file == target) return
+        file = target
         _state.value = runCatching { json.decodeFromString(AppState.serializer(), file.readText()) }
             .onFailure { if (file.exists()) Log.w("Prabhat", "Settings file unreadable, starting fresh", it) }
             .getOrDefault(AppState())

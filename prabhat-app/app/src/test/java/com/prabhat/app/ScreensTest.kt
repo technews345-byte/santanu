@@ -29,7 +29,7 @@ import org.robolectric.annotation.Config
 
 /** Renders the real app and walks through its main screens. */
 @RunWith(AndroidJUnit4::class)
-@Config(sdk = [34])
+@Config(sdk = [34], qualifiers = "w411dp-h891dp")
 class ScreensTest {
     @get:Rule val compose = createComposeRule()
     private val app: Application = ApplicationProvider.getApplicationContext()
