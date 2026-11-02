@@ -8,6 +8,7 @@ This changelog separates the current UI/responsiveness update from capabilities 
 - Keep the actual progress rings and colors in Budgets; category displays without a budget use a neutral, static circle.
 - Keep saved category icons, colors, transactions, budgets and app identity unchanged.
 - Ads come from the new AdMob app: a banner at the end of Home, and an interstitial after saving a transaction, at most once every 3 minutes. App-open ads are removed.
+- Daily reminders arrive at the set time: the app may now schedule exact alarms, so Android no longer holds the reminder back for battery saving. The notification icon is the new rounded R.
 
 ## 1.0.3 — Launcher icon and startup
 

@@ -15,6 +15,7 @@
 - Budget progress rings and colours are unchanged; categories without a budget show a neutral circle.
 - Saved categories, icons, colours, transactions and budgets are kept as they are.
 - Ads: a banner at the end of Home, and an interstitial after saving a transaction (at most once every 3 minutes). No more ads when opening the app.
+- Daily reminders now arrive on time, with the new R logo as the notification icon.
 
 **1.0.3 — Launcher icon and startup**
 - The R logo fits fully inside rounded Android launcher icons.
