@@ -1,0 +1,72 @@
+# Builds the Punch Attendance Android app (attendance-android/, which packages the web app in
+# attendance-app/) and publishes an installable APK.
+# Download link after a push: Releases → "Punch Attendance" → PunchAttendance.apk
+name: Attendance Android app
+
+on:
+  push:
+    paths: ['attendance-app/**', 'attendance-android/**', '.github/workflows/attendance-android.yml']
+  pull_request:
+    paths: ['attendance-app/**', 'attendance-android/**', '.github/workflows/attendance-android.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write   # publish the APK as a GitHub Release
+
+concurrency:
+  group: attendance-android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: attendance-android
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Build APK
+        env:
+          ATTENDANCE_VERSION_CODE: ${{ github.run_number }}
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon assembleRelease
+
+      - name: Collect APK
+        run: |
+          mkdir -p ../apk
+          cp app/build/outputs/apk/release/app-release.apk ../apk/PunchAttendance.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PunchAttendance-apk-${{ github.run_number }}
+          path: apk/PunchAttendance.apk
+          retention-days: 30
+
+      - name: Publish release
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="attendance-v1.0.${{ github.run_number }}"
+          flags="--latest=false"
+          if [ "${{ github.ref }}" != "refs/heads/main" ]; then flags="$flags --prerelease"; fi
+          gh release create "$tag" ../apk/PunchAttendance.apk --target "${{ github.sha }}" $flags \
+            --title "Punch Attendance 1.0.${{ github.run_number }}" \
+            --notes "Location-checked punch in / punch out app for Android 8.0+. Download PunchAttendance.apk on the phone, open it, allow installing from this source, then allow Location. Built from ${{ github.ref_name }}."
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: attendance-lint-reports
+          path: attendance-android/app/build/reports/
+          retention-days: 7

@@ -8,6 +8,8 @@
   const KEY_RECORDS = 'attendance.records';
 
   const $ = (id) => document.getElementById(id);
+  // Present only inside the Android app (see /attendance-android).
+  const native = window.AndroidDevice || null;
 
   // ---------- storage ----------
   function load(key, fallback) {
@@ -165,6 +167,10 @@
       const pos = await getFreshPosition();
       lastPos = pos;
       const ev = evaluate(pos);
+      if (native && native.isMockLocation()) {
+        setMsg('Fake GPS (mock location) detected. Turn off the fake-location app to punch.', 'bad');
+        return;
+      }
       if (!ev.accurate) {
         setMsg('GPS is not accurate enough (±' + Math.round(ev.accuracy) +
           ' m). Move to an open area and try again.', 'bad');
@@ -240,7 +246,8 @@
 
   function notify(text) {
     if (navigator.vibrate) navigator.vibrate([100, 60, 100]);
-    if ('Notification' in window && Notification.permission === 'granted') {
+    if (native) native.notify(text);
+    else if ('Notification' in window && Notification.permission === 'granted') {
       try { new Notification('Punch Attendance', { body: text, icon: 'icon.svg' }); } catch (e) { /* ignore */ }
     }
     setMsg(text, 'wait');
@@ -248,6 +255,7 @@
 
   // ---------- export ----------
   function download(name, content, type) {
+    if (native) { native.saveFile(name, content, type); return; }
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([content], { type }));
     a.download = name;
@@ -308,7 +316,7 @@
       webhookToken: $('webhookToken').value.trim()
     };
     save(KEY_SETTINGS, settings);
-    if (settings.remind && 'Notification' in window && Notification.permission === 'default') {
+    if (!native && settings.remind && 'Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission();
     }
     fillSettings();
@@ -335,7 +343,18 @@
     return Math.floor(m / 60) + 'h ' + String(m % 60).padStart(2, '0') + 'm';
   }
 
+  let nativeInfo = null;
+  function readNative() {
+    try { nativeInfo = JSON.parse(native.info()); } catch (e) { nativeInfo = null; return; }
+    battery = nativeInfo.battery == null ? null : {
+      level: nativeInfo.battery / 100, charging: nativeInfo.charging,
+      chargingTime: nativeInfo.chargeTimeSec == null ? Infinity : nativeInfo.chargeTimeSec,
+      dischargingTime: Infinity
+    };
+  }
+
   function renderDevice() {
+    if (native) readNative();
     const lvl = $('battLevel'), st = $('battState'), bar = $('battBar');
     if (battery) {
       const pct = Math.round(battery.level * 100);
@@ -354,7 +373,25 @@
       : /iPhone OS ([\d_]+)/.exec(ua) ? 'iOS ' + /iPhone OS ([\d_]+)/.exec(ua)[1].replace(/_/g, '.')
       : (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || '—';
     const model = /Android [\d.]+; ([^;)]+)/.exec(ua);
-    const rows = [
+    const n = nativeInfo;
+    const rows = n ? [
+      ['Battery', battery ? Math.round(battery.level * 100) + '%' : 'Not available'],
+      ['Status', n.full ? 'Full' : n.charging ? 'Charging' : 'Discharging'],
+      ['Power source', n.plugged],
+      ['Time to full', n.charging && !n.full ? fmtSecs(n.chargeTimeSec) : '—'],
+      ['Battery health', n.health],
+      ['Battery temperature', n.temperatureC == null ? '—' : n.temperatureC + ' °C'],
+      ['Battery voltage', n.voltage == null ? '—' : n.voltage.toFixed(2) + ' V'],
+      ['Battery type', n.technology || '—'],
+      ['Phone', (n.manufacturer + ' ' + n.model).trim()],
+      ['Android', n.android + ' (API ' + n.sdk + ')'],
+      ['Network', n.network],
+      ['Screen', screen.width + ' × ' + screen.height + ' @' + (window.devicePixelRatio || 1) + 'x'],
+      ['CPU cores', navigator.hardwareConcurrency || '—'],
+      ['Time zone', Intl.DateTimeFormat().resolvedOptions().timeZone || '—'],
+      ['GPS accuracy', lastPos ? '±' + Math.round(lastPos.coords.accuracy) + ' m' : '—'],
+      ['App version', n.appVersion || '—']
+    ] : [
       ['Battery', battery ? Math.round(battery.level * 100) + '%' : 'Not available'],
       ['Charging', battery ? (battery.charging ? 'Yes' : 'No') : '—'],
       ['Time to full', battery && battery.charging ? fmtSecs(battery.chargingTime) : '—'],
@@ -381,7 +418,9 @@
   }
 
   function initDevice() {
-    if (navigator.getBattery) {
+    if (native) {
+      setInterval(renderDevice, 5000);
+    } else if (navigator.getBattery) {
       navigator.getBattery().then((b) => {
         battery = b;
         ['levelchange', 'chargingchange', 'chargingtimechange', 'dischargingtimechange']
@@ -427,7 +466,7 @@
       $('distanceText').textContent = 'This browser does not support location.';
     }
 
-    if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+    if (!native && 'serviceWorker' in navigator && location.protocol !== 'file:') {
       navigator.serviceWorker.register('sw.js').catch(() => {});
     }
     initDevice();
