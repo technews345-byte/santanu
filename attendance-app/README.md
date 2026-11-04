@@ -6,6 +6,7 @@ A location-checked punch in / punch out web app (PWA) for phones.
 - **Punch In / Punch Out** only works when the phone's GPS shows you inside that radius
   with good accuracy. Each punch stores time, coordinates, accuracy and distance.
 - Shows today's hours and history, and exports CSV / JSON.
+- "This phone" card: live battery %, charging state, time to full / time left, OS, model, screen, CPU, memory, network. Battery % is saved with each punch and exported.
 - Optional reminders on arrival or departure (you still punch manually).
 - Optional webhook: each real punch is POSTed as JSON to another attendance system's
   official API (`event: clock_in | clock_out`, employee, time, latitude, longitude, accuracy_m, distance_m).

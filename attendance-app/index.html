@@ -77,6 +77,18 @@
   </section>
 
   <section class="card">
+    <h2>This phone</h2>
+    <div class="row" style="justify-content:space-between;margin-bottom:8px">
+      <div class="clock" id="battLevel" style="font-size:28px">--%</div>
+      <span class="pill wait" id="battState">Checking battery…</span>
+    </div>
+    <div style="height:10px;border-radius:6px;background:var(--line);overflow:hidden;margin-bottom:10px">
+      <div id="battBar" style="height:100%;width:0;background:var(--in)"></div>
+    </div>
+    <table><tbody id="deviceInfo"></tbody></table>
+  </section>
+
+  <section class="card">
     <h2>Attendance history</h2>
     <table>
       <thead><tr><th>Date</th><th>In</th><th>Out</th><th>Hours</th></tr></thead>

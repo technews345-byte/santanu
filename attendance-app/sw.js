@@ -1,5 +1,5 @@
 // Offline cache for the app shell.
-const CACHE = 'punch-attendance-v1';
+const CACHE = 'punch-attendance-v2';
 const FILES = ['./', 'index.html', 'app.js', 'manifest.json', 'icon.svg'];
 
 self.addEventListener('install', (e) => {

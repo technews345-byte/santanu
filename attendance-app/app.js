@@ -180,7 +180,8 @@
         type, time: new Date().toISOString(),
         lat: +ev.lat.toFixed(6), lng: +ev.lng.toFixed(6),
         accuracy: Math.round(ev.accuracy), distance: Math.round(ev.dist),
-        site: settings.siteName || '', employee: settings.empName || ''
+        site: settings.siteName || '', employee: settings.empName || '',
+        battery: battery ? Math.round(battery.level * 100) : null
       });
       save(KEY_RECORDS, records);
       setMsg((type === 'IN' ? 'Punched in' : 'Punched out') + ' at ' +
@@ -257,14 +258,15 @@
   function exportCsv() {
     const esc = (v) => '"' + String(v ?? '').replace(/"/g, '""') + '"';
     const rows = [['Employee', 'Site', 'Date', 'Punch In', 'Punch Out', 'Hours',
-      'In Lat', 'In Lng', 'In Distance m', 'Out Lat', 'Out Lng', 'Out Distance m']];
+      'In Lat', 'In Lng', 'In Distance m', 'Out Lat', 'Out Lng', 'Out Distance m', 'In Battery %', 'Out Battery %']];
     for (const s of shifts()) {
       rows.push([
         s.in.employee, s.in.site, fmtDate(s.in.time),
         new Date(s.in.time).toLocaleString(), s.out ? new Date(s.out.time).toLocaleString() : '',
         (shiftMs(s) / 3600000).toFixed(2),
         s.in.lat, s.in.lng, s.in.distance,
-        s.out ? s.out.lat : '', s.out ? s.out.lng : '', s.out ? s.out.distance : ''
+        s.out ? s.out.lat : '', s.out ? s.out.lng : '', s.out ? s.out.distance : '',
+        s.in.battery ?? '', s.out ? (s.out.battery ?? '') : ''
       ]);
     }
     download('attendance-' + new Date().toISOString().slice(0, 10) + '.csv',
@@ -324,6 +326,76 @@
     } catch (e) { setMsg(geoErrorText(e), 'bad'); }
   }
 
+  // ---------- battery & device details (this phone only) ----------
+  let battery = null;
+
+  function fmtSecs(sec) {
+    if (!Number.isFinite(sec) || sec <= 0) return '—';
+    const m = Math.round(sec / 60);
+    return Math.floor(m / 60) + 'h ' + String(m % 60).padStart(2, '0') + 'm';
+  }
+
+  function renderDevice() {
+    const lvl = $('battLevel'), st = $('battState'), bar = $('battBar');
+    if (battery) {
+      const pct = Math.round(battery.level * 100);
+      lvl.textContent = pct + '%';
+      bar.style.width = pct + '%';
+      bar.style.background = pct <= 15 ? 'var(--out)' : pct <= 30 ? 'var(--warn)' : 'var(--in)';
+      st.textContent = battery.charging ? 'Charging' : pct <= 15 ? 'Low battery' : 'On battery';
+      st.className = 'pill ' + (battery.charging ? 'ok' : pct <= 15 ? 'bad' : 'wait');
+    } else {
+      lvl.textContent = 'N/A';
+      st.textContent = 'Not supported in this browser'; st.className = 'pill wait';
+    }
+    const c = navigator.connection || {};
+    const ua = navigator.userAgent;
+    const os = /Android ([\d.]+)/.exec(ua) ? 'Android ' + /Android ([\d.]+)/.exec(ua)[1]
+      : /iPhone OS ([\d_]+)/.exec(ua) ? 'iOS ' + /iPhone OS ([\d_]+)/.exec(ua)[1].replace(/_/g, '.')
+      : (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || '—';
+    const model = /Android [\d.]+; ([^;)]+)/.exec(ua);
+    const rows = [
+      ['Battery', battery ? Math.round(battery.level * 100) + '%' : 'Not available'],
+      ['Charging', battery ? (battery.charging ? 'Yes' : 'No') : '—'],
+      ['Time to full', battery && battery.charging ? fmtSecs(battery.chargingTime) : '—'],
+      ['Time left', battery && !battery.charging ? fmtSecs(battery.dischargingTime) : '—'],
+      ['Operating system', os],
+      ['Device model', model ? model[1].trim() : '—'],
+      ['Screen', screen.width + ' × ' + screen.height + ' @' + (window.devicePixelRatio || 1) + 'x'],
+      ['CPU cores', navigator.hardwareConcurrency || '—'],
+      ['Memory (approx.)', navigator.deviceMemory ? navigator.deviceMemory + ' GB' : '—'],
+      ['Network', navigator.onLine ? 'Online' + (c.effectiveType ? ' (' + c.effectiveType.toUpperCase() + ')' : '') : 'Offline'],
+      ['Data saver', c.saveData ? 'On' : c.saveData === false ? 'Off' : '—'],
+      ['Language', navigator.language || '—'],
+      ['Time zone', Intl.DateTimeFormat().resolvedOptions().timeZone || '—'],
+      ['GPS accuracy', lastPos ? '±' + Math.round(lastPos.coords.accuracy) + ' m' : '—']
+    ];
+    const tbody = $('deviceInfo');
+    tbody.innerHTML = '';
+    for (const [k, v] of rows) {
+      const tr = document.createElement('tr');
+      const th = document.createElement('td'); th.className = 'muted'; th.textContent = k;
+      const td = document.createElement('td'); td.textContent = v;
+      tr.append(th, td); tbody.appendChild(tr);
+    }
+  }
+
+  function initDevice() {
+    if (navigator.getBattery) {
+      navigator.getBattery().then((b) => {
+        battery = b;
+        ['levelchange', 'chargingchange', 'chargingtimechange', 'dischargingtimechange']
+          .forEach((ev) => b.addEventListener(ev, renderDevice));
+        renderDevice();
+      }).catch(renderDevice);
+    }
+    window.addEventListener('online', renderDevice);
+    window.addEventListener('offline', renderDevice);
+    if (navigator.connection) navigator.connection.addEventListener('change', renderDevice);
+    setInterval(renderDevice, 15000);
+    renderDevice();
+  }
+
   // ---------- init ----------
   function init() {
     fillSettings();
@@ -358,6 +430,7 @@
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       navigator.serviceWorker.register('sw.js').catch(() => {});
     }
+    initDevice();
     renderAll();
   }
 
