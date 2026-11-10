@@ -104,13 +104,13 @@ export default function AnalyticsScreen() {
             </View>
 
             <GlassSurface level="row" blur={false} borderRadius={radius.pill} style={styles.anchorRow} contentStyle={styles.anchorInner}>
-              <Pressable onPress={() => shiftAnchor(-1)} hitSlop={10} style={styles.anchorArrow}>
+              <Pressable onPress={() => shiftAnchor(-1)} hitSlop={10} style={styles.anchorArrow} accessibilityRole="button" accessibilityLabel="Previous period">
                 <Ionicons name="chevron-back" size={18} color={theme.textSecondary} />
               </Pressable>
               <Text style={[styles.anchorLabel, { color: theme.text }]}>
                 {period === 'year' ? format(anchor, 'yyyy') : period === 'month' ? format(anchor, 'MMMM yyyy') : `Week of ${format(start, 'MMM d')}`}
               </Text>
-              <Pressable onPress={() => shiftAnchor(1)} hitSlop={10} style={styles.anchorArrow}>
+              <Pressable onPress={() => shiftAnchor(1)} hitSlop={10} style={styles.anchorArrow} accessibilityRole="button" accessibilityLabel="Next period">
                 <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
               </Pressable>
             </GlassSurface>

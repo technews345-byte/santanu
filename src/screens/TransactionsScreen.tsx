@@ -243,7 +243,9 @@ export default function TransactionsScreen() {
           maxToRenderPerBatch={8}
           windowSize={9}
           contentContainerStyle={{ paddingHorizontal: spacing.md, paddingBottom: 168 }}
-          ListEmptyComponent={<EmptyState icon="filter-outline" title={searchPending ? "Updating results…" : "No matching transactions"} subtitle="Try another search or adjust your filters" />}
+          ListEmptyComponent={scoped.length === 0
+            ? <EmptyState icon="receipt-outline" title="No transactions yet" subtitle="Tap + to add your first transaction" />
+            : <EmptyState icon="filter-outline" title={searchPending ? "Updating results…" : "No matching transactions"} subtitle="Try another search or adjust your filters" />}
           renderItem={({ item }) => {
             const cat = categoryById.get(item.categoryId ?? '');
             const account = accountById.get(item.accountId);

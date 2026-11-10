@@ -51,11 +51,11 @@ export default function BudgetsScreen() {
       </View>
 
       <View style={styles.anchorRow}>
-        <Pressable onPress={() => setAnchor((p) => subMonths(p, 1))} hitSlop={8}>
+        <Pressable onPress={() => setAnchor((p) => subMonths(p, 1))} hitSlop={8} accessibilityRole="button" accessibilityLabel="Previous month">
           <Ionicons name="chevron-back" size={20} color={theme.textSecondary} />
         </Pressable>
         <Text style={[styles.anchorLabel, { color: theme.text }]}>{format(anchor, 'MMMM yyyy')}</Text>
-        <Pressable onPress={() => setAnchor((p) => addMonths(p, 1))} hitSlop={8}>
+        <Pressable onPress={() => setAnchor((p) => addMonths(p, 1))} hitSlop={8} accessibilityRole="button" accessibilityLabel="Next month">
           <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
         </Pressable>
       </View>

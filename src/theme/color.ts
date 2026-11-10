@@ -48,20 +48,6 @@ export function contrast(a: string, b: string): number {
   return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
 }
 
-/**
- * The colour, deepened only as far as a white glyph on it needs to reach the
- * given contrast. Hue is kept — an amber stays amber, just richer — so a
- * category is still recognisably its own colour.
- */
-export function deepenForWhite(color: string, target = 3.2): string {
-  if (contrast('#FFFFFF', color) >= target) return color;
-  for (let step = 0.04; step <= 0.6; step += 0.04) {
-    const candidate = shade(color, -step);
-    if (contrast('#FFFFFF', candidate) >= target) return candidate;
-  }
-  return shade(color, -0.6);
-}
-
 /** The colour with its hue turned by some degrees, for a companion accent. */
 export function rotateHue(color: string, degrees: number): string {
   const c = parseColor(color);

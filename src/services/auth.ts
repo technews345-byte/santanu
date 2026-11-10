@@ -36,10 +36,6 @@ export function subscribeToAuth(listener: (user: AuthUser | null) => void): () =
   return onAuthStateChanged(getFirebaseAuth(), (user) => listener(toAuthUser(user)));
 }
 
-export function currentUser(): AuthUser | null {
-  return toAuthUser(getFirebaseAuth().currentUser);
-}
-
 /**
  * Signing in with a provider the account already has attached simply returns
  * that account. When someone is already signed in, the new provider is linked

@@ -34,11 +34,6 @@ function subscribe(listener: () => void) {
   return () => listeners.delete(listener);
 }
 
-export function isReducedMotion(): boolean {
-  ensureSubscribed();
-  return reduced;
-}
-
 export function useReducedMotion(): boolean {
   return useSyncExternalStore(subscribe, () => reduced, () => false);
 }

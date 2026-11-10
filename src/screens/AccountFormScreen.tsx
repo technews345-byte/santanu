@@ -64,12 +64,12 @@ export default function AccountFormScreen() {
   return (
     <Screen edges={['top', 'left', 'right', 'bottom']}>
       <View style={styles.header}>
-        <Pressable onPress={() => navigation.goBack()} hitSlop={10}>
+        <Pressable onPress={() => navigation.goBack()} hitSlop={10} accessibilityRole="button" accessibilityLabel="Close">
           <Ionicons name="close" size={26} color={theme.text} />
         </Pressable>
         <Text style={[styles.headerTitle, { color: theme.text }]}>{existing ? 'Edit Account' : 'New Account'}</Text>
         {existing ? (
-          <Pressable onPress={handleDelete} hitSlop={10}>
+          <Pressable onPress={handleDelete} hitSlop={10} accessibilityRole="button" accessibilityLabel="Delete">
             <Ionicons name="trash-outline" size={22} color={theme.danger} />
           </Pressable>
         ) : (

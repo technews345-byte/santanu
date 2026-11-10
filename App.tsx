@@ -1,12 +1,13 @@
 import { useShallow } from 'zustand/react/shallow';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { AppState, AppStateStatus, Pressable, StyleSheet, View } from 'react-native';
+import { AppState, AppStateStatus, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { fontAssets, Text } from './src/theme/type';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as LocalAuthentication from 'expo-local-authentication';
+import * as ScreenCapture from 'expo-screen-capture';
 import * as SplashScreen from 'expo-splash-screen';
 import * as SystemUI from 'expo-system-ui';
 import { useFonts } from 'expo-font';
@@ -100,6 +101,14 @@ function AppContent() {
     setUnlocked(!biometricLockEnabled);
     if (biometricLockEnabled) void authenticate();
   }, [hydrated, hydrationError, biometricLockEnabled, authenticate]);
+
+  // The lock hides the app, but Android's recent-apps preview is a picture of
+  // the last screen and would show balances past it. With the lock on, the
+  // window is kept out of that preview, and out of screenshots.
+  useEffect(() => {
+    if (Platform.OS === 'web' || !hydrated) return;
+    (biometricLockEnabled ? ScreenCapture.preventScreenCaptureAsync() : ScreenCapture.allowScreenCaptureAsync()).catch(() => {});
+  }, [hydrated, biometricLockEnabled]);
 
   // Once the app is usable on the very first launch, ask once whether Raahi
   // may send its daily reminder (on by default).

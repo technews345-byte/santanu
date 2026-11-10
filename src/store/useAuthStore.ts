@@ -37,7 +37,6 @@ interface AuthStoreState {
 
   init: () => Promise<void>;
   continueAsGuest: () => Promise<void>;
-  setUser: (user: AuthUser | null) => void;
   refreshPending: () => Promise<void>;
   syncNow: () => Promise<void>;
   signOut: () => Promise<void>;
@@ -120,8 +119,6 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
     set({ guestAcknowledged: true });
     await AsyncStorage.setItem(GUEST_ACK_KEY, 'true');
   },
-
-  setUser: (user) => set({ user }),
 
   refreshPending: async () => set({ pendingCount: await countPending() }),
 

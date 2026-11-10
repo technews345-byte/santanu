@@ -35,7 +35,12 @@ export default function AccountScreen() {
   }, []);
 
   const handleSignOut = () => {
-    Alert.alert('Sign out?', 'Your expenses stay on this device and sync again when you sign back in.', [
+    // Changes that never reached the account exist only here, and signing in
+    // with a different account clears this device's copy.
+    const waiting = pendingCount > 0
+      ? `${pendingCount} change${pendingCount === 1 ? ' has' : 's have'} not been backed up yet. Sync first, or ${pendingCount === 1 ? 'it' : 'they'} will be lost if a different account signs in on this phone.\n\n`
+      : '';
+    Alert.alert('Sign out?', `${waiting}Your expenses stay on this device and sync again when you sign back in.`, [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Sign out', style: 'destructive', onPress: () => signOut().catch(() => Alert.alert('Could not sign out', 'Please try again.')) },
     ]);
@@ -79,7 +84,7 @@ export default function AccountScreen() {
   return (
     <Screen>
       <View style={styles.header}>
-        <Pressable onPress={() => navigation.goBack()} hitSlop={12}>
+        <Pressable onPress={() => navigation.goBack()} hitSlop={12} accessibilityRole="button" accessibilityLabel="Back">
           <Ionicons name="chevron-back" size={26} color={theme.text} />
         </Pressable>
         <Text style={[styles.headerTitle, { color: theme.text }]}>Account</Text>
@@ -116,7 +121,7 @@ export default function AccountScreen() {
               <Text style={[styles.rowSub, { color: theme.textTertiary }]}>{status.detail}</Text>
             </View>
             {user && (
-              <Pressable onPress={() => syncNow()} hitSlop={8}>
+              <Pressable onPress={() => syncNow()} hitSlop={8} accessibilityRole="button" accessibilityLabel="Sync now">
                 <Ionicons name="refresh" size={20} color={theme.tint} />
               </Pressable>
             )}
@@ -146,10 +151,6 @@ export default function AccountScreen() {
                   </View>
                 );
               })}
-              <Pressable style={styles.listRow} onPress={() => navigation.navigate('Login')}>
-                <IconBadge icon="add-outline" color={theme.tint} size={34} />
-                <Text style={[styles.listLabel, { color: theme.tint }]}>Link another method</Text>
-              </Pressable>
             </Card>
           </>
         )}

@@ -164,24 +164,6 @@ async function reschedule(
   }
 }
 
-/**
- * A sample reminder, shown at once. Shown rather than scheduled: a scheduled
- * one goes through Android's alarm queue, which may hold it back for minutes.
- */
-export async function sendTestReminder(language: ReminderSettings['language']): Promise<boolean> {
-  if (!(await ensurePermission())) return false;
-  const pool = reminderPool(language, { groceries: true, shopping: true });
-  await Notifications.scheduleNotificationAsync({
-    content: {
-      title: 'Raahi',
-      body: pool[Math.floor(Math.random() * pool.length)],
-      data: { action: ADD_EXPENSE_ACTION },
-    },
-    trigger: Platform.OS === 'android' ? { channelId: CHANNEL } : null,
-  });
-  return true;
-}
-
 /** Calls back when a reminder is tapped, including the one that opened the app. */
 export function onReminderTapped(handler: () => void): () => void {
   if (!remindersSupported) return () => {};

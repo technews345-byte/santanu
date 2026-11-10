@@ -6,6 +6,7 @@ import { useNavigation } from '@react-navigation/native';
 import { Screen } from '../components/Screen';
 import { GlassPressable } from '../components/glass/GlassPressable';
 import { useTheme } from '../theme/ThemeContext';
+import { useReducedMotion } from '../theme/useReducedMotion';
 import { fontSizes, radius, spacing } from '../theme/tokens';
 import { useAuthStore } from '../store/useAuthStore';
 import { cloudProviders, isCloudConfigured } from '../services/cloudConfig';
@@ -22,14 +23,19 @@ export default function LoginScreen() {
 
   const intro = useRef(new Animated.Value(0)).current;
 
+  const reduced = useReducedMotion();
   useEffect(() => {
+    if (reduced) {
+      intro.setValue(1);
+      return;
+    }
     Animated.timing(intro, {
       toValue: 1,
       duration: 760,
       easing: Easing.bezier(0.22, 1, 0.36, 1),
       useNativeDriver: true,
     }).start();
-  }, []);
+  }, [reduced]);
 
   // One value drives a short stagger: each element starts a little later.
   const step = (index: number) => ({
@@ -64,7 +70,7 @@ export default function LoginScreen() {
     <Screen edges={['top', 'left', 'right', 'bottom']}>
       <View style={styles.container}>
         {navigation.canGoBack() ? (
-          <Pressable style={styles.close} onPress={dismiss} hitSlop={12}>
+          <Pressable style={styles.close} onPress={dismiss} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close">
             <Ionicons name="close" size={24} color={theme.textTertiary} />
           </Pressable>
         ) : (

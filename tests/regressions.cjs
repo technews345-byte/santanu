@@ -249,14 +249,15 @@ test('startup hides a disabled lock, exposes loading errors, and relocks without
   const React = require('react');
   const { create, act } = require('react-test-renderer');
   global.IS_REACT_ACT_ENVIRONMENT = true;
-  const listeners = new Set(); let mounted = 0; let authCalls = 0;
+  const listeners = new Set(); let mounted = 0; let authCalls = 0; const capture = [];
   const state = { hydrated: false, hydrationError: null, hydrate: async () => {}, biometricLockEnabled: false, transactions: [], categories: [] };
   const Root = () => { React.useEffect(() => { mounted++; }, []); return React.createElement('Ledger'); };
   const reminders = { loaded: false };
   const useStore = Object.assign(() => state, { getState: () => state });
   const useReminderStore = Object.assign(() => reminders, { getState: () => ({ load() {} }) });
   const load = loader({
-    'react-native': { AppState: { currentState: 'active', addEventListener: (_, f) => { listeners.add(f); return { remove: () => listeners.delete(f) }; } }, StyleSheet: { create: x => x }, View: 'View', Pressable: 'Pressable' },
+    'react-native': { AppState: { currentState: 'active', addEventListener: (_, f) => { listeners.add(f); return { remove: () => listeners.delete(f) }; } }, StyleSheet: { create: x => x }, View: 'View', Pressable: 'Pressable', Platform: { OS: 'android' } },
+    'expo-screen-capture': { preventScreenCaptureAsync: async () => { capture.push('prevent'); }, allowScreenCaptureAsync: async () => { capture.push('allow'); } },
     './src/theme/type': { fontAssets: {}, Text: 'Text' }, 'expo-status-bar': { StatusBar: 'StatusBar' },
     'react-native-safe-area-context': { SafeAreaProvider: 'Provider' }, 'react-native-gesture-handler': { GestureHandlerRootView: 'Gesture' },
     '@expo/vector-icons/Ionicons': 'Icon', 'expo-local-authentication': { authenticateAsync: async () => { authCalls++; return { success: true }; } },
@@ -279,9 +280,11 @@ test('startup hides a disabled lock, exposes loading errors, and relocks without
   await act(async () => renderer.update(React.createElement(App)));
   assert.equal(renderer.root.findByType('BrandSplash').props.ready, true);
   assert.ok(renderer.root.findAllByType('Text').some(node => node.children.includes("Couldn't load your data")));
+  assert.deepEqual(capture, []);
   state.hydrationError = null; state.hydrated = true; state.biometricLockEnabled = true;
   await act(async () => renderer.update(React.createElement(App)));
   assert.equal(authCalls, 1); assert.equal(mounted, 1);
+  assert.deepEqual(capture, ['prevent']);
   await act(async () => { for (const listener of listeners) listener('background'); });
   assert.ok(!renderer.root.findAllByType('Text').some(node => node.children.includes('Locked')));
   await act(async () => renderer.root.findByType('BrandSplash').props.onFinish());
@@ -291,4 +294,66 @@ test('startup hides a disabled lock, exposes loading errors, and relocks without
   assert.equal(authCalls, 2); assert.equal(mounted, 1);
   assert.ok(!renderer.root.findAllByType('Text').some(node => node.children.includes('Locked')));
   await act(async () => { renderer.unmount(); });
+});
+
+test('turning the app lock off needs the lock itself; a failed check leaves it on', async () => {
+  const React = require('react');
+  const { create, act } = require('react-test-renderer');
+  global.IS_REACT_ACT_ENVIRONMENT = true;
+  let success = false; let prompts = 0;
+  const state = { accounts: [], categories: [], transactions: [], biometricLockEnabled: true, setBiometricLockEnabled: (v) => { state.biometricLockEnabled = v; } };
+  const load = loader({
+    'zustand/react/shallow': { useShallow: f => f },
+    'react-native': { Alert: { alert() {} }, Image: 'Image', Pressable: 'Pressable', ScrollView: 'ScrollView', StyleSheet: { create: x => x, hairlineWidth: 1 }, Switch: 'Switch', View: 'View' },
+    '../theme/type': { Text: 'Text' }, '@expo/vector-icons/Ionicons': 'Icon',
+    '@react-navigation/native': { useNavigation: () => ({ navigate() {} }) },
+    'expo-local-authentication': {
+      hasHardwareAsync: async () => true, isEnrolledAsync: async () => true,
+      authenticateAsync: async () => { prompts++; return { success }; },
+    },
+    '../components/Screen': { Screen: 'Screen' }, '../components/Card': { Card: 'Card' },
+    '../components/IconBadge': { IconBadge: 'IconBadge' }, '../components/CategoryIcon': { CategoryIcon: 'CategoryIcon' },
+    '../components/ReminderSettings': { ReminderSettings: 'ReminderSettings' },
+    '../theme/ThemeContext': { useTheme: () => ({ theme: { mode: 'dark' } }) },
+    '../theme/tokens': { fontSizes: {}, spacing: {} },
+    '../store/useStore': { useStore: selector => selector(state) },
+    '../store/useAuthStore': { useAuthStore: selector => selector({ user: null, pendingCount: 0 }) },
+    '../utils/export': {}, 'expo-constants': { __esModule: true, default: { expoConfig: { version: '1.0.4' } } },
+    '../../assets/raahi-icon.png': 1,
+  });
+  const Settings = load('src/screens/SettingsScreen.tsx').default;
+  let renderer;
+  await act(async () => { renderer = create(React.createElement(Settings)); });
+  const toggle = (value) => act(async () => renderer.root.findByType('Switch').props.onValueChange(value));
+  await toggle(false);
+  assert.equal(prompts, 1); assert.equal(state.biometricLockEnabled, true);
+  success = true;
+  await toggle(false);
+  assert.equal(prompts, 2); assert.equal(state.biometricLockEnabled, false);
+  // Turning it on is checked by the lock engaging at once, not here.
+  await toggle(true);
+  assert.equal(prompts, 2); assert.equal(state.biometricLockEnabled, true);
+  await act(async () => { renderer.unmount(); });
+});
+
+test('attached photos are copied out of the cache once and stay attached if copying fails', async () => {
+  const copies = [];
+  class Directory { constructor(parent, name) { this.uri = `${parent.uri}${name}/`; } create() {} }
+  class File {
+    constructor(...parts) { this.uri = parts.map(part => part.uri ?? part).join(''); }
+    async copy(destination) { if (this.uri.includes('gone')) throw new Error('missing'); copies.push([this.uri, destination.uri]); }
+  }
+  const { keepAttachments, MAX_ATTACHMENTS } = loader({
+    'react-native': { Platform: { OS: 'android' } },
+    'expo-file-system': { Directory, File, Paths: { document: { uri: 'file:///data/files/' } } },
+  })('src/services/attachments.ts');
+  const kept = await keepAttachments(['file:///data/cache/ImagePicker/a.jpeg', 'file:///data/cache/gone.png']);
+  assert.match(kept[0], /^file:\/\/\/data\/files\/receipts\/receipt_[a-z0-9]+\.jpeg$/);
+  assert.equal(kept[1], 'file:///data/cache/gone.png');
+  assert.deepEqual(copies, [['file:///data/cache/ImagePicker/a.jpeg', kept[0]]]);
+  assert.deepEqual(await keepAttachments(kept), kept);
+  assert.equal(copies.length, 1);
+  // Ten kept paths must fit the 6000 characters a synced record allows.
+  const longest = `file:///data/user/0/com.santanu.spendly/files/receipts/receipt_${'x'.repeat(24)}.jpeg`;
+  assert.ok(JSON.stringify(Array(MAX_ATTACHMENTS).fill(longest)).length <= 6000);
 });

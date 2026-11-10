@@ -9,6 +9,18 @@ This changelog separates the current UI/responsiveness update from capabilities 
 - Keep saved category icons, colors, transactions, budgets and app identity unchanged.
 - Ads come from the new AdMob app: a banner at the end of Home, and an interstitial after saving a transaction, at most once every 3 minutes. App-open ads are removed.
 - Daily reminders arrive at the set time: the app may now schedule exact alarms, so Android no longer holds the reminder back for battery saving. The notification icon is the new rounded R.
+- Security review (10 November 2026), see [SECURITY.md](SECURITY.md):
+  - Turning the biometric lock off now needs the fingerprint/face/passcode check itself.
+  - While the lock is on, Android keeps Raahi out of screenshots and blanks it in the recent-apps preview, which used to show balances past the lock.
+  - Signing out with changes not yet backed up says so first. "Link another method" is removed: Google is the only method, and choosing a second Google account there switched accounts.
+  - Build-tool dependencies updated: known advisories drop from 12 (4 high) to 4 moderate, none of them in code that ships in the app.
+- Fixes:
+  - Receipt photos are copied into the app's own storage when an entry is saved. They used to stay in the cache folder, which Android may empty. Up to 10 photos per entry.
+  - Changing a budget between "every month" and "this month only" replaces the old budget instead of leaving it in force.
+  - Activity with no entries says "No transactions yet" rather than "No matching transactions".
+  - Entry form: the "Date" label fits on one line, "Today" keeps the chosen time, and an invalid sum no longer shows "= NaN".
+  - The sign-in screen's entrance animation respects Reduce Motion. Icon-only buttons (close, delete, month arrows, photo buttons) have screen-reader names.
+  - Removed unused code left from rewarded ads and earlier sign-in methods.
 
 ## 1.0.3 — Launcher icon and startup
 

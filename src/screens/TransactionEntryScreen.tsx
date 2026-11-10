@@ -30,6 +30,7 @@ import { showToast } from '../components/Toast';
 import { useReminderStore } from '../store/useReminderStore';
 import { savedMessage } from '../utils/messages';
 import { showInterstitialAtBreak } from '../services/ads';
+import { keepAttachments, MAX_ATTACHMENTS } from '../services/attachments';
 
 const TYPE_CONFIG: Record<TransactionType, { label: string; title: string; color: (theme: any) => string }> = {
   expense: { label: 'Expense', title: 'Expense', color: (t) => t.expense },
@@ -142,8 +143,9 @@ export default function TransactionEntryScreen() {
       ? await ImagePicker.launchCameraAsync({ quality: 0.6 })
       : await ImagePicker.launchImageLibraryAsync({ quality: 0.6, allowsMultipleSelection: true });
     if (!result.canceled) {
-      const uris = result.assets.map((a) => a.uri);
-      setAttachments((prev) => [...prev, ...uris]);
+      const next = [...attachments, ...result.assets.map((a) => a.uri)];
+      if (next.length > MAX_ATTACHMENTS) showToast(`Up to ${MAX_ATTACHMENTS} photos per entry`);
+      setAttachments(next.slice(0, MAX_ATTACHMENTS));
     }
   };
 
@@ -181,10 +183,11 @@ export default function TransactionEntryScreen() {
     saving.current = true;
     setIsSaving(true);
     try {
+      const saved = { ...payload, attachments: await keepAttachments(attachments) };
       if (existing) {
-        await updateTransaction(existing.id, payload);
+        await updateTransaction(existing.id, saved);
       } else {
-        await addTransaction(payload);
+        await addTransaction(saved);
       }
       if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       navigation.goBack();
@@ -232,12 +235,12 @@ export default function TransactionEntryScreen() {
   return (
     <Screen edges={['top', 'left', 'right', 'bottom']}>
       <View style={styles.header}>
-        <Pressable onPress={() => navigation.goBack()} hitSlop={10}>
+        <Pressable onPress={() => navigation.goBack()} hitSlop={10} accessibilityRole="button" accessibilityLabel="Close">
           <Ionicons name="close" size={26} color={theme.text} />
         </Pressable>
         <Text style={[styles.headerTitle, { color: theme.text }]}>{existing ? 'Edit' : 'Add'} {TYPE_CONFIG[type].title}</Text>
         {existing ? (
-          <Pressable onPress={handleDelete} hitSlop={10}>
+          <Pressable onPress={handleDelete} hitSlop={10} accessibilityRole="button" accessibilityLabel="Delete">
             <Ionicons name="trash-outline" size={22} color={theme.danger} />
           </Pressable>
         ) : (
@@ -258,7 +261,7 @@ export default function TransactionEntryScreen() {
 
       <View style={styles.amountArea}>
         <Text style={[styles.amountValue, { color: typeColor }]}>₹{formatExpressionDisplay(expression)}</Text>
-        {expression.includes('+') || expression.includes('-') || expression.includes('*') || expression.includes('/') ? (
+        {Number.isFinite(amount) && /[+\-*\/]/.test(expression) ? (
           <Text style={[styles.amountResult, { color: theme.textTertiary }]}>= {amount.toFixed(2)}</Text>
         ) : null}
       </View>
@@ -338,12 +341,21 @@ export default function TransactionEntryScreen() {
           <MetaRow
             icon="calendar-outline"
             iconColor={theme.tint}
-            label="Date & Time"
+            label="Date"
             value={format(date, "MMM d, yyyy '·' h:mm a")}
             onPress={() => setShowDatePicker(true)}
           />
           <View style={styles.quickDateRow}>
-            <Pill label="Today" onPress={() => setDate(new Date())} />
+            <Pill
+              label="Today"
+              onPress={() =>
+                setDate((prev) => {
+                  const today = new Date();
+                  today.setHours(prev.getHours(), prev.getMinutes(), 0, 0);
+                  return today;
+                })
+              }
+            />
             <Pill
               label="-1 day"
               onPress={() =>
@@ -372,15 +384,18 @@ export default function TransactionEntryScreen() {
                 <Pressable
                   style={[styles.thumbRemove, { backgroundColor: theme.danger }]}
                   onPress={() => setAttachments((prev) => prev.filter((u) => u !== uri))}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Remove photo"
                 >
                   <Ionicons name="close" size={12} color="#fff" />
                 </Pressable>
               </View>
             ))}
-            <Pressable style={[styles.addAttachment, { borderColor: theme.border }]} onPress={() => pickImage(false)}>
+            <Pressable style={[styles.addAttachment, { borderColor: theme.border }]} onPress={() => pickImage(false)} accessibilityRole="button" accessibilityLabel="Attach a photo from the gallery">
               <Ionicons name="image-outline" size={20} color={theme.textSecondary} />
             </Pressable>
-            <Pressable style={[styles.addAttachment, { borderColor: theme.border }]} onPress={() => pickImage(true)}>
+            <Pressable style={[styles.addAttachment, { borderColor: theme.border }]} onPress={() => pickImage(true)} accessibilityRole="button" accessibilityLabel="Take a photo to attach">
               <Ionicons name="camera-outline" size={20} color={theme.textSecondary} />
             </Pressable>
           </View>
@@ -556,7 +571,6 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   headerTitle: { fontSize: fontSizes.md, fontWeight: '700' },
   typeToggle: { paddingHorizontal: spacing.sm, marginTop: spacing.xs },
-  typeOption: { flex: 1, paddingVertical: spacing.xs, paddingHorizontal: 2, borderRadius: radius.pill, alignItems: 'center' },
   amountArea: { alignItems: 'center', paddingVertical: spacing.md },
   amountValue: { fontSize: fontSizes.xxxl, fontWeight: '800', fontVariant: ['tabular-nums'] },
   amountResult: { fontSize: fontSizes.base, marginTop: spacing.xxs, fontVariant: ['tabular-nums'] },

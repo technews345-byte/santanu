@@ -75,7 +75,7 @@ Repeat transactions daily, weekly, monthly or yearly. Due entries are generated 
 | Excel export | `.xlsx` transaction rows: date, type, category, source account, destination account, amount, currency and note |
 | PDF report | Formatted summaries and a detailed table capped at the 500 most recent entries; Excel exports the complete row set |
 | Appearance | Dark blue theme only |
-| Biometric lock | Supported device authentication, with re-locking when the app backgrounds |
+| Biometric lock | Supported device authentication, with re-locking when the app backgrounds; while it is on, Android keeps the app out of screenshots and the recent-apps preview, and turning it off needs the same check |
 | Google account | Optional sign-in, sync status, pending changes, last sync time, retry, export, sign out and account deletion |
 | Advertising | A banner at the end of Home, and an interstitial after saving a transaction (at most once every 3 minutes) |
 
@@ -175,8 +175,8 @@ The existing workflow falls back to the public debug key, with a warning, if pri
 | Command | Coverage |
 | --- | --- |
 | `npm run typecheck` | TypeScript checks |
-| `npm test` | 15 regression tests: calculations, persistence, recurrence, sync races, session storage, exports and startup/re-locking |
-| `npm run test:ui` | 10 interaction tests: ledger behavior, swipe actions, navigation, reduced motion, sheets, notifications, press feedback and splash startup |
+| `npm test` | 17 regression tests: calculations, persistence, recurrence, sync races, session storage, exports, startup/re-locking, the lock switch and receipt photo storage |
+| `npm run test:ui` | 11 interaction tests: ledger behavior, swipe actions, navigation, reduced motion, sheets, notifications, press feedback and splash startup |
 | `npm run test:rules` | Firestore rules suite; requires the appropriate emulator setup |
 
 The preview workflow runs type checking and the regression/UI tests. Native installation, visual layout, larger font sizes, scrolling frame rates, notifications, OCR accuracy and haptics need separate device testing.

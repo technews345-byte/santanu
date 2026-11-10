@@ -56,12 +56,6 @@ export interface Budget {
   isRecurring: boolean;
 }
 
-export interface AppSettings {
-  biometricLockEnabled: boolean;
-  baseCurrency: string;
-  activeAccountId: string | null; // null = All Accounts
-}
-
 export const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
   cash: 'Cash',
   checking: 'Checking',
@@ -69,13 +63,4 @@ export const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
   credit_card: 'Credit Card',
   wallet: 'Wallet',
   bank: 'Bank',
-};
-
-export const ACCOUNT_TYPE_ICONS: Record<AccountType, string> = {
-  cash: 'cash-outline',
-  checking: 'card-outline',
-  savings: 'wallet-outline',
-  credit_card: 'card',
-  wallet: 'wallet',
-  bank: 'business-outline',
 };

@@ -1,3 +1,43 @@
+# Raahi security review — 10 November 2026
+
+Reviewed Raahi 1.0.4 (formerly Spendly) on `claude/expense-budget-app-vdww3s`:
+authentication, sync, Firestore rules, local storage, exports, the app lock,
+permissions, dependencies and every screen. The October audit below still
+describes the design; this section lists what this review changed and what
+remains. A code review cannot certify an app as hack-proof, and none of this
+was exercised on a physical phone.
+
+## Fixed in this review
+
+| Finding | Severity | Fix |
+| --- | --- | --- |
+| The biometric lock could be switched off in Settings with no check, by anyone holding the unlocked app | Medium | Turning it off requires the same fingerprint/face/passcode check; a failed or cancelled check leaves it on |
+| With the lock on, Android's recent-apps preview and screenshots still showed balances and entries | Medium | While the lock is on the window is marked secure (`expo-screen-capture`): blank in recents, no screenshots or screen recording. Off when the lock is off |
+| "Link another method" reopened sign-in although Google is the only method; picking a second Google account switched accounts and cleared this device's copy | Low | Row removed |
+| Signing out while changes were still waiting to upload gave no warning; they are lost if a different account then signs in on the phone | Low | The sign-out prompt says how many changes are not backed up |
+| Receipt photos were referenced in the cache folder, which Android (or "Clear cache") empties | Data loss | Copied into the app's private documents folder on save; at most 10 per entry |
+| 12 dependency advisories (4 high) in build tooling | Dependency | Lockfile updated within the Expo 57 range: 4 moderate remain (`glob`, `minimatch` under `@expo/fingerprint`), with no fix short of downgrading Expo. They run at build time only and are not in the APK |
+| `WRITE_EXTERNAL_STORAGE` both requested and blocked; `READ_MEDIA_IMAGES` pulled in by a library | Low | Not requested; `READ_MEDIA_IMAGES` blocked. Photo picking uses the system picker and needs neither |
+
+## Checked and left as they are
+
+- Firestore rules: owner-only, deny by default, every field typed and bounded. Not re-run against the emulator in this review, and **still not confirmed as published** to the live project.
+- SQL uses bound parameters throughout; table names come from a fixed list.
+- PDF export escapes all user text and carries a restrictive CSP; XLSX writes text as inline strings, never formulas.
+- The Firebase session is in Keychain/Keystore (SecureStore). No secrets are in the repository; the Firebase API key comes from a GitHub Actions secret at build time.
+- Record IDs use `Math.random`. They are identifiers under the owner's own path, not secrets.
+
+## Still open
+
+1. **Release signing.** The `ANDROID_KEYSTORE_BASE64` secret is not a valid keystore, so builds are signed with the public debug key. Anyone can sign an APK that installs over Raahi. See "Creating the release signing key" below.
+2. **Publish `firestore.rules`** in the Firebase Console and restrict the API key; consider App Check.
+3. The local database is not encrypted (no SQLCipher). The lock is an access control, not encryption.
+4. `USE_EXACT_ALARM` is declared for on-time reminders. Google Play allows it only for alarm and calendar apps; remove it before a Play upload.
+5. Full-screen ads pause the app, so with the lock on Raahi is expected to ask for the fingerprint again after an ad closes. This is the safe behaviour and was left alone.
+6. A deleted entry's photos stay in the app's private storage until the app is uninstalled.
+
+---
+
 # Spendly security audit — 7 October 2026
 
 ## Scope and outcome

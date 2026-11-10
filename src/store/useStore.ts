@@ -10,7 +10,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const ACTIVE_ACCOUNT_KEY = 'settings:activeAccountId';
 const BALANCE_VISIBLE_KEY = 'settings:balanceVisible';
 const BIOMETRIC_KEY = 'settings:biometricLockEnabled';
-const SUPPORT_COUNT_KEY = 'settings:supportCount';
 
 interface StoreState {
   hydrated: boolean;
@@ -22,14 +21,11 @@ interface StoreState {
   activeAccountId: string | null; // null = All Accounts
   balanceVisible: boolean;
   biometricLockEnabled: boolean;
-  /** How many rewarded ads the user has chosen to watch to support the app. */
-  supportCount: number;
 
   hydrate: () => Promise<void>;
   setActiveAccountId: (id: string | null) => void;
   toggleBalanceVisible: () => void;
   setBiometricLockEnabled: (enabled: boolean) => void;
-  recordSupport: () => void;
 
   addAccount: (input: Omit<Account, 'id' | 'createdAt' | 'archived' | 'sortOrder'>) => Promise<Account>;
   updateAccount: (id: string, patch: Partial<Account>) => Promise<void>;
@@ -58,7 +54,6 @@ export const useStore = create<StoreState>((set, get) => ({
   activeAccountId: null,
   balanceVisible: true,
   biometricLockEnabled: false,
-  supportCount: 0,
 
   hydrate: async () => {
     // Loading materializes due repeats idempotently; the database's setup
@@ -75,7 +70,6 @@ export const useStore = create<StoreState>((set, get) => ({
         AsyncStorage.getItem(ACTIVE_ACCOUNT_KEY),
         AsyncStorage.getItem(BALANCE_VISIBLE_KEY),
         AsyncStorage.getItem(BIOMETRIC_KEY),
-        AsyncStorage.getItem(SUPPORT_COUNT_KEY),
       ]);
     };
     try {
@@ -86,7 +80,7 @@ export const useStore = create<StoreState>((set, get) => ({
         await new Promise((resolve) => setTimeout(resolve, 400));
         loaded = await load();
       }
-      const [accounts, categories, transactions, budgets, storedActive, storedVisible, storedBiometric, storedSupport] = loaded;
+      const [accounts, categories, transactions, budgets, storedActive, storedVisible, storedBiometric] = loaded;
       set({
         accounts,
         categories,
@@ -95,7 +89,6 @@ export const useStore = create<StoreState>((set, get) => ({
         activeAccountId: accounts.some((a) => a.id === storedActive) ? storedActive : null,
         balanceVisible: storedVisible === null ? true : storedVisible === 'true',
         biometricLockEnabled: storedBiometric === 'true',
-        supportCount: Number(storedSupport) || 0,
         hydrated: true,
         hydrationError: null,
       });
@@ -118,12 +111,6 @@ export const useStore = create<StoreState>((set, get) => ({
   setBiometricLockEnabled: (enabled) => {
     set({ biometricLockEnabled: enabled });
     AsyncStorage.setItem(BIOMETRIC_KEY, String(enabled)).catch(() => {});
-  },
-
-  recordSupport: () => {
-    const next = get().supportCount + 1;
-    set({ supportCount: next });
-    AsyncStorage.setItem(SUPPORT_COUNT_KEY, String(next)).catch(() => {});
   },
 
   addAccount: async (input) => {

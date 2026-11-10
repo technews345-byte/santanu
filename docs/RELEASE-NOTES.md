@@ -16,6 +16,9 @@
 - Saved categories, icons, colours, transactions and budgets are kept as they are.
 - Ads: a banner at the end of Home, and an interstitial after saving a transaction (at most once every 3 minutes). No more ads when opening the app.
 - Daily reminders now arrive on time, with the new R logo as the notification icon.
+- Security: turning the biometric lock off needs the lock's own check, and while the lock is on Raahi stays out of screenshots and the recent-apps preview.
+- Receipt photos are kept in the app's own storage, so clearing the cache no longer loses them.
+- Fixes for budgets switched between "every month" and "this month only", the empty Activity screen and the entry form.
 
 **1.0.3 — Launcher icon and startup**
 - The R logo fits fully inside rounded Android launcher icons.
@@ -29,7 +32,7 @@
 
 ### The UI
 
-- **Rounded glass:** an iOS-inspired interface of frosted glass panels over a deep blue background, in dark and light mode.
+- **Rounded glass:** an iOS-inspired interface of frosted glass panels over a deep blue background.
 - **Floating tab bar:** Home, Activity, Budgets, Analytics and Settings in a floating glass capsule with a soft spring on every tap.
 - **One icon family:** clean outline category symbols across budgets, entries, activity and charts.
 - **Calm motion:** native-driven springs that stay smooth, and switch off when Reduce Motion is on.

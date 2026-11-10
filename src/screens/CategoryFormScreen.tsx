@@ -65,7 +65,7 @@ export default function CategoryFormScreen() {
   return (
     <Screen edges={['top', 'left', 'right', 'bottom']}>
       <View style={styles.header}>
-        <Pressable onPress={() => navigation.goBack()} hitSlop={10}>
+        <Pressable onPress={() => navigation.goBack()} hitSlop={10} accessibilityRole="button" accessibilityLabel="Close">
           <Ionicons name="close" size={26} color={theme.text} />
         </Pressable>
         <Text style={[styles.headerTitle, { color: theme.text }]}>{existing ? 'Edit Category' : 'New Category'}</Text>

@@ -57,13 +57,3 @@ export function planMerge<T extends SyncRecord>(localRows: T[], remoteRows: T[],
 
   return { applyLocally, pushRemote };
 }
-
-/**
- * A guest's local rows keep their ids when they first sign in, so signing in
- * twice, or on a device that already pulled the same rows, cannot duplicate
- * them. Anything the account already holds wins.
- */
-export function planGuestMigration<T extends SyncRecord>(localRows: T[], accountRows: T[]): T[] {
-  const existing = new Set(accountRows.map((r) => r.id));
-  return localRows.filter((r) => !existing.has(r.id) && !r.deletedAt);
-}

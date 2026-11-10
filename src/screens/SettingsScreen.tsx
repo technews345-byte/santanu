@@ -47,6 +47,13 @@ export default function SettingsScreen() {
         Alert.alert('Unavailable', 'No biometric authentication is set up on this device.');
         return;
       }
+    } else {
+      // Turning the lock off is the one change the lock itself has to guard.
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: 'Turn off Raahi lock',
+        fallbackLabel: 'Use passcode',
+      }).catch(() => null);
+      if (!result?.success) return;
     }
     setBiometricLockEnabled(value);
   };

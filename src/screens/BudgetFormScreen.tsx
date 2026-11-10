@@ -33,7 +33,11 @@ export default function BudgetFormScreen() {
         Alert.alert('Enter a valid amount');
         return;
       }
-      await setBudget(categoryId, isRecurring ? RECURRING_BUDGET_KEY : monthKey, value, isRecurring);
+      const key = isRecurring ? RECURRING_BUDGET_KEY : monthKey;
+      await setBudget(categoryId, key, value, isRecurring);
+      // Switching between "every month" and "this month only" saves under a
+      // different key; the budget it replaces must not stay in force.
+      if (existing && existing.monthKey !== key) await removeBudget(existing.id);
       navigation.goBack();
     } catch (error: any) {
       Alert.alert("Could not save", error?.message ?? "Please try again.");
@@ -58,12 +62,12 @@ export default function BudgetFormScreen() {
   return (
     <Screen edges={['top', 'left', 'right', 'bottom']}>
       <View style={styles.header}>
-        <Pressable onPress={() => navigation.goBack()} hitSlop={10}>
+        <Pressable onPress={() => navigation.goBack()} hitSlop={10} accessibilityRole="button" accessibilityLabel="Close">
           <Ionicons name="close" size={26} color={theme.text} />
         </Pressable>
         <Text style={[styles.headerTitle, { color: theme.text }]}>Monthly Budget</Text>
         {existing ? (
-          <Pressable onPress={handleRemove} hitSlop={10}>
+          <Pressable onPress={handleRemove} hitSlop={10} accessibilityRole="button" accessibilityLabel="Delete">
             <Ionicons name="trash-outline" size={22} color={theme.danger} />
           </Pressable>
         ) : (
