@@ -28,6 +28,28 @@ Raahi's sculpted white **R** has cyan and violet highlights on a blue-purple bac
 
 Version **1.0.4** brings the Budgets tab's clean outline category icons to category lists, transaction entry, activity and analytics while preserving saved icons, colors and budget progress. Version **1.0.3** centers the splash, prevents the lock screen showing through during loading, and preserves biometric authentication when enabled. Version **1.0.2** introduced the Raahi name, full-edge blue background, simpler touch feedback, cleaner Activity card corners, and a single Notifications switch. See [CHANGELOG.md](CHANGELOG.md) for the full history.
 
+## What's fixed — 10 November 2026
+
+A full review of security, code and UI in the current 1.0.4 build. Details are in [SECURITY.md](SECURITY.md) and [CHANGELOG.md](CHANGELOG.md).
+
+**Security**
+- **App lock can't be switched off freely.** Turning the biometric lock off in Settings now needs your fingerprint, face or passcode.
+- **Nothing shows past the lock.** While the lock is on, Raahi is blank in Android's recent-apps preview and can't be screenshotted or screen-recorded. Before, the preview showed your balance.
+- **No accidental account switch.** "Link another method" is removed. Google is the only sign-in method, and choosing a second Google account there replaced the data on the phone.
+- **Sign-out warning.** If some changes are not backed up yet, the sign-out prompt says how many.
+- **Safer build tools.** Known advisories in build-time dependencies dropped from 12 (4 high) to 4 moderate. None are in code that ships in the app.
+
+**Bugs**
+- **Receipt photos are kept.** They are copied into the app's own storage when an entry is saved, up to 10 per entry. They used to sit in the cache folder, which Android can empty.
+- **Budgets.** Switching a budget between "every month" and "this month only" replaces the old budget instead of leaving it active.
+- **Daily reminders arrive on time,** with the new R logo as the notification icon.
+- **Activity.** An empty ledger says "No transactions yet" instead of "No matching transactions".
+- **Entry form.** The "Date" label fits on one line, "Today" keeps the time you chose, and an invalid sum no longer shows "= NaN".
+- **Accessibility.** The sign-in animation respects Reduce Motion, and icon-only buttons (close, delete, month arrows, photo buttons) have screen-reader names.
+- **Cleanup.** Removed unused code left from rewarded ads and earlier sign-in methods.
+
+**Still open:** release builds are signed with the public debug key until a valid signing key is added to the repository secrets, and `firestore.rules` must be published in the Firebase Console.
+
 ## Main features
 
 ### Home and spending overview
