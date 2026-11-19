@@ -182,11 +182,12 @@ class PlaybackService : MediaSessionService() {
             PlaybackHub.error.value = "“${wanted.name}” is missing from storage, playing another mantra instead."
         }
         val index = playable.indexOfFirst { it.id == wanted?.id }.coerceAtLeast(0)
-        val point = s.resume?.takeIf { resume && it.mantraId == playable[index].id }
+        val target = repeat ?: s.repeat
+        val point = s.resume?.takeIf { resume && it.usableFor(playable[index].id, target, playable[index].durationMs, System.currentTimeMillis()) }
 
         this.kind = kind
         repeatOverride = repeat
-        plan = RepeatPlan(repeat ?: s.repeat, point?.played ?: 0)
+        plan = RepeatPlan(target, point?.played ?: 0)
         clearSleep()
         val items = playable.map(::mediaItem)
         // Morning sessions can open with temple bells or birdsong, placed just before the mantra so it follows on its own.
@@ -304,7 +305,7 @@ class PlaybackService : MediaSessionService() {
 
     private fun saveResume() {
         val id = player.currentMediaItem?.mediaId?.takeIf { it != INTRO_ID } ?: return
-        Store.update { it.copy(resume = ResumePoint(id, player.currentPosition, plan.played)) }
+        Store.update { it.copy(resume = ResumePoint(id, player.currentPosition, plan.played, System.currentTimeMillis())) }
     }
 
     private val listener = object : Player.Listener {

@@ -58,7 +58,22 @@ enum class ThemeMode { AUTO, SYSTEM, LIGHT, DARK }
 
 /** Where playback stopped, so pressing Play continues from there. */
 @Serializable
-data class ResumePoint(val mantraId: String, val positionMs: Long, val played: Int = 0)
+data class ResumePoint(val mantraId: String, val positionMs: Long, val played: Int = 0, val savedAt: Long = 0) {
+    /**
+     * Play continues from here only after a recent pause of the same mantra, with plays left in the session and
+     * more than the last few seconds of the track to go. Anything else starts a fresh, full session.
+     */
+    fun usableFor(id: String, target: Int, durationMs: Long, now: Long): Boolean =
+        id == mantraId &&
+            now - savedAt in 0..MAX_AGE_MS &&
+            (target == AppState.CONTINUOUS || played < target) &&
+            (durationMs <= 0 || positionMs < durationMs - END_MARGIN_MS)
+
+    companion object {
+        const val MAX_AGE_MS = 30 * 60_000L
+        const val END_MARGIN_MS = 5_000L
+    }
+}
 
 @Serializable
 data class AppState(
