@@ -107,7 +107,7 @@ fun AppRoot(player: PlayerConnection, playNow: StateFlow<Boolean>, onPlayNowHand
     LaunchedEffect(wantsPlay, state.onboarded) {
         if (wantsPlay && state.onboarded) {
             player.send(
-                PlaybackHub.Command.Start(morningMantra(state)?.id, SessionKind.MORNING, resume = false, fade = true, repeat = morningRule(state)?.repeat)
+                PlaybackHub.Command.Start(morningMantra(state)?.id, SessionKind.MORNING, resume = false, fade = false, repeat = morningRule(state)?.repeat)
             )
             onPlayNowHandled()
         }

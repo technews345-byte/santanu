@@ -81,7 +81,7 @@ fun HomeScreen(state: AppState, player: PlayerConnection, pad: PaddingValues, na
     val pending = if (state.scheduleOn) ScheduleMath.pendingToday(state.schedules, now, state.lastCompletedAt, state.place) else null
 
     fun play(occ: Occurrence?) {
-        player.send(PlaybackHub.Command.Start(state.mantraFor(occ?.rule ?: homeRule)?.id, SessionKind.MORNING, resume = occ == null, fade = occ != null, (occ?.rule ?: homeRule)?.repeat))
+        player.send(PlaybackHub.Command.Start(state.mantraFor(occ?.rule ?: homeRule)?.id, SessionKind.MORNING, resume = occ == null, fade = false, (occ?.rule ?: homeRule)?.repeat))
         nav.navigate(Routes.PLAYER)
     }
 

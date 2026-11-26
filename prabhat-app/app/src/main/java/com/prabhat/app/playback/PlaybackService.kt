@@ -25,6 +25,7 @@ import com.prabhat.app.data.Library
 import com.prabhat.app.data.Mantra
 import com.prabhat.app.data.ResumePoint
 import com.prabhat.app.data.Store
+import com.prabhat.app.domain.Fade
 import com.prabhat.app.domain.RepeatPlan
 import com.prabhat.app.notify.Notifier
 import com.prabhat.app.schedule.Scheduler
@@ -199,10 +200,11 @@ class PlaybackService : MediaSessionService() {
         }
         applyRepeat()
         fadeJob?.cancel()
-        player.volume = if (fade && s.fadeInSeconds > 0) 0f else s.volume
+        val fadeSeconds = if (fade) Fade.seconds(s.fadeInSeconds, playable[index].durationMs, target) else 0
+        player.volume = if (fadeSeconds > 0) s.volume * Fade.level(0f) else s.volume
         player.prepare()
         player.play()
-        if (fade && s.fadeInSeconds > 0) fadeIn(s.fadeInSeconds)
+        if (fadeSeconds > 0) fadeIn(fadeSeconds)
         publishSession()
         return true
     }
@@ -233,8 +235,7 @@ class PlaybackService : MediaSessionService() {
             val steps = seconds * 10
             for (i in 1..steps) {
                 delay(100)
-                val f = i.toFloat() / steps
-                player.volume = Store.value.volume * f * f // eased so the start is especially soft
+                player.volume = Store.value.volume * Fade.level(i.toFloat() / steps)
             }
             player.volume = Store.value.volume
         }
