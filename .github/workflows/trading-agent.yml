@@ -1,0 +1,24 @@
+name: Trading Agent CI
+on:
+  push:
+    paths: ["trading-agent/**", ".github/workflows/trading-agent.yml"]
+  pull_request:
+    paths: ["trading-agent/**", ".github/workflows/trading-agent.yml"]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: trading-agent
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install pytest
+      - run: python -m pytest -q
+      - run: PYTHONPATH=src python -m tradeagent.cli paper --schema schemas/nifty-earnings.v1.json --minutes 375 --run state/ci-nifty
+      - run: PYTHONPATH=src python -m tradeagent.cli paper --schema schemas/btc-capitulation.v1.json --start 2026-11-28T00:00:00+00:00 --minutes 720 --run state/ci-btc
+      - run: PYTHONPATH=src python -m tradeagent.cli review --schema schemas/btc-capitulation.v1.json --run state/ci-btc
