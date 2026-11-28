@@ -22,9 +22,15 @@ from .jev_schema import Decision
 @dataclass(frozen=True)
 class SetupParams:
     stop_vol_mult: float = 1.5       # stop = mult * hourly realised vol
-    reward_risk: float = 2.0         # target distance / stop distance
+    reward_risk: float = 3.0         # target distance / stop distance (1:3 risk-reward)
     min_stop_bps: float = 40.0
     max_stop_bps: float = 600.0
+
+    def __post_init__(self) -> None:
+        if not 1.0 <= self.reward_risk <= 10.0:
+            raise ValueError("reward_risk must be between 1 and 10 (target = reward_risk x stop distance)")
+        if not 0 < self.min_stop_bps <= self.max_stop_bps:
+            raise ValueError("need 0 < min_stop_bps <= max_stop_bps")
 
 
 @dataclass

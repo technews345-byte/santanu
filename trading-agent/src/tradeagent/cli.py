@@ -28,6 +28,7 @@ from .journal import Journal
 from .judge import BaselineJudge, HttpJevClient, JudgeUnavailable
 from .loop import Agent, AgentConfig
 from .markets import PROFILES
+from .policy import SetupParams
 from .models import Account, BookLevel, OrderBook, Trade
 from .review import DIRS, MIN_EVAL_SAMPLES, brier_multiclass, direction_label, write_review
 from .risk import KillSwitch, RiskEngine
@@ -41,17 +42,29 @@ def _judge(name: str):
     return BaselineJudge()
 
 
-def build_agent(schema_path: str, run: Path, judge: str, cash: float | None = None) -> Agent:
+DEFAULT_CAPITAL = {"INR": 100_000.0, "USD": 10_000.0}    # paper account: Rs 1 lakh for NSE, $10k for crypto
+
+
+def build_agent(schema_path: str, run: Path, judge: str, cash: float | None = None,
+                reward_risk: float | None = None) -> Agent:
     schema = load_schema(schema_path)
     market = PROFILES[schema.market]
     run.mkdir(parents=True, exist_ok=True)
-    cash = cash or (1_000_000.0 if market.currency == "INR" else 10_000.0)
+    cash = cash or DEFAULT_CAPITAL.get(market.currency, 10_000.0)
+    if cash <= 0:
+        raise ValueError("capital must be positive")
     acct = Account(cash=cash, peak_equity=cash, day_start_equity=cash)
     journal = Journal(run / "journal.jsonl")
     cfg = AgentConfig(market=market)
+    if reward_risk is not None:
+        cfg.setup = SetupParams(reward_risk=reward_risk)
     risk = RiskEngine(cfg.limits, KillSwitch(run / "KILL"), market)
-    return Agent(schema, StateEngine(schema.symbol), _judge(judge), PaperBroker(acct, market),
-                 acct, risk, make_escalator(journal), journal, cfg)
+    agent = Agent(schema, StateEngine(schema.symbol), _judge(judge), PaperBroker(acct, market),
+                  acct, risk, make_escalator(journal), journal, cfg)
+    agent.initial_capital = cash
+    journal.write("config", 0, capital=cash, currency=market.currency,
+                  reward_risk=cfg.setup.reward_risk, market=market.name)
+    return agent
 
 
 def drive(agent: Agent, events) -> dict:
@@ -66,8 +79,9 @@ def drive(agent: Agent, events) -> dict:
             n += 1
         agent.on_book(ev) if kind == "book" else agent.on_trade(ev)
     mid = agent.engine.snapshot_mid(agent.book) if agent.book else 0
-    return {"steps": n, "equity": agent.acct.equity({agent.symbol: mid}),
-            "kill_tripped": agent.risk.kill.tripped}
+    return {"steps": n, "capital": getattr(agent, "initial_capital", None),
+            "reward_risk": f"1:{agent.cfg.setup.reward_risk:g}",
+            "equity": agent.acct.equity({agent.symbol: mid}), "kill_tripped": agent.risk.kill.tripped}
 
 
 def recorded_events(path: str, symbol: str):
@@ -85,7 +99,7 @@ def recorded_events(path: str, symbol: str):
 
 
 def cmd_paper(a) -> int:
-    agent = build_agent(a.schema, Path(a.run), a.judge)
+    agent = build_agent(a.schema, Path(a.run), a.judge, a.capital, a.reward_risk)
     start = int(datetime.fromisoformat(a.start).timestamp() * 1000)
     px = 25_600 / 100 if agent.cfg.market.currency == "INR" else 60_000.0
     res = drive(agent, synthetic_events(agent.symbol, start, a.minutes, start_px=px, seed=a.seed,
@@ -95,7 +109,7 @@ def cmd_paper(a) -> int:
 
 
 def cmd_replay(a) -> int:
-    agent = build_agent(a.schema, Path(a.run), a.judge)
+    agent = build_agent(a.schema, Path(a.run), a.judge, a.capital, a.reward_risk)
     print(json.dumps(drive(agent, recorded_events(a.events, agent.symbol)), indent=2))
     return 0
 
@@ -185,6 +199,11 @@ def cmd_reset_kill(a) -> int:
     return 0
 
 
+def _money_flags(s) -> None:
+    s.add_argument("--capital", type=float, help="paper account size (default: 100000 INR for NSE, 10000 USD for crypto)")
+    s.add_argument("--reward-risk", type=float, help="target as a multiple of the stop distance (default 3 = 1:3)")
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="tradeagent")
     sp = p.add_subparsers(dest="cmd", required=True)
@@ -193,10 +212,12 @@ def main(argv=None) -> int:
     s.add_argument("--minutes", type=int, default=1440); s.add_argument("--seed", type=int, default=7)
     s.add_argument("--start", default="2026-11-30T09:15:00+05:30"); s.add_argument("--crash-at", type=int)
     s.add_argument("--judge", choices=["baseline", "jev"], default="baseline"); s.set_defaults(f=cmd_paper)
+    _money_flags(s)
 
     s = sp.add_parser("replay"); s.add_argument("--schema", required=True); s.add_argument("--run", required=True)
     s.add_argument("--events", required=True)
     s.add_argument("--judge", choices=["baseline", "jev"], default="baseline"); s.set_defaults(f=cmd_replay)
+    _money_flags(s)
 
     s = sp.add_parser("fetch-yahoo", help="real 1-minute bars from Yahoo Finance -> replay events")
     s.add_argument("--schema", required=True); s.add_argument("--out", required=True)
@@ -223,6 +244,8 @@ def main(argv=None) -> int:
         return a.f(a)
     except PermissionError as e:
         print(f"refused: {e}"); return 2
+    except ValueError as e:
+        print(f"invalid setting: {e}"); return 2
 
 
 if __name__ == "__main__":

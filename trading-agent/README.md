@@ -29,6 +29,12 @@ PYTHONPATH=src python -m tradeagent.cli review --schema schemas/nifty-earnings.v
 `fetch-yahoo` needs `query1.finance.yahoo.com` reachable. Yahoo serves 1-minute bars for about the last week only. Prices are real, but Yahoo has no order book, so each bar is replayed as 60 one-second books along its open → low/high → close path with a one-tick spread. Depth, imbalance and aggressor flow are approximated, so treat results as a sanity check, not proof of edge. Recorded Kite/exchange order books are still needed for gate G5.
 
 **First real-data result (20–27 Nov 2026, rule-based stand-in judge):** no trades on NIFTYBEES, ONGC, BPCL, TATASTEEL or INFY, and one BTC trade (+$69.92 on $10k). On every symbol the judge's direction score was worse than a uniform guess (0.72–0.81 vs 0.667). No edge yet.
+**Paper account and risk-reward.** The default paper account is ₹1,00,000 for NSE ($10,000 for crypto), and every target is 3× the stop distance (1:3 risk-reward). Change either one per run with `--capital` and `--reward-risk` on `paper` and `replay`:
+```bash
+PYTHONPATH=src python -m tradeagent.cli replay --schema schemas/nifty-earnings.v1.json --events data/NIFTYBEES.jsonl --run state/n --capital 100000 --reward-risk 3
+```
+On ₹1 lakh the 20% position cap limits each trade to about ₹20,000 of stock. With the minimum 0.4% stop, that's roughly ₹80 at risk to make ₹240. Zerodha's charges on a ₹20,000 round trip come to about ₹21 before slippage, so costs are a much bigger share of each trade than on a larger account.
+
 Emergency stop: `touch state/<run>/KILL`. Entries stop at once and the position is flattened on the next candle. Clearing it takes `tradeagent reset-kill --run state/<run> --i-understand`.
 
 ## Hard rules in code (the model cannot change them)
