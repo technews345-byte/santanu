@@ -113,3 +113,21 @@ def test_candidate_schema_keeps_required_fields(tmp_path, btc_schema):
     p = propose_schema(btc_schema, {"verdict": "x"}, tmp_path)
     s = load_schema(p)
     assert s.version == btc_schema.version + 1 and s.market == btc_schema.market
+
+
+def test_cli_replay_path_can_trade(tmp_path, nifty_schema):
+    """Regression: the synthetic feed must be dense enough to pass the staleness check, so a
+    forced signal driven through cli.drive() actually fills (it silently never did with 15s books)."""
+    from datetime import datetime
+    from tradeagent.cli import build_agent, drive
+    from tradeagent.sim import synthetic_events
+    agent = build_agent(str(Path(__file__).resolve().parents[1] / "schemas" / "nifty-earnings.v1.json"),
+                        tmp_path, "baseline")
+    agent.judge = ScriptedJudge(direction="long", p_dir=0.9, q=3)
+    start = int(datetime.fromisoformat("2026-11-30T09:15:00+05:30").timestamp() * 1000)
+    drive(agent, synthetic_events("NIFTYBEES", start, 375, start_px=256.0, seed=11))
+    ev = [json.loads(l) for l in open(tmp_path / "journal.jsonl")]
+    stale = [e for e in ev if e["kind"] == "risk" and "stale" in e["verdict"]["reason"]]
+    assert not stale
+    assert any(e["kind"] == "fill" and e["why"] == "entry" for e in ev)
+    assert not agent.acct.positions

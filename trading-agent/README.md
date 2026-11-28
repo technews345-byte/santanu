@@ -20,7 +20,15 @@ python -m pytest -q                       # 44 tests
 PYTHONPATH=src python -m tradeagent.cli paper  --schema schemas/btc-capitulation.v1.json --start 2026-11-28T00:00:00+00:00 --minutes 2880 --run state/btc
 PYTHONPATH=src python -m tradeagent.cli review --schema schemas/btc-capitulation.v1.json --run state/btc
 cat state/btc/reviews/*/report.md
+
+# real prices: last 5 sessions of 1-minute bars from Yahoo Finance, replayed through the same agent
+PYTHONPATH=src python -m tradeagent.cli fetch-yahoo --schema schemas/nifty-earnings.v1.json --out data/NIFTYBEES.jsonl
+PYTHONPATH=src python -m tradeagent.cli replay --schema schemas/nifty-earnings.v1.json --events data/NIFTYBEES.jsonl --run state/nifty-real
+PYTHONPATH=src python -m tradeagent.cli review --schema schemas/nifty-earnings.v1.json --run state/nifty-real
 ```
+`fetch-yahoo` needs `query1.finance.yahoo.com` reachable. Yahoo serves 1-minute bars for about the last week only. Prices are real, but Yahoo has no order book, so each bar is replayed as 60 one-second books along its open → low/high → close path with a one-tick spread. Depth, imbalance and aggressor flow are approximated, so treat results as a sanity check, not proof of edge. Recorded Kite/exchange order books are still needed for gate G5.
+
+**First real-data result (20–27 Nov 2026, rule-based stand-in judge):** no trades on NIFTYBEES, ONGC, BPCL, TATASTEEL or INFY, and one BTC trade (+$69.92 on $10k). On every symbol the judge's direction score was worse than a uniform guess (0.72–0.81 vs 0.667). No edge yet.
 Emergency stop: `touch state/<run>/KILL`. Entries stop at once and the position is flattened on the next candle. Clearing it takes `tradeagent reset-kill --run state/<run> --i-understand`.
 
 ## Hard rules in code (the model cannot change them)
