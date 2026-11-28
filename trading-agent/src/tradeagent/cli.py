@@ -2,6 +2,7 @@
 
   python -m tradeagent.cli paper    --schema schemas/btc-capitulation.v1.json --minutes 2880 --run state/btc
   python -m tradeagent.cli paper    --schema schemas/nifty-earnings.v1.json --start 2026-11-30T09:15+05:30 --minutes 375 --run state/nifty
+  python -m tradeagent.cli fetch-yahoo --schema schemas/nifty-earnings.v1.json --out data/NIFTYBEES.jsonl [--range 5d]
   python -m tradeagent.cli replay   --schema ... --events recorded.jsonl --run state/x
   python -m tradeagent.cli review   --schema ... --run state/x
   python -m tradeagent.cli evaluate --incumbent ... --candidate ... --run state/x     (needs a judge key)
@@ -99,6 +100,28 @@ def cmd_replay(a) -> int:
     return 0
 
 
+def cmd_fetch_yahoo(a) -> int:
+    from .yahoo import YahooDataError, bars_to_events, fetch_chart, parse_bars, write_events, yahoo_symbol
+    schema = load_schema(a.schema)
+    ysym = a.yahoo_symbol or yahoo_symbol(schema.symbol, schema.market)
+    try:
+        body = fetch_chart(ysym, a.range)
+        meta, bars = parse_bars(body)
+    except (YahooDataError, OSError, ValueError) as e:
+        print(f"fetch failed for {ysym}: {e}")
+        return 1
+    if a.raw_out:
+        Path(a.raw_out).parent.mkdir(parents=True, exist_ok=True)
+        Path(a.raw_out).write_text(json.dumps(body))
+    n = write_events(a.out, bars_to_events(schema.symbol, bars))
+    fmt = lambda t: datetime.fromtimestamp(t, timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    print(json.dumps({"symbol": schema.symbol, "yahoo_symbol": ysym, "currency": meta.get("currency"),
+                      "bars": len(bars), "first_bar": fmt(bars[0][0]), "last_bar": fmt(bars[-1][0]),
+                      "events": n, "out": a.out,
+                      "note": "real prices; order-book depth and trade aggressor are approximated"}, indent=2))
+    return 0
+
+
 def cmd_review(a) -> int:
     run = Path(a.run)
     date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
@@ -174,6 +197,12 @@ def main(argv=None) -> int:
     s = sp.add_parser("replay"); s.add_argument("--schema", required=True); s.add_argument("--run", required=True)
     s.add_argument("--events", required=True)
     s.add_argument("--judge", choices=["baseline", "jev"], default="baseline"); s.set_defaults(f=cmd_replay)
+
+    s = sp.add_parser("fetch-yahoo", help="real 1-minute bars from Yahoo Finance -> replay events")
+    s.add_argument("--schema", required=True); s.add_argument("--out", required=True)
+    s.add_argument("--range", choices=["1d", "5d", "7d"], default="5d")
+    s.add_argument("--yahoo-symbol", help="override the ticker derived from the schema (e.g. ^NSEI)")
+    s.add_argument("--raw-out", help="also save Yahoo's raw JSON here"); s.set_defaults(f=cmd_fetch_yahoo)
 
     s = sp.add_parser("review"); s.add_argument("--schema", required=True); s.add_argument("--run", required=True)
     s.set_defaults(f=cmd_review)
