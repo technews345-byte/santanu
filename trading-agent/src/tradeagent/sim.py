@@ -1,5 +1,8 @@
 """Synthetic market data for paper runs and tests. Seeded, so runs are reproducible.
 
+Books update once per second by default, like a live feed; sparser updates would (correctly)
+trip the risk layer's 2-second staleness check and block every entry.
+
 This is plumbing, not evidence: P&L on synthetic data says nothing about edge. Real evaluation
 replays recorded exchange data through the same Agent (see `tradeagent replay`).
 """
@@ -14,7 +17,7 @@ from .models import BookLevel, OrderBook, Trade
 
 def synthetic_events(symbol: str, start_ms: int, minutes: int, start_px: float = 100.0,
                      seed: int = 7, crash_at_min: int | None = None,
-                     updates_per_min: int = 4) -> Iterator[tuple[str, object]]:
+                     updates_per_min: int = 60) -> Iterator[tuple[str, object]]:
     rng = random.Random(seed)
     px = start_px
     drift, vol = 0.0, 0.0008
