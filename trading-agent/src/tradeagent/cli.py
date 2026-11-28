@@ -225,12 +225,6 @@ def main(argv=None) -> int:
     s.add_argument("--yahoo-symbol", help="override the ticker derived from the schema (e.g. ^NSEI)")
     s.add_argument("--raw-out", help="also save Yahoo's raw JSON here"); s.set_defaults(f=cmd_fetch_yahoo)
 
-    s = sp.add_parser("fetch-yahoo", help="real 1-minute bars from Yahoo Finance -> replay events")
-    s.add_argument("--schema", required=True); s.add_argument("--out", required=True)
-    s.add_argument("--range", choices=["1d", "5d", "7d"], default="5d")
-    s.add_argument("--yahoo-symbol", help="override the ticker derived from the schema (e.g. ^NSEI)")
-    s.add_argument("--raw-out", help="also save Yahoo's raw JSON here"); s.set_defaults(f=cmd_fetch_yahoo)
-
     s = sp.add_parser("review"); s.add_argument("--schema", required=True); s.add_argument("--run", required=True)
     s.set_defaults(f=cmd_review)
 
