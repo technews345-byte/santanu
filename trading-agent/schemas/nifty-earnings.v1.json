@@ -1,0 +1,61 @@
+{
+  "schema_id": "nifty-earnings",
+  "version": 1,
+  "symbol": "NIFTYBEES",
+  "market": "nse_equity_intraday",
+  "thesis": "Q2 FY27 earnings were strong (Nifty-50 PAT up about 27% YoY per MOFSL) and Nifty 100 PE about 20.4 sits below its 5-year median; FPIs bought heavily in Nov 2026. Intraday long on pullbacks that hold the opening range.",
+  "invalidation": "Invalid if Brent stays above about 95 USD, RBI signals more hikes, or FPI flows flip to sustained selling.",
+  "fields": [
+    {
+      "name": "regime",
+      "kind": "choice",
+      "options": [
+        "trending",
+        "mean_reverting",
+        "high_vol",
+        "crisis"
+      ],
+      "question": "From this snapshot only, which regime is this symbol in right now: trending (persistent directional returns, moderate realised vol), mean_reverting (returns oscillate around a level), high_vol (realised vol well above its recent norm without a clear direction), or crisis (disorderly selling, gaps, liquidity thinning)?"
+    },
+    {
+      "name": "direction",
+      "kind": "choice",
+      "options": [
+        "long",
+        "short",
+        "neutral"
+      ],
+      "question": "Over the next 60 minutes, is the more likely outcome a move up larger than round-trip costs (long), a move down larger than costs (short), or neither (neutral)? Answer neutral unless the evidence in the snapshot is clear."
+    },
+    {
+      "name": "toxic_flow",
+      "kind": "bool",
+      "options": [
+        true,
+        false
+      ],
+      "question": "Does order flow look informed or one-sided enough that a new passive or taker entry is likely to be picked off (for example large one-sided aggressor flow with a widening spread)?"
+    },
+    {
+      "name": "setup_quality",
+      "kind": "score",
+      "options": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "question": "How well does the snapshot match the thesis's entry conditions? 0 = no match, 1 = weak, 2 = clear match, 3 = textbook match with confirming flow."
+    },
+    {
+      "name": "risk_state",
+      "kind": "choice",
+      "options": [
+        "safe",
+        "near_limit",
+        "reduce"
+      ],
+      "question": "Given drawdown, daily P&L and inventory in the snapshot, is the account safe to add risk, near_limit, or should it reduce?"
+    }
+  ]
+}
